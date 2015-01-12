@@ -1,0 +1,22 @@
+<node name = "room">
+
+	<useshape name = "tube">
+	</useshape>
+
+	<node>
+		<translation>0.0, 0.0, 2.0</translation>
+
+		<useshape name = "corner">
+		</useshape>
+
+		<node>	
+			<rotation>0.0, 1.0, 0.0, -90</rotation>
+			<node>
+				<translation>0.0, 0.0, 2.0</translation>
+				<useshape name = "tube">
+				</useshape>
+			</node>
+		</node>>
+	</node>
+
+</node>

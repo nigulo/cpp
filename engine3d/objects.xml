@@ -1,0 +1,177 @@
+<texture name = "brickwall", file = "ConcreteWall.bmp"/>
+<texture name = "paintwall", file = "ConcreteWall.bmp"/>
+<shape name = "wall">
+	<triangles>
+		<vertex>
+			<coords>0.0, 0.0, 0.0</coords>
+			<texcoords>0.5, 0.5</texcoords>
+		</vertex>
+		<vertex>
+			<coords>0.0, 1.0, 0.0</coords>
+			<texcoords>0.5, 1.0</texcoords>
+		</vertex>
+		<vertex>
+			<coords>1.0, 1.0, 0.0</coords>
+			<texcoords>1.0, 1.0</texcoords>
+		</vertex>
+		<vertex>
+			<coords>1.0, 0.0, 0.0</coords>
+			<texcoords>1.0, 0.5</texcoords>
+		</vertex>
+		<vertex>
+			<coords>1.0, -1.0, 0.0</coords>
+			<texcoords>1.0, 0.0</texcoords>
+		</vertex>
+		<vertex>
+			<coords>0.0, -1.0, 0.0</coords>
+			<texcoords>0.5, 0.0</texcoords>
+		</vertex>
+		<vertex>
+			<coords>-1.0, -1.0, 0.0</coords>
+			<texcoords>0.0, 0.0</texcoords>
+		</vertex>
+		<vertex>
+			<coords>-1.0, 0.0, 0.0</coords>
+			<texcoords>0.0, 0.5</texcoords>
+		</vertex>
+		<vertex>
+			<coords>-1.0, 1.0, 0.0</coords>
+			<texcoords>0.0, 1.0</texcoords>
+		</vertex>
+		<vertex>
+			<coords>0.5, 0.5, 0.0</coords>
+			<texcoords>0.75, 0.75</texcoords>
+		</vertex>
+		<vertex>
+			<coords>0.5, -0.5, 0.0</coords>
+			<texcoords>0.75, 0.25</texcoords>
+		</vertex>
+		<vertex>
+			<coords>-0.5, -0.5, 0.0</coords>
+			<texcoords>0.25, 0.25</texcoords>
+		</vertex>
+		<vertex>
+			<coords>-0.5, 0.5, 0.0</coords>
+			<texcoords>0.25, 0.75</texcoords>
+		</vertex>
+		<triangle>0, 1, 9</triangle>
+		<triangle>1, 2, 9</triangle>
+		<triangle>2, 3, 9</triangle>
+		<triangle>3, 0, 9</triangle>
+
+		<triangle>0, 3, 10</triangle>
+		<triangle>3, 4, 10</triangle>
+		<triangle>4, 5, 10</triangle>
+		<triangle>5, 0, 10</triangle>
+
+		<triangle>0, 5, 11</triangle>
+		<triangle>5, 6, 11</triangle>
+		<triangle>6, 7, 11</triangle>
+		<triangle>7, 0, 11</triangle>
+
+		<triangle>0, 7, 12</triangle>
+		<triangle>7, 8, 12</triangle>
+		<triangle>8, 1, 12</triangle>
+		<triangle>1, 0, 12</triangle>
+	</triangles>
+
+	
+	<bound type = "polygon" usage = "culling, collision">
+		<vertex>
+			<coords>1.0, 1.0, 0.0</coords>
+		</vertex>
+		<vertex>
+			<coords>-1.0, 1.0, 0.0</coords>
+		</vertex>
+		<vertex>
+			<coords>1.0, -1.0, 0.0</coords>
+		</vertex>
+		<vertex>
+			<coords>-1.0, -1.0, 0.0</coords>
+		</vertex>
+	</bound>
+
+</shape>
+
+<shape name = "tube">
+	<node name = "ceiling">
+		<rotation>1.0, 0.0, 0.0, 90</rotation>
+		<translation>0.0, 1.0, 0.0</translation>
+		
+		<useshape name = "wall">
+			<usetexture name = "paintwall"/>
+		</useshape>
+
+	</node>
+
+	<node name = "leftwall">
+		<rotation>0.0, 1.0, 0.0, 90</rotation>
+		<translation>-1.0, 0.0, 0.0</translation>
+		
+		<useshape name = "wall">
+			<usetexture name = "paintwall"/>
+		</useshape>
+
+	</node>
+
+	<node name = "rightwall">
+		<rotation>0.0, 1.0, 0.0, -90</rotation>
+		<translation>1.0, 0.0, 0.0</translation>
+
+		<useshape name = "wall">
+			<usetexture name = "paintwall"/>
+		</useshape>
+
+	</node>
+
+	<node name = "floor">
+		<rotation>1.0, 0.0, 0.0, -90</rotation>
+		<translation>0.0, -1.0, 0.0</translation>
+		
+		<useshape name = "wall">
+			<usetexture name = "paintwall"/>
+		</useshape>
+
+	</node>
+</shape>
+
+<shape name = "corner">
+	<node name = "ceiling">
+		<rotation>1.0, 0.0, 0.0, 90</rotation>
+		<translation>0.0, 1.0, 0.0</translation>
+		
+		<useshape name = "wall">
+			<usetexture name = "paintwall"/>
+		</useshape>
+
+	</node>
+
+	<node name = "leftwall">
+		<rotation>0.0, 1.0, 0.0, 90</rotation>
+		<translation>-1.0, 0.0, 0.0</translation>
+		
+		<useshape name = "wall">
+			<usetexture name = "paintwall"/>
+		</useshape>
+
+	</node>
+
+	<node name = "rightwall">
+		<translation>0.0, 0.0, 1.0</translation>
+
+		<useshape name = "wall">
+			<usetexture name = "paintwall"/>
+		</useshape>
+
+	</node>
+
+	<node name = "floor">
+		<rotation>1.0, 0.0, 0.0, -90</rotation>
+		<translation>0.0, -1.0, 0.0</translation>
+		
+		<useshape name = "wall">
+			<usetexture name = "paintwall"/>
+		</useshape>
+
+	</node>
+</shape>
