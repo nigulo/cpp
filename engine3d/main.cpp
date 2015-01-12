@@ -58,7 +58,7 @@ Node n("W");
  * WinMain
  *
  **************************/
-
+// test
 void motionFunc(int x, int y) {
     Object::Dbg("motionFunc 1");
     pMouseController->OnMove(x, y);
