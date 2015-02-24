@@ -15,7 +15,7 @@ class D2 {
 	private:
 
 	const Mode mode = Gauss;
-	const bool relative = false;
+	const bool relative = true;
 	const int coherenceGrid = 200;
 	const double minCoherence;
 	const double maxCoherence = 0.1;

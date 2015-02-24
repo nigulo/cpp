@@ -278,7 +278,7 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 			double w=wmin+j*step;
 			double d1 = d;
 			if (relative) {
-				d1 = minCoherence / w + (maxCoherence - minCoherence) * i / w;
+				d1 = d / w;
 			}
 			double res=Criterion(d1,w);
 			cum[j]=res;
