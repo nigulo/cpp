@@ -39,8 +39,18 @@ int main(int argc, char *argv[]) {
 				words.erase(it);
 			}
 		}
-		x.push_back(stod(words[0]));
-		y.push_back(stod(words[col]));
+		if (words.size() > col) {
+			try {
+				double xVal = stod(words[0]);
+				double yVal = stod(words[col]);
+				x.push_back(xVal);
+				y.push_back(yVal);
+			} catch (std::invalid_argument ex) {
+				cout << "Skipping line, invalid number: " << line << endl;
+			}
+		} else {
+			cout << "Skipping line, too few columns: " << line << endl;
+		}
     }
 	input.close();
 	double minPeriod = argc > 3 ? atof(argv[3]) : 2;
@@ -64,35 +74,27 @@ int main(int argc, char *argv[]) {
 D2::D2(const vector<double>& r_x, const vector<double>& r_y, double minp, double maxp, double minc, double maxc) :
 		x(r_x),
 		y(r_y),
-		minPeriod(minp),
-		maxPeriod(maxp),
 		minCoherence(minc),
 		maxCoherence(maxc) {
 
+	double wmax = 1.0 / minp;
+	wmin = 1.0 / maxp;
+
+	dmin = minCoherence * (relative ? minp : 1);
+	dmax = maxCoherence * (relative ? maxp : 1);
+
 	l = x.size();
-	dbase = startCoherence;
-	dmin = minCoherence;
-	dbase = dmin;
-	//if (dbase < 2.0 * minPeriod) {
-	//	dbase = 2.0 * minPeriod;
-	//}
-	//if (dmin < 2.0 * minPeriod) {
-	//	dmin = 2.0 * minPeriod;
-	//}
-	dmax = maxCoherence;
-	if (dmax < dmin || minPeriod > maxPeriod) {
+
+	if (dmax < dmin || minp > maxp) {
 		throw "Check Arguments";
 	}
 	k = dmax > dmin ? coherenceGrid : 1;
-	deltac = dmax > dmin ? (dmax - dmin) / (k - 1) : 0;
-	double wmax = 1.0 / minPeriod;
-	wmin = 1.0 / maxPeriod;
-	m = round(phaseBins * (dmax - dbase) * wmax);
-	a = (m - 1.0) / (dmax - dbase);
-	b = -dbase * a;
-	delta = (dmax - dbase) / (m - 1);
+	m = round(phaseBins * (dmax - dmin) * wmax);
+	a = (m - 1.0) / (dmax - dmin);
+	b = -dmin * a;
+	delta = (dmax - dmin) / (m - 1);
 
-	lp = round((wmax - wmin) * (dmax - dbase) / deltaPhi);
+	lp = round((wmax - wmin) * (dmax - dmin) / deltaPhi);
 	step = (wmax - wmin) / (lp - 1);
 	eps = epsilon;
 	epslim = 1.0 - eps;
@@ -186,12 +188,10 @@ void D2::Compute2DSpectrum(bool bootstrap) {
     cout << "m= " << m << endl;
     cout << "a= " << a << endl;
     cout << "b= " << b << endl;
-    cout << "dbase= " << dbase << endl;
     cout << "dmin= " << dmin << endl;
     cout << "dmax= " << dmax << endl;
     cout << "wmin= " << wmin << endl;
     cout << "delta= " << delta << endl;
-    cout << "deltac= " << deltac << endl;
     cout << "step= " << step << endl;
 
 	cum.assign(lp, 0);
@@ -204,7 +204,7 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 	for (i=0; i < l - 1; i++) {// to l-2 do
 		for (j=i+1; j < l; j++) {// to l-1 do begin
 			double d = x[j] - x[i];
-			if (d >= dbase && d <= dmax) {
+			if (d >= dmin && d <= dmax) {
 				int kk = round(a * d + b);
 				if (bootstrap) {
 					if (!ydiffs[kk]) {
@@ -248,7 +248,7 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 	ty.assign(j, 0);
 	td.assign(j, 0);
 	cout << "td.size()=" << td.size() << endl;
-	double d = dbase;
+	double d = dmin;
 
 	// Build final grids for perdiodicity search.
 
@@ -271,11 +271,16 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 		k = 1;
 	}
 
+	double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (k - 1) : 0;
 	for (i=0; i < k; i++) {
-		d = dmin + i * deltac;
+		d = minCoherence + i * deltac;
 		for (j=0; j < lp; j++) {
 			double w=wmin+j*step;
-			double res=Criterion(d,w);
+			double d1 = d;
+			if (relative) {
+				d1 = minCoherence / w + (maxCoherence - minCoherence) * i / w;
+			}
+			double res=Criterion(d1,w);
 			cum[j]=res;
 		}
 

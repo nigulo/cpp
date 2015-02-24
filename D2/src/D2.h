@@ -15,12 +15,10 @@ class D2 {
 	private:
 
 	const Mode mode = Gauss;
-	const double minPeriod;
-	const double maxPeriod;
+	const bool relative = false;
 	const int coherenceGrid = 200;
-	const double startCoherence = 0;
 	const double minCoherence;
-	const double maxCoherence;
+	const double maxCoherence = 0.1;
 	const int phaseBins = 50;
 	const double deltaPhi = 0.05;
 	const double epsilon = 0.1;
@@ -35,12 +33,10 @@ class D2 {
     int m;
     double a;
     double b;
-    double dbase;
     double dmin;
     double dmax;
     double wmin;
     double delta;
-    double deltac;
     double step;
     // For bootstrap resampling
     // Seed with a real random value, if available
