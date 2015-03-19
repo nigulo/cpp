@@ -155,7 +155,6 @@ void init() {
 
     Object::Dbg("main 2");
     
-    ts.SetTransformation(Transformation(Vector(0, 0, 5)));
     n.AddChild(&tr);
     //n.AddChild(p_s);
     //scene->SetNode(&n);
