@@ -179,7 +179,7 @@ void Vertex::Render()
     }
     else {
         ////Debug(String("WC V::R ") + (worldCoords)[0] + ", " + (worldCoords)[1] + ", " + (worldCoords)[2]);
-        ////Debug((String) "V::R " + (coords)[0] + ", " + (coords)[1] + ", " + (coords)[2]);
+        //Debug((String) "V::R " + (coords)[0] + ", " + (coords)[1] + ", " + (coords)[2]);
         glVertex3d((coords)[0], (coords)[1], (coords)[2]);
     }
     //Debug(String("Vertex::Render took ") + (GetMillis() - millis));

@@ -204,6 +204,7 @@ void Node::Render()
     }
     else {
         if (!TEST_WORLD_COORDS) {
+        	//Debug("transforming");
             mTransformation.Transform();
         }
         int num_indices = mIndices.Size();

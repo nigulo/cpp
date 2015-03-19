@@ -8,7 +8,7 @@
 
 using namespace engine3d;
 // class constructor
-Camera::Camera(double viewAngle, double aspect, double zNear, double zFar) :
+Camera::Camera(double viewAngle, double aspect, double zNear, double zFar) : Node("Camera"),
     mViewAngle(viewAngle),
     mAspect(aspect),
     mZNear(zNear),

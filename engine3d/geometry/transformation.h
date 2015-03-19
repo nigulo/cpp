@@ -52,7 +52,7 @@ class Transformation : public Object
         /**
          * Performs the OpenGL transformation
          **/
-		void Transform();
+		void Transform() const;
 		
 		/**
 		 * Transforms the given vector

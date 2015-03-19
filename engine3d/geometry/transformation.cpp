@@ -117,11 +117,18 @@ const Matrix& Transformation::GetMatrix() const {
 /**
  * Performs the OpenGL transformation
  **/
-void Transformation::Transform()
+void Transformation::Transform() const
 {
     
     //const double* trMatrix = matrix->GetElements();
     const double* trMatrix = mMatrix.GetElements();
+    /*
+    String s;
+    for (int i = 0; i < 16; i++) {
+    	s = s + String(trMatrix[i]) + " ";
+    }
+	Debug(String("Transform: ") + s);
+	*/
     glMultMatrixd(trMatrix);
 }
 

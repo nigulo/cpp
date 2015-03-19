@@ -39,15 +39,15 @@ using namespace base;
 MouseController* pMouseController;
 double theta = 0;
 Scene* scene;
-Camera camera;//(-1, 1, -1, 1, 0.5, 1000);
-
+Camera camera;//(90.0f, 1.0f, 0.5f, 10.0f);
+bool doubleBuffer = true;
 long tickCount = 0;
 
 ////////////////////////////
-Vertex v1(1.08711, -1.57328, 1);
-Vertex v2(1.4863, -1.13543, 1);
-Vertex v3(1.56252, -1.19366, 1);
-Vertex v4(0.2, 0.2, 0.5);
+Vertex v1(-0.1, -0.1, 2);
+Vertex v2(-0.1, 0.1, 2);
+Vertex v3(0.1, 0.1, 2);
+Vertex v4(0.1, -0.1, 2);
 Triangles tr;
 TriangleStrip trs;
 
@@ -76,7 +76,11 @@ void mouseFunc(int button, int state, int x, int y) {
 void renderFunc() {
     Object::Dbg("renderFunc 1");
 	scene->Render();
-    glutSwapBuffers();
+	if (doubleBuffer) {
+		glutSwapBuffers();
+	} else {
+		glFlush();
+	}
     Object::Dbg("renderFunc 2");
 }
 
@@ -92,17 +96,18 @@ void init() {
 
     SceneLoader sl(*scene);
     sl.Load();
-    Object::Dbg("main -2");
-    Object::Dbg("main -1");
+    //Object::Dbg("main -2");
+    //Object::Dbg("main -1");
 
     String textureFile("ConcreteWall.bmp");
     Texture* p_tex = new Texture(textureFile);
     Object::Dbg("main -0.5");
     Sphere* p_s = new Sphere(0.5, 20, 20);
-    p_s->SetTexture(p_tex);
-    p_s->SetTransformation(Transformation(Vector(0, 0, 5)));
-    n.AddChild(p_s);
+    //p_s->SetTexture(p_tex);
+    p_s->SetTransformation(Transformation(Vector(0, 0, 5000)));
+    //n.AddChild(p_s);
     //scene->SetNode(&n);
+    scene->GetNode()->AddChild(p_s);
 
     //Sphere s1(0.5, 20, true);
     //s1.SetTexture(&tex);
@@ -139,17 +144,20 @@ void init() {
     v1.SetColor(Color(1, 0, 0));
     v2.SetColor(Color(0, 1, 0));
     v3.SetColor(Color(0, 0, 1));
-    v3.SetColor(Color(0, 1, 1));
+    v4.SetColor(Color(0, 1, 1));
     tr.Add(v1, v2, v3);
 
-    trs.AddVertex(v1);
-    trs.AddVertex(v2);
-    trs.AddVertex(v3);
-    trs.AddVertex(v4);
+    //trs.AddVertex(v1);
+    //trs.AddVertex(v2);
+    //trs.AddVertex(v3);
+    //trs.AddVertex(v4);
+    //trs.AddVertex(v1);
 
     Object::Dbg("main 2");
     
-    //n.AddChild(&trs);//distantProjection);
+    ts.SetTransformation(Transformation(Vector(0, 0, 5)));
+    n.AddChild(&tr);
+    //n.AddChild(p_s);
     //scene->SetNode(&n);
 
     Object::Dbg("main 3");
@@ -199,7 +207,7 @@ void init() {
 int main (int argc, char* argv[]) {
 
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_SINGLE);
+    glutInitDisplayMode(doubleBuffer ? GLUT_DOUBLE : GLUT_SINGLE);
     glutInitWindowSize(500,500);
     glutInitWindowPosition(100,100);
     glutCreateWindow("OpenGL - First window demo");
