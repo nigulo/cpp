@@ -8,181 +8,43 @@
 
 using namespace engine3d;
 
-
-/**
- * Converts the RGB bits in Windows presentation to the OpenGL presentation
- **/
-/*
-BYTE* ConvertRGB(BITMAPINFO& bmpInfo, BYTE* bmpBits)
-{
-    
-    int bmpWidth = bmpInfo.bmiHeader.biWidth;
-    int bmpHeight = bmpInfo.bmiHeader.biHeight;
-    int bmpBitCount = bmpInfo.bmiHeader.biBitCount;
-    int bmpSize = bmpWidth * (bmpBitCount >> 3);
-    bmpSize += 3;
-    bmpSize &= 0xfffffffc;
-    bmpSize *= bmpHeight;
-    BYTE* newBits = new BYTE[bmpSize];
-    assert(newBits);
-    long ptr1 = 0;
-    long ptr2 = 0;
-    switch (bmpInfo.bmiHeader.biCompression) {
-        case BI_RGB:
-            switch (bmpBitCount) {
-                case 24:
-                    Object::Dbg("BI_RGB 24");
-                    for (int i = 0; i < bmpHeight; i++) {
-                        for (int j = 0; j < bmpWidth; j++) {
-                            newBits[ptr1] = bmpBits[ptr1 + 2];
-                            newBits[ptr1 + 1] = bmpBits[ptr1 + 1];
-                            newBits[ptr1 + 2] = bmpBits[ptr1];
-                            ptr1 += 3;
-                        }
-                    }
-                    break;
-                default:
-                    assert(false);
-            }
-            break;
-        case BI_BITFIELDS:
-            switch (bmpBitCount) {
-                case 32:
-                    Object::Dbg("BI_BITFIELDS 32");
-                    for (int i = 0; i < bmpHeight; i++) {
-                        for (int j = 0; j < bmpWidth; j++) {
-                            newBits[ptr2 + 2] = bmpBits[ptr1];
-                            newBits[ptr2 + 1] = bmpBits[ptr1 + 1];
-                            newBits[ptr2] = bmpBits[ptr1 + 2];
-                            ptr2 += 3;
-                            ptr1 += 4;
-                        }
-                    }
-                    break;
-                case 16:
-                    Object::Dbg("BI_BITFIELDS 16");
-                    for (int i = 0; i < bmpHeight; i++) {
-                        for (int j = 0; j < bmpWidth; j++) {
-                            BYTE b = bmpBits[ptr1];
-                            b &= 0x1f;
-                            b <<= 3;
-                            newBits[ptr2 + 2] = b;
-                            
-                            WORD w = bmpBits[ptr1];
-                            w << 3;
-                            b = *(&w + 1);
-                            b &= 0x1f;
-                            b <<= 3;
-                            newBits[ptr2 + 1] = b;
-
-                            b = bmpBits[ptr1 + 1];
-                            b >>= 2;
-                            b &= 0x1f;
-                            b <<= 3;
-                            newBits[ptr2] = b;
-                            ptr2 += 3;
-                            ptr1 += 2;
-                        }
-                    }
-                    break;
-                default:
-                    assert(false);
-            }
-            break;
-        default:
-            assert(false);
-    }
-    return newBits;
-}
-*/
-/**
- * Converts the pixels according to the pixel format. If the texture
- * image contains only color data from single channel, alpha or luminance
- * values the 3 bytes per pixel are equal
- **/
-/*
-BYTE* Pack(BYTE* pPixels, long size, int format)
-{
-    // Change the pixels according to format.
-    // No change is needed in the case of FORMAT_RGB
-    switch (format) {
-        case Texture::FORMAT_RED:
-        case Texture::FORMAT_GREEN:
-        case Texture::FORMAT_BLUE:
-        case Texture::FORMAT_ALPHA:
-        case Texture::FORMAT_LUMINANCE: {
-            // Shrink 3 equal bytes into a single one
-            BYTE* p_pixels = new BYTE[size];
-            for (long i = 0; i < size; i++) {
-                p_pixels[i] = pPixels[i * 3];
-            }
-            Object::Dbg(String("Pack: ") + size);
-            delete[] pPixels;
-            return p_pixels;
-        }
-        default:
-            return pPixels;
-    }
-}
-*/
 // class constructor
-Texture::Texture(const String& textureFile, const String& name, const int format) : Object(name)
+Texture::Texture(const String& textureFile, const String& name) : Object(name)
 {
 
-	  mpImage = nullptr;
+    std::vector<unsigned char> image;
+    unsigned width, height;
+	unsigned error = lodepng::decode(image, width, height, textureFile.GetChars());
+	if (error != 0) {
+		throw (String("Loading texture ") + textureFile + " failed: " + String((int) error) + ", " + lodepng_error_text(error));
+	} else {
+		Debug(String("Texture ") + textureFile + " loaded");
+	}
 
-	  mpImage = new bitmap_image(textureFile.GetChars());
-	  if (!mpImage) {
-	      throw ("Texture loading failed");
-	  } else {
-		  Debug("Texture loaded");
-	  }
+	// Texture size must be power of two for the primitive OpenGL version this is written for. Find next power of two.
+	mWidth = 1;
+	while (mWidth < width) {
+		mWidth *= 2;
+	};
+	mHeight = 1;
+	while (mHeight < height) {
+		mHeight *= 2;
+	}
 
-///////////////////////////
-/*
-	mFormat = format;
-	HBITMAP hBmp = (HBITMAP) LoadImage(NULL, textureFile.GetChars(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
-	assert(hBmp);
-	BITMAPINFO bmpInfo;
-    bmpInfo.bmiHeader.biSize = sizeof bmpInfo;
-    bmpInfo.bmiHeader.biBitCount = 0;
-    int scanLines = GetDIBits(GetDC(GetActiveWindow()), hBmp, 0, 0, NULL, &bmpInfo, DIB_RGB_COLORS);
-    assert(scanLines);
-    
-	int bmpWidth = bmpInfo.bmiHeader.biWidth;
-	int bmpHeight = bmpInfo.bmiHeader.biHeight;
-	int bmpSize = bmpInfo.bmiHeader.biSizeImage;
-	mWidth = bmpWidth;
-	mHeight = bmpHeight;
-	if (bmpSize == 0) {
-        bmpSize = bmpInfo.bmiHeader.biBitCount;
-        bmpSize *= bmpWidth;
-        bmpSize += 7;
-        if (bmpHeight < 0) {
-            bmpHeight = -bmpHeight;
-        }
-        bmpSize *= bmpHeight;
-        bmpSize >>= 3;
-    }
-    BYTE* p_bmp_bits = new BYTE[bmpSize]; 
-    assert(p_bmp_bits);
-    scanLines = GetDIBits(GetDC(GetActiveWindow()), hBmp, 0, bmpHeight, p_bmp_bits, &bmpInfo, DIB_RGB_COLORS);
-    assert(scanLines);
-	DeleteObject(hBmp);
-    BYTE* p_pixels = ConvertRGB(bmpInfo, p_bmp_bits);
-    delete[] p_bmp_bits;
-    assert(p_pixels);
-    mpPixels = Pack(p_pixels, bmpWidth * bmpHeight, format);
-	Debug("Texture loaded");
-*/
+	mpImage = new std::vector<unsigned char>(mWidth * mHeight * 4);
+	// Make power of two version of the image.
+	std::vector<unsigned char> image2(mWidth * mHeight * 4);
+	for(size_t y = 0; y < height; y++) {
+		for(size_t x = 0; x < width; x++) {
+			for(size_t c = 0; c < 4; c++) {
+				(*mpImage)[4 * mWidth * y + 4 * x + c] = image[4 * width * y + 4 * x + c];
+			}
+		}
+	}
+
 }
 
 // private constructor
-Texture::Texture(int format, bitmap_image* pImage) :
-    mFormat(format)
-{
-    mpImage = pImage;
-}
 // class destructor
 Texture::~Texture()
 {

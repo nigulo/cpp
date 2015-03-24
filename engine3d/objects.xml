@@ -1,5 +1,5 @@
-<texture name = "brickwall", file = "ConcreteWall.bmp"/>
-<texture name = "paintwall", file = "ConcreteWall.bmp"/>
+<texture name = "brickwall", file = "ConcreteWall.png"/>
+<texture name = "paintwall", file = "ConcreteWall.png"/>
 <shape name = "wall">
 	<triangles>
 		<vertex>

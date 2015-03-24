@@ -5,7 +5,7 @@
 
 #include <gl.h>
 #include "base/object.h"
-#include "bitmap/bitmap_image.hpp"
+#include "lodepng/lodepng.h"
 
 using namespace base;
 
@@ -17,24 +17,14 @@ namespace engine3d {
 class Texture : public Object
 {
 	public:
-        //static const int FORMAT_COLOR_INDEX = GL_COLOR_INDEX;
-        static const int FORMAT_RED = GL_RED;
-        static const int FORMAT_GREEN = GL_GREEN;
-        static const int FORMAT_BLUE = GL_BLUE;
-        static const int FORMAT_ALPHA = GL_ALPHA;
-        static const int FORMAT_RGB = GL_RGB;
-        static const int FORMAT_RGBA = GL_RGBA;
-        static const int FORMAT_LUMINANCE = GL_LUMINANCE;
-        static const int FORMAT_LUMINANCE_ALPHA = GL_LUMINANCE_ALPHA;
-	public:
 		/**
 		 * Creates a new texture
-		 * @param textureFile bitmap file of the texture image. 
+		 * @param textureFile png file of the texture image.
          * The height and width of the texture image must be multiples of 2.
 		 * @param name name of the texture
 		 * @param format texture format (one of the above constants)
 		 **/
-		Texture(const String& textureFile, const String& name = "", int format = FORMAT_RGB);
+		Texture(const String& textureFile, const String& name = "");
 		// class destructor
 		~Texture();
 		
@@ -49,31 +39,23 @@ class Texture : public Object
 		 * @return pointer to the texture image data that can be used as an
 		 * input parameter for glTextImage2D function
 		 **/
-		const unsigned char* GetPixels() {
-            return mpImage->data();
+		const void* GetPixels() {
+            return &((*mpImage)[0]);
         }
         
 		// No description
-		int GetHeight() {
-            return mpImage->height();
+		unsigned GetHeight() {
+            return mHeight;
         }
         
 		// No description
-		int GetWidth() {
-            return mpImage->width();
+		unsigned GetWidth() {
+            return mWidth;
         }
         
-		// No description
-		int GetFormat() {
-            return mFormat;
-        }
-
-	private:
-        Texture(int format, bitmap_image* pImage);
-
 	protected:
-        bitmap_image* mpImage;
-        int mFormat;
+        std::vector<unsigned char>* mpImage;
+        unsigned mWidth, mHeight;
 };
 }
 #endif // TEXTURE_H

@@ -151,12 +151,12 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
     else if (rElement.mType == TEXTURE) {
         Debug(String("Creating new texutre: ") + rElement.mName + ", " + rElement.mParams.GetProperty("file"));
         Texture* p_texture = new Texture(rElement.mParams.GetProperty("file"), rElement.mName);
-        if (rElement.mParams.GetProperty("alphafile").Length() > 0) {
-            Texture tex_alpha(rElement.mParams.GetProperty("alphafile"), rElement.mName + "_alpha", Texture::FORMAT_ALPHA);
-            Debug("before modulate");
-            //p_texture->Modulate(tex_alpha);
-            Debug("after modulate");
-        }
+        //if (rElement.mParams.GetProperty("alphafile").Length() > 0) {
+        //    Texture tex_alpha(rElement.mParams.GetProperty("alphafile"), rElement.mName + "_alpha", Texture::FORMAT_ALPHA);
+        //    Debug("before modulate");
+        //    //p_texture->Modulate(tex_alpha);
+        //    Debug("after modulate");
+        //}
         mTextures.Add(p_texture);
     }
     else if (rElement.mType == NODE) {

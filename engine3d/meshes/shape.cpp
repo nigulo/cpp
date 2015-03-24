@@ -53,18 +53,18 @@ void Shape::BeginRender()
 {
     //static Texture* ps_texture = 0;
     if (mpTexture) {// && mpTexture != ps_texture) {
-        Debug(String("Using texture: ") + String(mpTexture->GetWidth()) + String(", ") + String(mpTexture->GetHeight()));
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        Debug(String("Using texture: ") + String((int) mpTexture->GetWidth()) + String(", ") + String((int) mpTexture->GetHeight()));
+        //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_PRIORITY, 1);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, mpTexture->GetWidth(), mpTexture->GetHeight(), 0, GL_RGB, GL_UNSIGNED_BYTE, mpTexture->GetPixels());
+        //glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        //glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        //glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+        //glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, 4, mpTexture->GetWidth(), mpTexture->GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, mpTexture->GetPixels());
     }
     else {
         //glTexImage2D(GL_TEXTURE_2D, 0, 3, 0, 0, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
