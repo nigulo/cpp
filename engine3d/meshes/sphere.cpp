@@ -226,9 +226,9 @@ void Sphere::Render()
 void Sphere::Init() 
 {
 	Shape::Init();
-	Camera cam = GetScene().GetCamera();
+	Camera& r_cam = GetScene().GetCamera();
 	Vector o = mWorldTransformation.Transform(Vector(0, 0, 0));
-	if ((o - cam.GetEye()).DotProduct((cam.GetCenter() - cam.GetEye()).Normalize()) > cam.GetZFar()) {
+	if ((o - r_cam.GetEye()).DotProduct((r_cam.GetCenter() - r_cam.GetEye()).Normalize()) > r_cam.GetZFar()) {
 		Debug("distant");
 		//SetDistant(true);
 	}

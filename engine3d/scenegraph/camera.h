@@ -32,6 +32,7 @@ class Camera : public Node
 		// class destructor
 		~Camera();
 		
+        virtual void Init();
 		/**
 		 * Positions the camera (Calls the underlaying GL functions)
 		 **/

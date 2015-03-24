@@ -18,13 +18,6 @@ Camera::Camera(double viewAngle, double aspect, double zNear, double zFar) : Nod
     mUp(0, 1, 0),
     mPerspective(true)
 {
-    //mEye = mTransformation.Transform(Vector(0, 0, 0));
-    //mCenter = mTransformation.Transform(Vector(0, 0, 1));
-    //mUp = (mTransformation.Rotate(Vector(0, 1, 0))).Normalize();
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(mViewAngle, mAspect, mZNear, mZFar);
-    glMatrixMode(GL_MODELVIEW);
     mChanged = true;
 }
 
@@ -40,10 +33,6 @@ Camera::Camera(double left, double right, double bottom, double top, double zNea
     mUp(0, 1, 0),
     mPerspective(false)
 {
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(mLeft, mRight, mBottom, mTop, mZNear, mZFar);
-    glMatrixMode(GL_MODELVIEW);
     mChanged = true;
 }
 
@@ -62,20 +51,25 @@ Camera::Camera(const Camera& rCam) :
     mTop(rCam.mTop),
     Node(rCam)
 {
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-	if (rCam.mPerspective) {
-		gluPerspective(mViewAngle, mAspect, mZNear, mZFar);
-	} else {
-	    glOrtho(mLeft, mRight, mBottom, mTop, mZNear, mZFar);
-	}
-    glMatrixMode(GL_MODELVIEW);
     mChanged = true;
 }
 
 // class destructor
 Camera::~Camera()
 {
+}
+
+void engine3d::Camera::Init() {
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+	if (mPerspective) {
+		gluPerspective(mViewAngle, mAspect, mZNear, mZFar);
+	} else {
+	    glOrtho(mLeft, mRight, mBottom, mTop, mZNear, mZFar);
+	}
+    glMatrixMode(GL_MODELVIEW);
+    mChanged = true;
+	Node::Init();
 }
 
 void Camera::Look()

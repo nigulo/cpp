@@ -89,7 +89,7 @@ void init() {
     BoundingPolygon* p_bp = new BoundingPolygon();
     p_bp->AddVertex(Vector(0, 0, 0.5));
     p_bp->AddVertex(Vector(0, 0, 0));
-    //camera.SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
+    camera.SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
 
     scene = new Scene();
     scene->SetCamera(&camera);
@@ -99,15 +99,15 @@ void init() {
     //Object::Dbg("main -2");
     //Object::Dbg("main -1");
 
-    String textureFile("ConcreteWall.bmp");
-    Texture* p_tex = new Texture(textureFile);
-    Object::Dbg("main -0.5");
-    Sphere* p_s = new Sphere(0.5, 20, 20);
+    //String textureFile("ConcreteWall.bmp");
+    //Texture* p_tex = new Texture(textureFile);
+    //Object::Dbg("main -0.5");
+    //Sphere* p_s = new Sphere(0.5, 10, 10);
     //p_s->SetTexture(p_tex);
-    p_s->SetTransformation(Transformation(Vector(0, 0, 5000)));
+    //p_s->SetTransformation(Transformation(Vector(0, 0, 5000)));
     //n.AddChild(p_s);
     //scene->SetNode(&n);
-    scene->GetNode()->AddChild(p_s);
+    //scene->GetNode()->AddChild(p_s);
 
     //Sphere s1(0.5, 20, true);
     //s1.SetTexture(&tex);
