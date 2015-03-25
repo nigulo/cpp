@@ -3,7 +3,8 @@
 #include <gl.h>
 
 #include "trianglefan.h" // class's header file
-#include "engine3d/geometry/projection.h"
+
+#include "../geometry/projector.h"
 #include "engine3d/geometry/triangle.h"
 
 using namespace engine3d;

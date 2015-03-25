@@ -8,49 +8,21 @@
 
 using namespace engine3d;
 // class constructor
-Camera::Camera(double viewAngle, double aspect, double zNear, double zFar) : Node("Camera"),
-    mViewAngle(viewAngle),
-    mAspect(aspect),
-    mZNear(zNear),
-    mZFar(zFar),
+Camera::Camera(Projection* p_projection) : Node("Camera"),
+    mpProjection(p_projection),
     mEye(0, 0, 0),
     mCenter(0, 0, 1),
-    mUp(0, 1, 0),
-    mPerspective(true)
-{
+    mUp(0, 1, 0) {
     mChanged = true;
-}
-
-Camera::Camera(double left, double right, double bottom, double top, double zNear, double zFar) :
-    mLeft(left),
-    mRight(right),
-    mBottom(bottom),
-    mTop(top),
-    mZNear(zNear),
-    mZFar(zFar),
-    mEye(0, 0, 0),
-    mCenter(0, 0, 1),
-    mUp(0, 1, 0),
-    mPerspective(false)
-{
-    mChanged = true;
+	assert(mpProjection);
 }
 
 Camera::Camera(const Camera& rCam) :
-    mViewAngle(rCam.mViewAngle),
-    mAspect(rCam.mAspect),
-    mZNear(rCam.mZNear),
-    mZFar(rCam.mZFar),
+    mpProjection(rCam.mpProjection),
     mEye(rCam.mEye),
     mCenter(rCam.mCenter),
     mUp(rCam.mUp),
-    mPerspective(rCam.mPerspective),
-    mLeft(rCam.mLeft),
-    mRight(rCam.mRight),
-    mBottom(rCam.mBottom),
-    mTop(rCam.mTop),
-    Node(rCam)
-{
+    Node(rCam) {
     mChanged = true;
 }
 
@@ -60,13 +32,7 @@ Camera::~Camera()
 }
 
 void engine3d::Camera::Init() {
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-	if (mPerspective) {
-		gluPerspective(mViewAngle, mAspect, mZNear, mZFar);
-	} else {
-	    glOrtho(mLeft, mRight, mBottom, mTop, mZNear, mZFar);
-	}
+	mpProjection->Init();
     glMatrixMode(GL_MODELVIEW);
     mChanged = true;
 	Node::Init();
@@ -93,15 +59,14 @@ void Camera::Look()
  * the viewing frustrum
  * Not precise!
  **/
-const Plane Camera::GetFarPlane() const 
-{
+const Plane Camera::GetFarPlane() const {
     //assert(center);
     //assert(eye);
 	Vector plane_normal = GetDirection();
 	//Vector planePoint = eye + (planeNormal * zFar);
 	// NB! This is not correct. just added to avoid 
     // distantprojections rounded behind farplane
-	Vector plane_point = mEye + (plane_normal * mZFar * 0.99);
+	Vector plane_point = mEye + (plane_normal * mpProjection->GetZFar() * 0.99);
 	return Plane(plane_point, plane_normal * (-1));
 }
 
@@ -110,12 +75,11 @@ const Plane Camera::GetFarPlane() const
  * the viewing frustrum
  * WARNING: NOT TESTED!!!
  **/
-const Plane Camera::GetNearPlane() const 
-{
+const Plane Camera::GetNearPlane() const {
     //assert(center);
     //assert(eye);
 	Vector plane_normal = GetDirection();
-	Vector plane_point = mEye + (plane_normal * mZNear);
+	Vector plane_point = mEye + (plane_normal * mpProjection->GetZNear());
 	return Plane(plane_point, plane_normal);
 }
 
@@ -124,20 +88,8 @@ const Plane Camera::GetNearPlane() const
  * the viewing frustrum
  * WARNING: NOT TESTED!!!
  **/
-const Plane Camera::GetTopPlane() const 
-{
-	if (mPerspective) {
-	    //assert(center);
-	    //assert(eye);
-		Vector direction = GetDirection();
-		Vector down = (-mUp) * tan((M_PI * mViewAngle / 360));
-		Vector plane_normal = (direction + down) * 0.5;
-		Vector plane_point = mEye;
-		return Plane(plane_point, plane_normal);
-	} 
-	else {
-		return Plane(mEye + mUp * mTop, -mUp);
-	}
+const Plane Camera::GetTopPlane() const {
+	return mpProjection->GetTopPlane(*this);
 }
 
 /**
@@ -145,19 +97,8 @@ const Plane Camera::GetTopPlane() const
  * the viewing frustrum
  * WARNING: NOT TESTED!!!
  **/
-const Plane Camera::GetBottomPlane() const 
-{
-	if (mPerspective) {
-	    //assert(center);
-	    //assert(eye);
-		Vector direction = GetDirection();
-		Vector plane_normal = (direction + mUp * tan((M_PI * mViewAngle / 360))) * 0.5;
-		Vector plane_point = mEye;
-		return Plane(plane_point, plane_normal);
-	} 
-	else {
-		return Plane(mEye + (-mUp) * mBottom, mUp);
-	}
+const Plane Camera::GetBottomPlane() const {
+	return mpProjection->GetBottomPlane(*this);
 }
 
 /**
@@ -165,21 +106,8 @@ const Plane Camera::GetBottomPlane() const
  * the viewing frustrum
  * WARNING: NOT TESTED!!!
  **/
-const Plane Camera::GetLeftPlane() const 
-{
-	if (mPerspective) {
-	    //assert(center);
-	    //assert(eye);
-		Vector direction = GetDirection();
-		Vector right = direction.CrossProduct(mUp);
-		Vector plane_normal = (direction + right * tan((M_PI * mViewAngle * mAspect / 360))) * 0.5;
-		Vector plane_point = mEye;
-		return Plane(plane_point, plane_normal);
-	}
-	else {
-		Vector right = GetDirection().CrossProduct(mUp);
-		return Plane(mEye + (-right) * mLeft, right);
-	}
+const Plane Camera::GetLeftPlane() const {
+	return mpProjection->GetLeftPlane(*this);
 }
 
 /**
@@ -187,21 +115,8 @@ const Plane Camera::GetLeftPlane() const
  * the viewing frustrum
  * WARNING: NOT TESTED!!!
  **/
-const Plane Camera::GetRightPlane() const 
-{
-	if (mPerspective) {
-	    //assert(center);
-	    //assert(eye);
-		Vector direction = GetDirection();
-		Vector left = mUp.CrossProduct(direction);
-		Vector plane_normal = (direction + left * tan((M_PI * mViewAngle * mAspect / 360))) * 0.5;
-		Vector plane_point = mEye;
-		return Plane(plane_point, plane_normal);
-	}
-	else {
-		Vector left = mUp.CrossProduct(GetDirection());
-		return Plane(mEye + (-left) * mRight, left);
-	}
+const Plane Camera::GetRightPlane() const {
+	return mpProjection->GetRightPlane(*this);
 }
 
 /**

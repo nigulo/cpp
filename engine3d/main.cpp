@@ -27,6 +27,7 @@
 #include "engine3d/geometry/beziercurve.h"
 #include "engine3d/containment/boundingsphere.h"
 #include "engine3d/containment/boundingpolygon.h"
+#include "engine3d/projection/perspective.h"
 
 using namespace engine3d;
 using namespace base;
@@ -39,7 +40,8 @@ using namespace base;
 MouseController* pMouseController;
 double theta = 0;
 Scene* scene;
-Camera camera;//(90.0f, 1.0f, 0.5f, 10.0f);
+Perspective projection;
+Camera camera(&projection);
 bool doubleBuffer = true;
 long tickCount = 0;
 

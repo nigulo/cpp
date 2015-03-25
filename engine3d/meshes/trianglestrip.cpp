@@ -3,7 +3,8 @@
 #include <gl.h>
 
 #include "trianglestrip.h" // class's header file
-#include "engine3d/geometry/projection.h" // class's header file
+
+#include "engine3d/geometry/projector.h" // class's header file
 #include "engine3d/geometry/triangle.h" // class's header file
 #include "engine3d/scenegraph/scene.h" // class's header file
 #include "engine3d/scenegraph/camera.h" // class's header file
@@ -61,7 +62,7 @@ void TriangleStrip::RenderDistant()
 	// NB!!! plane normal is pointing isnide the view
 	// frustrum, so this is not the plane we want
     Debug("TS::RD 3");
-	Projection p;
+	Projector p;
     Debug("TS::RD 4");
 	p.AddPlane(plane);
     Debug("TS::RD 5");
@@ -92,7 +93,7 @@ void TriangleStrip::RenderDistant()
             Debug("TS::RD 12");
 
         	Vector direction = v1->GetWorldCoords() - GetScene().GetCamera().GetEye();
-        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetZFar()) {
+        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetProjection().GetZFar()) {
         		direction = direction * -1.0;
                 Debug("TS::RD 120");
         	}
@@ -102,7 +103,7 @@ void TriangleStrip::RenderDistant()
             Vector distantVector1 = p.Project(v1->GetWorldCoords());
             Debug("TS::RD 123");
             direction = v2->GetWorldCoords() - GetScene().GetCamera().GetEye();
-        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetZFar()) {
+        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetProjection().GetZFar()) {
         		direction = direction * -1.0;
                 Debug("TS::RD 1235");
         	}
@@ -112,7 +113,7 @@ void TriangleStrip::RenderDistant()
             Vector distantVector2 = p.Project(v2->GetWorldCoords());
             Debug("TS::RD 126");
             direction = v3->GetWorldCoords() - GetScene().GetCamera().GetEye();
-        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetZFar()) {
+        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetProjection().GetZFar()) {
         		direction = direction * -1.0;
                 Debug("TS::RD 1265");
         	}

@@ -3,7 +3,8 @@
 #include <gl.h>
 
 #include "triangles.h" // class's header file
-#include "engine3d/geometry/projection.h"
+
+#include "engine3d/geometry/projector.h"
 #include "engine3d/geometry/triangle.h"
 #include "engine3d/scenegraph/scene.h"
 #include "engine3d/scenegraph/camera.h"
@@ -74,7 +75,7 @@ void Triangles::RenderDistant()
 	// NB!!! plane normal is pointing isnide the view
 	// frustrum, so this is not the plane we want
     Debug("T::RD 3");
-	Projection p;
+	Projector p;
     Debug("T::RD 4");
 	p.AddPlane(plane);
     Debug("T::RD 5");
@@ -102,7 +103,7 @@ void Triangles::RenderDistant()
             Debug("T::RD 12");
 
         	Vector direction = v1->GetWorldCoords() - GetScene().GetCamera().GetEye();
-        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetZFar()) {
+        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetProjection().GetZFar()) {
                 Debug("T::RD 120");
         		direction = direction * -1.0;
         	}
@@ -112,7 +113,7 @@ void Triangles::RenderDistant()
             Vector distantVector1 = p.Project(v1->GetWorldCoords());
             Debug("T::RD 123");
             direction = v2->GetWorldCoords() - GetScene().GetCamera().GetEye();
-        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetZFar()) {
+        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetProjection().GetZFar()) {
                 Debug("T::RD 1235");
         		direction = direction * -1.0;
         	}
@@ -122,7 +123,7 @@ void Triangles::RenderDistant()
             Vector distantVector2 = p.Project(v2->GetWorldCoords());
             Debug("T::RD 126");
             direction = v3->GetWorldCoords() - GetScene().GetCamera().GetEye();
-        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetZFar()) {
+        	if (direction.DotProduct(plane.GetNormal()) > GetScene().GetCamera().GetProjection().GetZFar()) {
                 Debug("T::RD 1265");
         		direction = direction * -1.0;
         	}

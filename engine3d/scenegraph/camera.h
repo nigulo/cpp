@@ -8,6 +8,7 @@
 #include "engine3d/geometry/plane.h"
 #include "engine3d/geometry/transformation.h"
 #include "engine3d/containment/boundingvolume.h"
+#include "engine3d/projection/projection.h"
 
 namespace engine3d {
     
@@ -18,15 +19,8 @@ namespace engine3d {
 class Camera : public Node
 {
 	public:
-		/**
-		 * Creates a camera using perspective projection matrix
-		 */
-		Camera(double viewAngle = 90.0f, double aspect = 1.0f, double near = 0.5f, double far = 10.0f);
+		Camera(Projection* p_projection);
 		
-		/**
-		 * Creates a camera using parallel projection matrix
-		 */ 
-		Camera(double left, double right, double bottom, double top, double near, double far);
 		Camera(const Camera& rCam);
 		
 		// class destructor
@@ -38,34 +32,6 @@ class Camera : public Node
 		 **/
 		void Look();
 		
-		/**
-		 * @return view angle in y-direction in degrees
-		 **/
-		double GetViewAngle() const {
-            return mViewAngle;
-        }
-		
-		/**
-		 * @return ratio of x (width) to y (height)
-		 **/
-		double GetAspect() const {
-            return mAspect;
-        }
-        
-        /**
-         * @return disctance of the near clipping plane measured from eye point
-         **/
-		double GetZNear() const {
-            return mZNear;
-        }
-        
-        /**
-         * @return disctance of the far clipping plane measured from eye point
-         **/
-		double GetZFar() const {
-            return mZFar;
-        }
-        
 		/**
 		 * @return the eye position
 		 **/
@@ -127,27 +93,11 @@ class Camera : public Node
         
         void Transform();
         
+        const Projection& GetProjection() const {
+        	return * mpProjection;
+        }
+
 	private:
-        
-        /**
-		 * View angle in y-direction in degrees
-		 **/
-        double mViewAngle;
-        
-        /**
-         * Ratio of x to y
-         **/
-        double mAspect;
-        
-        /**
-         * Disctance of the near clipping plane measured from eye point
-         **/
-        double mZNear;
-        
-        /**
-         * Disctance of the far clipping plane measured from eye point
-         **/
-        double mZFar;
         
         /**
          * Eye point of the camera
@@ -167,15 +117,8 @@ class Camera : public Node
         /**
          * Specifies if perspective or parallel projection is used
          */
-        bool mPerspective;
+        Projection* mpProjection;
         
-        /**
-         * Fields used in case of parallel projection
-         */         
-        double mLeft;
-        double mRight;
-        double mBottom;
-        double mTop;
         
 };
 }
