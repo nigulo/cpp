@@ -62,15 +62,15 @@ class Transformation : public Object
 		
 		/**
          * Translates the given vector (rotation component 
-         * of the transformatioon is disregarded).
-         * @return vector transformaed by this transformation
+         * of the transformation is disregarded).
+         * @return vector transformed by this transformation
 		 **/
 		Vector Translate(const Vector& v) const;
 
 		/**
 		 * Rotates the given vector (translation component of the
-         * transformatioon disregarded).
-         * @return vector transformaed by this transformation
+         * transformation disregarded).
+         * @return vector transformed by this transformation
 		 **/
 		Vector Rotate(const Vector& v) const;
 		

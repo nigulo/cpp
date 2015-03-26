@@ -3,7 +3,7 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-#include <gl.h>
+#include <GL/gl.h>
 #include "base/object.h"
 #include "lodepng/lodepng.h"
 

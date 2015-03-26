@@ -7,25 +7,36 @@
 
 #include "ortho.h"
 #include "engine3d/scenegraph/camera.h"
-#include <gl.h>
+#include <GL/gl.h>
 
 using namespace engine3d;
 
 Ortho::Ortho(double left, double right, double bottom, double top, double near, double far) :
-	Projection(near, far),
-    mLeft(left),
-    mRight(right),
-    mBottom(bottom),
-    mTop(top) {
+		Projection(near, far),
+		mLeft(left),
+		mRight(right),
+		mBottom(bottom),
+		mTop(top) {
+
+	double w = right - left;
+	double h = top - bottom;
+	double d = far - near;
+	double tx = (right + left) / w;
+	double ty = (top + bottom) / h;
+	double tz = (far + near) / d;
+	mMatrix.Set(0, 0, 2 / w); mMatrix.Set(0, 1, 0);     mMatrix.Set(0, 2, 0);      mMatrix.Set(0, 3, tx);
+	mMatrix.Set(1, 0, 0);     mMatrix.Set(1, 1, 2 / h); mMatrix.Set(1, 2, 0);      mMatrix.Set(1, 3, ty);
+	mMatrix.Set(2, 0, 0);     mMatrix.Set(2, 1, 0);     mMatrix.Set(2, 2, -2 / d); mMatrix.Set(2, 3, tz);
+	mMatrix.Set(3, 0, 0);     mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);      mMatrix.Set(3, 3, 1);
 }
 
 Ortho::~Ortho() {
 }
 
-void Ortho::Init() const {
-	Projection::Init();
-    glOrtho(mLeft, mRight, mBottom, mTop, mZNear, mZFar);
-}
+//void Ortho::Init() const {
+//	Projection::Init();
+//    glOrtho(mLeft, mRight, mBottom, mTop, mZNear, mZFar);
+//}
 
 const Plane Ortho::GetTopPlane(const Camera& r_camera) const {
 	return Plane(r_camera.GetEye() + r_camera.GetUp() * mTop, -r_camera.GetUp());

@@ -18,8 +18,6 @@ public:
 	Ortho(double left, double right, double bottom, double top, double near, double far);
 	virtual ~Ortho();
 
-	virtual void Init() const;
-
 	virtual const Plane GetTopPlane(const Camera& r_camera) const;
     virtual const Plane GetBottomPlane(const Camera& r_camera) const;
     virtual const Plane GetLeftPlane(const Camera& r_camera) const;

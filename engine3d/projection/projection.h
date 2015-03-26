@@ -10,6 +10,7 @@
 
 #include "base/object.h"
 #include "engine3d/geometry/plane.h"
+#include "engine3d/geometry/matrix.h"
 
 using namespace base;
 
@@ -19,11 +20,11 @@ class Camera;
 class Projection : public Object {
 
 protected:
-	Projection(double near = 0.5f, double far = 10.0f);
+	Projection(double near, double far);
 	virtual ~Projection();
 
 public:
-	virtual void Init() const;
+	void Project() const;
     /**
      * @return disctance of the near clipping plane measured from eye point
      **/
@@ -55,6 +56,7 @@ protected:
      **/
     double mZFar;
 
+    Matrix mMatrix;
 };
 
 }

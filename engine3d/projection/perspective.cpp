@@ -7,7 +7,6 @@
 
 #include "perspective.h"
 #include "engine3d/scenegraph/camera.h"
-#include <glu.h>
 #include <math.h>
 
 using namespace engine3d;
@@ -16,14 +15,15 @@ Perspective::Perspective(double viewAngle, double aspect, double near, double fa
 		Projection(near, far),
 	    mViewAngle(viewAngle),
 	    mAspect(aspect) {
+	double f = 1 / tan(M_PI * viewAngle / 180 / 2);
+	double md = near - far;
+	mMatrix.Set(0, 0, f / aspect); mMatrix.Set(0, 1, 0); mMatrix.Set(0, 2, 0);                 mMatrix.Set(0, 3, 0);
+	mMatrix.Set(1, 0, 0);          mMatrix.Set(1, 1, f); mMatrix.Set(1, 2, 0);                 mMatrix.Set(1, 3, 0);
+	mMatrix.Set(2, 0, 0);          mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, (far + near) / md); mMatrix.Set(2, 3, 2 * far * near / md);
+	mMatrix.Set(3, 0, 0);          mMatrix.Set(3, 1, 0); mMatrix.Set(3, 2, -1);                mMatrix.Set(3, 3, 0);
 }
 
 Perspective::~Perspective() {
-}
-
-void Perspective::Init() const {
-	Projection::Init();
-	gluPerspective(mViewAngle, mAspect, mZNear, mZFar);
 }
 
 const Plane Perspective::GetTopPlane(const Camera& r_camera) const {

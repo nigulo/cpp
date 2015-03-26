@@ -6,11 +6,11 @@
 	<node>
 		<translation>0.0, 0.0, 2.0</translation>
 
-		<useshape name = "corner">
+		<useshape name = "leftcorner">
 		</useshape>
 
 		<node>	
-			<rotation>0.0, 1.0, 0.0, -90</rotation>
+			<rotation>0.0, 1.0, 0.0, 90</rotation>
 			<node>
 				<translation>0.0, 0.0, 2.0</translation>
 				<useshape name = "tube">

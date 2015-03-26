@@ -15,38 +15,26 @@ namespace engine3d {
 class Matrix : public Object
 {
 	public:
-		// creates a square matrix
 		Matrix(int dim = 3);
-		// creates a matrix with specified number of rows and columns
 		Matrix(int rows, int columns);
-		// copy constructor
 		Matrix(const Matrix& m);
-		// assignment operator
+		virtual ~Matrix();
 		void operator=(const Matrix& m);
-		// sets the row at the specified index.
 		void SetRow(int index, const Vector& row);
-		// sets the column at the specified index.
 		void SetColumn(int index, const Vector& column);
-		// sets the element at the given row and column position
 		void Set(int row, int col, double d);
-		// returns the element at the given row and column position
 		double Get(int row, int col) const;
-		// adds two matrices
 		Matrix operator+(const Matrix& m) const;
-		// subtracts two matrices
 		Matrix operator-(const Matrix& m) const;
-		// multiplies two matrices
 		Matrix operator*(const Matrix& m) const;
-		// multiplies the matrix with the scalar
 		Matrix operator*(double k) const;
-		// multiplies the matrix with the vector
+		/**
+		 * Multiplies the matrix with a column vector
+		 */
 		Vector operator*(const Vector& v) const;
-		// returns the array of elements
+		Matrix Transpose() const;
 		const double* GetElements() const;
-		// Returns the square unit matrix
 		static Matrix GetUnit(int dim = 3);
-		// class destructor
-		~Matrix();
 	protected:
         int numRows;
         int numColumns;

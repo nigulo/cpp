@@ -91,12 +91,12 @@ Matrix Matrix::operator-(const Matrix& m) const {
 }
 
 Matrix Matrix::operator*(const Matrix& m) const {
-    assert(numRows == numColumns && numRows == m.numRows && numColumns == m.numColumns);
-    Matrix m1(numRows, numColumns);
+    assert(numColumns == m.numRows && numRows == m.numRows && numColumns == m.numColumns);
+    Matrix m1(numRows, m.numColumns);
     for (int k = 0; k < numRows; k++) {
-        for (int j = 0; j < numColumns; j++) {
+        for (int j = 0; j < m.numColumns; j++) {
             double d = 0;
-            for (int l = 0; l < numRows; l++) {
+            for (int l = 0; l < numColumns; l++) {
                 d += Get(k, l) * m.Get(l, j);
             }
             m1.Set(k, j, d);
@@ -116,12 +116,12 @@ Matrix Matrix::operator*(double k) const {
 }
 
 Vector Matrix::operator*(const Vector& v) const {
-    assert(numRows == v.GetDim());
-    Vector v1(v.GetDim());
-    for (int k = 0; k < numColumns; k++) {
+    assert(numColumns == v.GetDim());
+    Vector v1(numRows);
+    for (int k = 0; k < numRows; k++) {
         double d = 0;
-        for (int l = 0; l < numRows; l++) {
-            d += v[l] * Get(l, k);
+        for (int l = 0; l < numColumns; l++) {
+            d += Get(k, l) * v[l];
         }
         v1.SetCoord(k, d);
     }
@@ -145,14 +145,24 @@ Matrix Matrix::GetUnit(int dim) {
 
 void Matrix::Set(int row, int col, double d) {
     assert(row < numRows && col < numColumns);
-    elements[row * numColumns + col] = d;
+    elements[col * numRows + row] = d;
 }
 
 double Matrix::Get(int row, int col) const {
     assert(row < numRows && col < numColumns);
-    return elements[row * numColumns + col];
+    return elements[col * numRows + row];
 }
 
 const double* Matrix::GetElements() const {
     return elements;
+}
+
+Matrix Matrix::Transpose() const {
+	Matrix m(numColumns, numRows);
+    for (int i = 0; i < numRows; i++) {
+        for (int j = i + 1; j < numColumns; j++) {
+        	m.Set(j, i, Get(i, j));
+        }
+    }
+    return m;
 }

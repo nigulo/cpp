@@ -6,20 +6,22 @@
  */
 
 #include "projection.h"
-#include <gl.h>
+#include <GL/gl.h>
 
 using namespace engine3d;
 
 Projection::Projection(double near, double far) :
 	mZNear(near),
-	mZFar(far) {
+	mZFar(far),
+	mMatrix(4) {
 
 }
 
 Projection::~Projection() {
 }
 
-void Projection::Init() const {
+void Projection::Project() const {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
+	glMultMatrixd(mMatrix.GetElements());
 }

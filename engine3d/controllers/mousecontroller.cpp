@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-#include <glut.h>
+#include <GL/glut.h>
 #include "mousecontroller.h" // class's header file
 #include "engine3d/scenegraph/viewport.h" // class's header file
 #include "engine3d/scenegraph/scene.h" // class's header file
@@ -38,13 +38,13 @@ void MouseController::OnMove(int xPos, int yPos)
     double dy = ((double) yPos - y) / r_viewport.GetHeight() * 2 * M_PI;
     if (mpButton && *mpButton ==  GLUT_LEFT_BUTTON) {
     	if (mpModifier && *mpModifier == GLUT_ACTIVE_SHIFT) {
-    		Vector trVector(dx, dy, 0);
+    		Vector trVector(dx, -dy, 0);
     		Translate(trVector);
 
     	} else {
             double rotAngle = sqrt(dx * dx + dy * dy);
             if (rotAngle > 0) {
-    			Vector rotVector(-dy, dx, 0);
+    			Vector rotVector(-dy, -dx, 0);
     			Rotate(rotVector, rotAngle);
             }
     	}
@@ -52,7 +52,7 @@ void MouseController::OnMove(int xPos, int yPos)
     else if (mpButton && *mpButton == GLUT_RIGHT_BUTTON) {
         double rotAngle = fabs(dx);
         if (rotAngle > 0) {
-            Vector rotVector(0, 0, dx);
+            Vector rotVector(0, 0, -dx);
             Rotate(rotVector, rotAngle);
         }
         if (dy != 0) {

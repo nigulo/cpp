@@ -95,7 +95,7 @@
 
 <shape name = "tube">
 	<node name = "ceiling">
-		<rotation>1.0, 0.0, 0.0, 90</rotation>
+		<rotation>1.0, 0.0, 0.0, -90</rotation>
 		<translation>0.0, 1.0, 0.0</translation>
 		
 		<useshape name = "wall">
@@ -106,7 +106,7 @@
 
 	<node name = "leftwall">
 		<rotation>0.0, 1.0, 0.0, 90</rotation>
-		<translation>-1.0, 0.0, 0.0</translation>
+		<translation>1.0, 0.0, 0.0</translation>
 		
 		<useshape name = "wall">
 			<usetexture name = "paintwall"/>
@@ -116,7 +116,7 @@
 
 	<node name = "rightwall">
 		<rotation>0.0, 1.0, 0.0, -90</rotation>
-		<translation>1.0, 0.0, 0.0</translation>
+		<translation>-1.0, 0.0, 0.0</translation>
 
 		<useshape name = "wall">
 			<usetexture name = "paintwall"/>
@@ -125,7 +125,7 @@
 	</node>
 
 	<node name = "floor">
-		<rotation>1.0, 0.0, 0.0, -90</rotation>
+		<rotation>1.0, 0.0, 0.0, 90</rotation>
 		<translation>0.0, -1.0, 0.0</translation>
 		
 		<useshape name = "wall">
@@ -135,9 +135,9 @@
 	</node>
 </shape>
 
-<shape name = "corner">
+<shape name = "leftcorner">
 	<node name = "ceiling">
-		<rotation>1.0, 0.0, 0.0, 90</rotation>
+		<rotation>1.0, 0.0, 0.0, -90</rotation>
 		<translation>0.0, 1.0, 0.0</translation>
 		
 		<useshape name = "wall">
@@ -146,17 +146,17 @@
 
 	</node>
 
-	<node name = "leftwall">
-		<rotation>0.0, 1.0, 0.0, 90</rotation>
+	<node name = "rightwall">
+		<rotation>0.0, 1.0, 0.0, -90</rotation>
 		<translation>-1.0, 0.0, 0.0</translation>
-		
+
 		<useshape name = "wall">
 			<usetexture name = "paintwall"/>
 		</useshape>
 
 	</node>
 
-	<node name = "rightwall">
+	<node name = "frontwall">
 		<translation>0.0, 0.0, 1.0</translation>
 
 		<useshape name = "wall">
@@ -166,7 +166,7 @@
 	</node>
 
 	<node name = "floor">
-		<rotation>1.0, 0.0, 0.0, -90</rotation>
+		<rotation>1.0, 0.0, 0.0, 90</rotation>
 		<translation>0.0, -1.0, 0.0</translation>
 		
 		<useshape name = "wall">

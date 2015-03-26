@@ -4,9 +4,10 @@
  **************************/
 
 #include <math.h>
-#include <gl.h>
-#include <freeglut.h>
+#include <GL/gl.h>
+#include <GL/freeglut.h>
 #include <fstream>
+//#include <GL/glew.h>
 
 #include "base/string.h"
 #include "engine3d/geometry/vector.h"
@@ -51,7 +52,6 @@ Vertex v2(-0.1, 0.1, 2);
 Vertex v3(0.1, 0.1, 2);
 Vertex v4(0.1, -0.1, 2);
 Triangles tr;
-TriangleStrip trs;
 
 Node n("W");
 ////////////////////////////
@@ -75,6 +75,12 @@ void mouseFunc(int button, int state, int x, int y) {
     Object::Dbg("mouseFunc 2");
 }
 
+void keyboardFunc(unsigned char key, int x, int y) {
+    if (key == 'r' || key == 'R') {
+        // Do stuff
+    }
+}
+
 void renderFunc() {
     Object::Dbg("renderFunc 1");
 	scene->Render();
@@ -91,7 +97,7 @@ void init() {
     BoundingPolygon* p_bp = new BoundingPolygon();
     p_bp->AddVertex(Vector(0, 0, 0.5));
     p_bp->AddVertex(Vector(0, 0, 0));
-    camera.SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
+    //camera.SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
 
     scene = new Scene();
     scene->SetCamera(&camera);
@@ -101,22 +107,18 @@ void init() {
     //Object::Dbg("main -2");
     //Object::Dbg("main -1");
 
-    //String textureFile("ConcreteWall.bmp");
-    //Texture* p_tex = new Texture(textureFile);
+    String textureFile("ConcreteWall.png");
+    Texture* p_tex = new Texture(textureFile);
     //Object::Dbg("main -0.5");
-    //Sphere* p_s = new Sphere(0.5, 10, 10);
-    //p_s->SetTexture(p_tex);
-    //p_s->SetTransformation(Transformation(Vector(0, 0, 5000)));
-    //n.AddChild(p_s);
+    Sphere* p_s = new Sphere(0.5, 10, 10);
+    p_s->SetTexture(p_tex);
+    Transformation t;
+    //t.SetRotation(Vector(1, 1, 0), -M_PI / 4);
+    t.SetTranslation(Vector(2, 2, 2));
+    p_s->SetTransformation(t);
+    n.AddChild(p_s);
     //scene->SetNode(&n);
-    //scene->GetNode()->AddChild(p_s);
 
-    //Sphere s1(0.5, 20, true);
-    //s1.SetTexture(&tex);
-    //s1.SetTransformation(Transformation(Vector(0, 0, 5)));
-    //s1.TEST_WORLD_COORDS = true;
-    //s1.SetDistant();
-    
     Object::Dbg("main 0");
     
 //    Sphere s2(0.5, 20, true);
@@ -143,21 +145,15 @@ void init() {
 
     Object::Dbg("main 1");
     
-    v1.SetColor(Color(1, 0, 0));
-    v2.SetColor(Color(0, 1, 0));
-    v3.SetColor(Color(0, 0, 1));
-    v4.SetColor(Color(0, 1, 1));
-    tr.Add(v1, v2, v3);
-
-    //trs.AddVertex(v1);
-    //trs.AddVertex(v2);
-    //trs.AddVertex(v3);
-    //trs.AddVertex(v4);
-    //trs.AddVertex(v1);
+    //v1.SetColor(Color(1, 0, 0));
+    //v2.SetColor(Color(0, 1, 0));
+    //v3.SetColor(Color(0, 0, 1));
+    //v4.SetColor(Color(0, 1, 1));
+    //tr.Add(v1, v2, v3);
 
     Object::Dbg("main 2");
     
-    n.AddChild(&tr);
+    //n.AddChild(&tr);
     //n.AddChild(p_s);
     //scene->SetNode(&n);
 
@@ -205,18 +201,50 @@ void init() {
     Object::Dbg("main 6");
 }
 
-int main (int argc, char* argv[]) {
+void update() {
+    int milliseconds = glutGet(GLUT_ELAPSED_TIME);
+    GLfloat seconds = (GLfloat)milliseconds * (1.0f/1000.0f);
+    // Do stuff
+    //glutPostRedisplay();
+}
 
+static void reshape(int w, int h) {
+    //g_resources.window_size[0] = w;
+    //g_resources.window_size[1] = h;
+    //update_p_matrix(g_resources.p_matrix, w, h);
+    //projection.Update(w, h);
+    glViewport(0, 0, w, h);
+}
+
+
+int main (int argc, char* argv[]) {
     glutInit(&argc, argv);
     glutInitDisplayMode(doubleBuffer ? GLUT_DOUBLE : GLUT_SINGLE);
-    glutInitWindowSize(500,500);
+    glutInitWindowSize(100, 100);
     glutInitWindowPosition(100,100);
     glutCreateWindow("OpenGL - First window demo");
     init();
     glutDisplayFunc(renderFunc);
+    glutIdleFunc(update);
     glutMouseFunc(mouseFunc);
     glutMotionFunc(motionFunc);
     //glutPassiveMotionFunc(motionFunc);
+    glutKeyboardFunc(keyboardFunc);
+    glutReshapeFunc(reshape);
+
+    /*
+    glewInit();
+    if (!GLEW_VERSION_2_0) {
+        fprintf(stderr, "OpenGL 2.0 not available\n");
+        return 1;
+    }
+
+    init_gl_state();
+    if (!make_resources()) {
+        fprintf(stderr, "Failed to load resources\n");
+        return 1;
+    }
+	*/
     glutMainLoop();
     delete scene;
     return 0;

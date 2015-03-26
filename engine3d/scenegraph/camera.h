@@ -4,7 +4,8 @@
 #define CAMERA_H
 
 #include "node.h"
-#include "engine3d/geometry/vector.h" // inheriting class's header file
+#include "engine3d/geometry/vector.h"
+#include "engine3d/geometry/matrix.h"
 #include "engine3d/geometry/plane.h"
 #include "engine3d/geometry/transformation.h"
 #include "engine3d/containment/boundingvolume.h"
@@ -20,8 +21,6 @@ class Camera : public Node
 {
 	public:
 		Camera(Projection* p_projection);
-		
-		Camera(const Camera& rCam);
 		
 		// class destructor
 		~Camera();
@@ -92,6 +91,7 @@ class Camera : public Node
         bool Cull(const BoundingVolume& rVolume);
         
         void Transform();
+        void Update();
         
         const Projection& GetProjection() const {
         	return * mpProjection;
@@ -119,6 +119,7 @@ class Camera : public Node
          */
         Projection* mpProjection;
         
+        Matrix mMatrix;
         
 };
 }

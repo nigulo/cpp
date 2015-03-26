@@ -15,10 +15,8 @@ namespace engine3d {
 class Camera;
 class Perspective : public Projection {
 public:
-	Perspective(double viewAngle = 90.0f, double aspect = 1.0f, double near = 0.5f, double far = 10.0f);
+	Perspective(double viewAngle = 90.0f, double aspect = 1.0f, double near = 0.1f, double far = 100.0f);
 	virtual ~Perspective();
-
-	virtual void Init() const;
 
 	/**
 	 * @return view angle in y-direction in degrees

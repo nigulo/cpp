@@ -4,7 +4,7 @@
 #include "scene.h"
 #include "camera.h"
 
-#include <gl.h>
+#include <GL/gl.h>
 
 using namespace engine3d;
 // class constructor
