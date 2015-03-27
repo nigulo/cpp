@@ -34,12 +34,12 @@ void Node::Copy(const Node& n)
 
     Spatial::Copy(n);
     
-    for (LinkedList<Node*>::Iterator i = n.mChildren.Begin(); !i.Done(); i++) {
+    for (auto i = n.mChildren.begin(); i != n.mChildren.end(); i++) {
         AddChild((*i)->Clone());
     }
 
-    for (LinkedList<int>::Iterator i = n.mIndices.Begin(); !i.Done(); i++) {
-        mIndices.Add(*i);
+    for (auto i = n.mIndices.begin(); i != n.mIndices.end(); i++) {
+        mIndices.push_back(*i);
     }
     if (n.mpBound) {
         mpBound = n.mpBound->Clone();
@@ -65,11 +65,11 @@ Node::~Node()
     if (mListCode >= 0) {
         glDeleteLists(mListCode, 1);
     }
-	for (int i = 0; i < mChildren.Size(); i++) {
+	for (int i = 0; i < mChildren.size(); i++) {
         delete mChildren[i];
     }
-    mChildren.Clear();
-    mIndices.Clear();
+    mChildren.clear();
+    mIndices.clear();
 }
 
 bool Node::CheckCollisions(Node& rNode1, Node& rNode2) {
@@ -79,7 +79,7 @@ bool Node::CheckCollisions(Node& rNode1, Node& rNode2) {
     if (rNode2.mpCollisionBound && rNode1.mpCollisionBound->Collides(*(rNode2.mpCollisionBound))) {
         return true;
     }
-    for (LinkedList<Node*>::Iterator j = rNode2.mChildren.Begin(); !j.Done(); j++) {
+    for (auto j = rNode2.mChildren.begin(); j != rNode2.mChildren.end(); j++) {
         if ((*j) == &rNode1) {
             continue;
         }
@@ -102,17 +102,17 @@ void Node::CheckCollisions()
         mpCollisionBound->SetTransformation(GetNewWorldTransformation());
     }
     //Debug("Node::Debug 5");
-    for (LinkedList<Node*>::Iterator i = mChildren.Begin(); !i.Done(); i++) {
+    for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
         //Debug("Node::Debug 6");
         (*i)->CheckCollisions();
         //Debug("Node::Debug 7");
     }
-    for (LinkedList<Node*>::Iterator i = mChildren.Begin(); !i.Done(); i++) {
+    for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
         //Debug("Node::Debug 8");
         bool collides = false;
         Node* p_child = *i;
         //Debug("Node::Debug 9");
-        for (LinkedList<Node*>::Iterator j = mChildren.Begin(); !j.Done(); j++) {
+        for (auto j = mChildren.begin(); j != mChildren.end(); j++) {
             //Debug("Node::Debug 10");
             if ((*j) == p_child) {
                 //Debug("Node::Debug 11");
@@ -157,7 +157,7 @@ void Node::Init()
         mpBound->Transform();
     }
     //Debug("Node::Init 5");
-    for (LinkedList<Node*>::Iterator i = mChildren.Begin(); !i.Done(); i++) {
+    for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
         //Debug("Node::Init 6");
         (*i)->Init();
         //Debug("Node::Init 7");
@@ -190,22 +190,20 @@ void Node::Render()
     else {
 		//Debug("transforming");
 		mTransformation.Transform();
-        int num_indices = mIndices.Size();
+        int num_indices = mIndices.size();
         if (num_indices <= 0) {
             // There are no indices defined,
             // render children in the regular order 
-            //int num_children = mChildren.Size();
-            //for (int i = 0; i < num_children; i++) {
-            for (LinkedList<Node*>::Iterator i = mChildren.Begin(); !i.Done(); i++) {
+            for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
                 glPushMatrix();
                 (*i)->Render();
                 glPopMatrix();
             }
         }
         else {
-            for (LinkedList<int>::Iterator i = mIndices.Begin(); !i.Done(); i++) {
+            for (auto i = mIndices.begin(); i != mIndices.end(); i++) {
                 //Debug(String("index: ") + (*i) + " Node: " + Name());
-                assert((*i) < mChildren.Size());
+                assert((*i) < mChildren.size());
                 glPushMatrix();
                 //Debug(String("indices[") + i + "]:" + mIndices[i]);
                 mChildren[*i]->Render();
@@ -244,22 +242,6 @@ Scene& Node::GetScene() const
     }
 }
 
-//void Node::SetTransformation(const Transformation& t)
-//{
-//	mTransformation = t;
-//	SetChanged();
-//}
-//
-//const Transformation& Node::GetLocalTransformation() const
-//{
-//    return mTransformation;
-//}
-//
-//const Transformation& Node::GetWorldTransformation() const
-//{
-//    return mWorldTransformation;
-//}
-
 void Node::AddChild(Node* n) 
 {
     assert(n);
@@ -268,13 +250,13 @@ void Node::AddChild(Node* n)
     //itoa(mChildren.Size(), str, 10);
     //n->SetName(n->GetName());// + String(str));
     //---------------------
-    mChildren.Add(n);
+    mChildren.push_back(n);
     n->mpParent = this;
 }
 
 Node& Node::GetChild(int i) const
 {
-    assert(i >= 0 && i < mChildren.Size());
+    assert(i >= 0 && i < mChildren.size());
     return *mChildren[i];
 }
 
@@ -284,7 +266,7 @@ Node& Node::GetChild(int i) const
  **/
 Node* Node::GetChild(const String& name) const
 {
-    for (int i = 0; i < mChildren.Size(); i++) {
+    for (int i = 0; i < mChildren.size(); i++) {
         Debug(String("children[") + i + "] = " + mChildren[i]->Name());
         if (mChildren[i]->Name() == name) {
             return mChildren[i];
@@ -293,45 +275,31 @@ Node* Node::GetChild(const String& name) const
     return NULL;
 }
 
-void Node::RemoveChild(Node* pNode)
-{
-	//int index = 0;
-    //for (LinkedList<Node*>::Iterator i = mChildren.Begin(); !i.Done(); i++) {
-    //    if ((*i) == pNode) {
-    //    	break
-    //    }
-    //    index++;
-    //}
-    //assert(index >= 0 && index < mChildren.Size());
-    mChildren.Remove(pNode);
-    delete pNode;
-}
-
 void Node::RemoveChild(int i)
 {
-    assert(i >= 0 && i < mChildren.Size());
+    assert(i >= 0 && i < mChildren.size());
     assert(mChildren[i]);
     delete mChildren[i];
-    mChildren.RemoveAt(i);
+    mChildren.erase(mChildren.begin() + i);
 }
 
 void Node::AddIndex(int index)
 {
     assert(index >= 0);
-	mIndices.Add(index);
+	mIndices.push_back(index);
 }
 
 void Node::AddIndices(const int* indices, int count)
 {
     for (int i = 0; i < count; i++) {
         assert(indices[i] >= 0);
-    	this->mIndices.Add(indices[i]);
+    	this->mIndices.push_back(indices[i]);
     }
 }
 
 bool Node::IsChanged()
 {
-    for (LinkedList<Node*>::Iterator i = mChildren.Begin(); !i.Done(); i++) {
+    for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
         if ((*i)->IsChanged()) {
             return true;
         }
@@ -342,7 +310,7 @@ bool Node::IsChanged()
 
 bool Node::IsLeaf() const
 {
-    return mChildren.Size() == 0;
+    return mChildren.size() == 0;
 }
 
 Transformation Node::GetWorldTransformation() const {

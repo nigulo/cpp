@@ -9,7 +9,10 @@
 #include "engine3d/geometry/vector.h"
 #include "engine3d/containment/boundingvolume.h"
 
+#include <vector>
+
 using namespace base;
+using namespace std;
 
 namespace engine3d {
 
@@ -57,11 +60,10 @@ class Node : public Spatial
 		Scene& GetScene() const;
 		Node* GetParent() const;
 		void AddChild(Node* n);
-		void RemoveChild(Node* pNode);
 		void RemoveChild(int i);
 		Node& GetChild(int i) const;
 		Node* GetChild(const String& name) const;
-		LinkedList<Node*>& GetChildren() {
+		vector<Node*>& GetChildren() {
 			return mChildren;
 		}
 		// Adds a new child index
@@ -105,11 +107,11 @@ class Node : public Spatial
         /**
          * Child nodes of this node
          **/
-        LinkedList<Node*> mChildren;
+        vector<Node*> mChildren;
         /**
          * Child indices that edetermine the rendering sequence
          **/
-        LinkedList<int> mIndices;
+        vector<int> mIndices;
 
         /**
          * Bounding volume of this node. Bounding volume is
