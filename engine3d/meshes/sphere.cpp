@@ -213,27 +213,7 @@ void Sphere::Render()
     }
 }
 
-//void Sphere::SetDistant()
-//{
-//	Node::SetDistant(true);
-//	top.SetDistant(true);
-//    for (int i = 0; i < rings.size(); i++) {
-//        rings[i]->SetDistant(true);
-//    }
-//	bottom.SetDistant(true);
-//}
-
 void Sphere::Init() 
 {
 	Shape::Init();
-	Camera& r_cam = GetScene().GetCamera();
-	Vector o = mWorldTransformation.Transform(Vector(0, 0, 0));
-	if ((o - r_cam.GetEye()).DotProduct((r_cam.GetCenter() - r_cam.GetEye()).Normalize()) > r_cam.GetProjection().GetZFar()) {
-		Debug("distant");
-		//SetDistant(true);
-	}
-	else {
-		Debug("not distant");
-		//SetDistant(false);
-	}
 }

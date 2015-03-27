@@ -109,6 +109,12 @@ class Node : public Spatial
 	protected:
         void Copy(const Node& node);
         static bool CheckCollisions(Node& rNode1, Node& rNode2);
+
+        // gets current world transformation for given node
+        Transformation GetWorldTransformation() const;
+        // gets new world transformation for given node
+        Transformation GetNewWorldTransformation() const;
+
 	protected:
         /**
          * Determines if the node has changed since the last

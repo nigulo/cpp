@@ -98,17 +98,8 @@ void Node::CheckCollisions()
 {
     long millis = GetMillis();
     //Debug("Node::Debug 1");
-	if (mpParent) {
-        //Debug("Node::Debug 2");
-    	const Transformation parentWT = mpParent->mNewWorldTransformation;
-       	mNewWorldTransformation = mNewTransformation * parentWT;
-    }
-    else {
-        mNewWorldTransformation = mNewTransformation;
-        //Debug("Node::Debug 4");
-    }
     if (mpCollisionBound) {
-        mpCollisionBound->SetTransformation(mNewWorldTransformation);
+        mpCollisionBound->SetTransformation(GetNewWorldTransformation());
     }
     //Debug("Node::Debug 5");
     for (LinkedList<Node*>::Iterator i = mChildren.Begin(); !i.Done(); i++) {
@@ -162,7 +153,7 @@ void Node::Init()
 //        //Debug("Node::Init 4");
 //    }
     if (mpBound) {
-        mpBound->SetTransformation(mWorldTransformation);
+        mpBound->SetTransformation(GetWorldTransformation());
         mpBound->Transform();
     }
     //Debug("Node::Init 5");
@@ -369,14 +360,6 @@ void Node::AddIndices(const int* indices, int count)
     }
 }
 
-//void Node::SetChanged(bool changed)
-//{
-//    Spatial::SetChanged(changed);
-//	if (mpParent) {
-//        mpParent->SetChanged();
-//    }
-//}
-
 bool Node::IsChanged()
 {
     for (LinkedList<Node*>::Iterator i = mChildren.Begin(); !i.Done(); i++) {
@@ -393,22 +376,12 @@ bool Node::IsLeaf() const
     return mChildren.Size() == 0;
 }
 
-/**
- * @return geometrical center point of this shape
- **/
-//Vector Node::GetCenter() const
-//{
-//    Vector center(0, 0, 0);
-//    for (int i = 0; i < mChildren.Size(); i++) {
-//        center = center + mChildren[i]->GetCenter();
-//        //Debug(String("childCenter ") + i + ": " + mChildren[i]->GetCenter()[0] + ", " + mChildren[i]->GetCenter()[1] + ", " + mChildren[i]->GetCenter()[2]);
-//        Debug(String("realCenter: ") + center[0] + ", " + center[1] + ", " + center[2]);
-//    }
-//    Debug(String("realCenter2: ") + center[0] + ", " + center[1] + ", " + center[2]);
-//    return center / ((double) mChildren.Size());
-//}
+Transformation Node::GetWorldTransformation() const {
+	// TODO:
+	return Transformation();
+}
 
-//void Spatial::SetTransformation(const Transformation& rT)
-//{
-//	mNewTransformation = rT;
-//}
+Transformation Node::GetNewWorldTransformation() const {
+	// TODO:
+	return Transformation();
+}

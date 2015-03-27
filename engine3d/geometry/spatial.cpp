@@ -25,9 +25,7 @@ void Spatial::Copy(const Spatial& rSpatial)
 {
     mChanged = true;
     mTransformation = rSpatial.mTransformation;
-    mWorldTransformation = rSpatial.mWorldTransformation;
     mNewTransformation = rSpatial.mNewTransformation;
-    mNewWorldTransformation = rSpatial.mNewWorldTransformation;
 }
 
 // class destructor
@@ -38,7 +36,6 @@ Spatial::~Spatial()
 void Spatial::SetTransformation(const Transformation& rT)
 {
 	mNewTransformation = rT;
-	//mTransformation = rT;
 	mChanged = true;
 }
 
@@ -47,28 +44,7 @@ const Transformation& Spatial::GetTransformation() const
     return mNewTransformation;
 }
 
-const Transformation& Spatial::GetWorldTransformation() const
-{
-    return mWorldTransformation;
-}
-
-//void Spatial::SetNewTransformation(const Transformation& rT)
-//{
-//	mNewTransformation = rT;
-//}
-//
-//const Transformation& Spatial::GetNewTransformation() const
-//{
-//    return mNewTransformation;
-//}
-//
-//const Transformation& Spatial::GetNewWorldTransformation() const
-//{
-//    return mNewWorldTransformation;
-//}
-
 void Spatial::Transform()
 {
     mTransformation = mNewTransformation;
-    mWorldTransformation = mNewWorldTransformation;
 }
