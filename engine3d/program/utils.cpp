@@ -1,13 +1,9 @@
-#include "glutils.h"
-
-#include <GL/glut.h>
 #include <stdio.h>
-#include "utils/utils.h"
+#include "utils.h"
 
 using namespace engine3d;
-using namespace utils;
 
-const std::string GLUtils::InfoLog(GLuint object,
+const std::string Utils::InfoLog(GLuint object,
 		PFNGLGETSHADERIVPROC glGet__iv,
 		PFNGLGETSHADERINFOLOGPROC glGet__InfoLog) {
     GLint log_length;

@@ -23,6 +23,7 @@ public:
 	GLuint GetId() const {
 		return mId;
 	}
+
 private:
 	VertexShader mVertexShader;
 	FragmentShader mFragmentShader;

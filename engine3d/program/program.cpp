@@ -8,7 +8,8 @@
 #include "program.h"
 #include <GL/glew.h>
 #include <GL/gl.h>
-#include "glutils.h"
+
+#include "utils.h"
 
 using namespace engine3d;
 using namespace std;
@@ -27,7 +28,7 @@ Program::Program(const std::string& rVertexShaderScript,
     GLint program_ok;
     glGetProgramiv(mId, GL_LINK_STATUS, &program_ok);
     if (!program_ok) {
-        const string info_log = GLUtils::InfoLog(mId, glGetProgramiv, glGetProgramInfoLog);
+        const string info_log = Utils::InfoLog(mId, glGetProgramiv, glGetProgramInfoLog);
         glDeleteProgram(mId);
         throw (info_log);
     }
@@ -35,4 +36,10 @@ Program::Program(const std::string& rVertexShaderScript,
 }
 
 Program::~Program() {
+    glDetachShader(mId, mVertexShader.GetId());
+    glDetachShader(mId, mFragmentShader.GetId());
+    glDeleteProgram(mId);
+    glDeleteShader(mVertexShader.GetId());
+    glDeleteShader(mFragmentShader.GetId());
+
 }

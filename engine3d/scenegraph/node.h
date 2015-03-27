@@ -24,7 +24,6 @@ class Node : public Spatial
 		// class constructor
 		Node();
 		Node(const String& name);
-		//Node(const Node& n);
 		virtual Node* Clone() const;
 		// class destructor
 		virtual ~Node();
@@ -55,11 +54,6 @@ class Node : public Spatial
          * if it's not already done. listCode parameter is defined there.
 		 **/
 		void Compile();
-		// Sets the local transformation for the node
-		//virtual void SetTransformation(const Transformation& t);
-		// Gets the local transformation for the node
-		//const Transformation& GetLocalTransformation() const;
-		//const Transformation& GetWorldTransformation() const;
 		Scene& GetScene() const;
 		Node* GetParent() const;
 		void AddChild(Node* n);
@@ -74,21 +68,9 @@ class Node : public Spatial
 		void AddIndex(int index);
 		// Adds a set of child indices
 		void AddIndices(const int* indices, int count);
-		//bool IsChanged() {return mChanged;}
-		//void SetChanged(bool changed = true);
 		
-		//@Override Spatial::IsChanged
 		bool IsChanged();
-		//virtual String GetName() const;
 		bool IsLeaf() const;
-        /**
-         * @return geometrical center point of this node
-         **/
-		//virtual Vector GetCenter() const;
-        /**
-         * Sorts the node tree by distance to the camera
-         **/
-        virtual void Sort();
         
         void CheckCollisions();
         
@@ -100,12 +82,6 @@ class Node : public Spatial
             mpCollisionBound = pCollisionBound;
         }
         
-        // @Override Spatial::SetTransformation
-        //void SetTransformation(const Transformation& rT);
-        
-        //Transformation& GetNewWorldTransformation() {
-        //    return mNewWorldTransformation;
-        //}
 	protected:
         void Copy(const Node& node);
         static bool CheckCollisions(Node& rNode1, Node& rNode2);
@@ -116,11 +92,6 @@ class Node : public Spatial
         Transformation GetNewWorldTransformation() const;
 
 	protected:
-        /**
-         * Determines if the node has changed since the last
-         * render
-         **/
-        //bool mChanged;
         /**
          * Pointer to the parent node. Must be NULL, if
          * mpScene is not NULL and vice versa.

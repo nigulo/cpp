@@ -1,23 +1,24 @@
 /*
- * shader.h
+ * globject.h
  *
  *  Created on: Mar 27, 2015
  *      Author: nigul
  */
 
-#ifndef SHADER_H_
-#define SHADER_H_
+#ifndef OBJECT_H_
+#define OBJECT_H_
 
+#include "program.h"
 #include <GL/glew.h>
 #include <string>
 
 namespace engine3d {
 
-class Shader {
-protected:
-	Shader(GLenum type, const std::string& rShaderScript);
-	virtual ~Shader();
+class Object {
 public:
+	Object(const Program& rProgram, const std::string& rName);
+	virtual ~Object();
+
 	GLuint GetId() const {
 		return mId;
 	}
@@ -27,4 +28,4 @@ private:
 
 } /* namespace engine3d */
 
-#endif /* SHADER_H_ */
+#endif /* OBJECT_H_ */

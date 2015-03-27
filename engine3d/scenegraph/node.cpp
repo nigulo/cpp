@@ -222,37 +222,6 @@ void Node::Compile()
     mCompile = true;
 }
 
-void Node::Sort()
-{
-//    int num_children = mChildren.Size();
-//    if (num_children > 1) {
-//        Camera& r_camera = GetScene().GetCamera();
-//        const Vector eye = r_camera.GetEye();
-//        const Vector center = r_camera.GetEye();
-//        Vector direction = (center - eye).Normalize();
-//        double distances[num_children];
-//        for (int i = 0; i < num_children; i++) {
-//            distances[i] = (mChildren[i]->GetCenter() - eye).ScalarProduct(direction);
-//            Debug(String("Center ") + i + ": " + mChildren[i]->GetCenter()[0] + ", " + mChildren[i]->GetCenter()[1] + ", " + mChildren[i]->GetCenter()[2]);
-//            Debug(String("Distances ") + i + ": " + distances[i]);
-//        }
-//        for (int j = 0; j <  num_children - 1; j++) {
-//            for (int i = 0; i < num_children - 1; i++) {
-//                if (distances[i + 1] > distances[i]) {
-//                    double distance = distances[i];
-//                    distances[i] = distances[i + 1];
-//                    distances[i + 1] = distance;
-//                    Debug(String("Swapping children ") + i + " and " + (i + 1));
-//                    mChildren.Swap(i, i + 1);
-//                }
-//            }
-//        }
-//    }
-//    for (int i = 0; i < num_children; i++) {
-//        mChildren[i]->Sort();
-//    }
-}
-
 void Node::SetScene(Scene* pScene)
 {
     assert(!mpParent);

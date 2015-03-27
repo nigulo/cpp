@@ -6,9 +6,9 @@
  */
 
 #include "shader.h"
-#include "glutils.h"
 #include <GL/glew.h>
 #include <GL/gl.h>
+#include "utils.h"
 
 using namespace engine3d;
 using namespace std;
@@ -28,7 +28,7 @@ Shader::Shader(GLenum type, const string& rShaderScript) {
     GLint shader_ok;
     glGetShaderiv(mId, GL_COMPILE_STATUS, &shader_ok);
     if (!shader_ok) {
-        string info_log = GLUtils::InfoLog(mId, glGetShaderiv, glGetShaderInfoLog);
+        string info_log = Utils::InfoLog(mId, glGetShaderiv, glGetShaderInfoLog);
         glDeleteShader(mId);
 		throw (info_log);
     }
