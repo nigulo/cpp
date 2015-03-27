@@ -5,21 +5,18 @@
 using namespace engine3d;
 
 // class constructor
-Mesh::Mesh(int type)
-{
-	this->type = type;
+Mesh::Mesh(int mode) : mElementBuffer(mode) {
 }
 
 void Mesh::Copy(const Mesh& rMesh)
 {
     Shape::Copy(rMesh);
-	type = rMesh.type;
 }
 
 Mesh* Mesh::Clone()
 {
     Debug("Mesh.Clone");
-    Mesh* p_m = new Mesh(type);
+    Mesh* p_m = new Mesh(mElementBuffer.GetMode());
     p_m->Copy(*this);
     return p_m;
 }
@@ -66,17 +63,21 @@ void Mesh::AddVertex(const Vector& v, const Vector& texCoords)
 	AddChild(vertex);
 }
 
+
+void Mesh::UpdateBuffers() {
+
+}
+
 void Mesh::Render() {
-	glBegin(type);
-	Shape::Render();
-	glEnd();
+	mVertexBuffer.Render();
+	mElementBuffer.Render();
 }
 
 // Sets texture coordinates for all vertices
 void Mesh::SetTexCoords(vector<Vector*>& texCoords)
 {
 	assert(texCoords.size() == mChildren.size());
-	for (int i = 0; i < mChildren.size(); i++) {
+	for (unsigned i = 0; i < mChildren.size(); i++) {
         Vertex* p_child = dynamic_cast<Vertex*>(&GetChild(i));
         assert(p_child);
         p_child->SetTexCoords(*texCoords[i]);

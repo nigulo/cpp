@@ -2,8 +2,11 @@
 #define MESH_H
 
 #include "shape.h"
-#include "engine3d/geometry/vector.h"
 #include "vertex.h"
+#include "engine3d/geometry/vector.h"
+#include "engine3d/program/vertexbuffer.h"
+#include "engine3d/program/elementbuffer.h"
+
 #include <vector>
 
 using namespace base;
@@ -36,9 +39,11 @@ class Mesh : public Shape
 		// Generates texture coordinates for the vertices
 		virtual void GenTexCoords();
 		void SetTexCoords(vector<Vector*>& texCoords);
+		void UpdateBuffers();
 	protected:
 	protected:
-        int type;
+		VertexBuffer mVertexBuffer;
+		ElementBuffer mElementBuffer;
 };
 }
 #endif // MESH_H
