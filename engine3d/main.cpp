@@ -4,10 +4,9 @@
  **************************/
 
 #include <math.h>
-#include <GL/gl.h>
-#include <GL/freeglut.h>
-#include <fstream>
 //#include <GL/glew.h>
+#include <GL/glut.h>
+#include <fstream>
 
 #include "base/string.h"
 #include "engine3d/geometry/vector.h"

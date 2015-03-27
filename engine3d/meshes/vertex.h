@@ -43,7 +43,6 @@ class Vertex : public Node
 		double GetCoord(int index) const {return (coords)[index];}
 		const Vector& GetCoords() const {return coords;}
 		const Vector* GetTexCoords() const {return texCoords;}
-		const Vector& GetWorldCoords() const {return worldCoords;}
 		/**
 		 * Overrides Node::GetCenter
 		 * @returns the world coordinates of this vertex
@@ -53,7 +52,6 @@ class Vertex : public Node
         Color* color;
         Vector coords;
         Vector* texCoords;
-        Vector worldCoords;
 };
 }
 #endif // VERTEX_H

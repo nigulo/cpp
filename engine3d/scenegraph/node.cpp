@@ -14,8 +14,7 @@ Node::Node() :
     mpParent(0),
     mpScene(0),
     mpBound(0), // no bounding volume by default
-    mpCollisionBound(0), // no collision bound by default
-    TEST_WORLD_COORDS(false)
+    mpCollisionBound(0) // no collision bound by default
 {
 }
 
@@ -26,8 +25,7 @@ Node::Node(const String& name) :
     mpParent(0),
     mpScene(0),
     mpBound(0), // no bounding volume by default
-    mpCollisionBound(0), // no bounding volume by default
-    TEST_WORLD_COORDS(false)
+    mpCollisionBound(0) // no bounding volume by default
 {
 }
 
@@ -50,7 +48,6 @@ void Node::Copy(const Node& n)
         mpCollisionBound = n.mpCollisionBound->Clone();
     }
 
-    TEST_WORLD_COORDS = false;
 }
 
 Node* Node::Clone() const
@@ -171,9 +168,6 @@ void Node::Init()
     //Debug("Node::Init 5");
     for (LinkedList<Node*>::Iterator i = mChildren.Begin(); !i.Done(); i++) {
         //Debug("Node::Init 6");
-        if (mpParent) {
-            (*i)->TEST_WORLD_COORDS = TEST_WORLD_COORDS;
-        }
         (*i)->Init();
         //Debug("Node::Init 7");
     }
@@ -203,10 +197,8 @@ void Node::Render()
         Debug("Object culled");
     }
     else {
-        if (!TEST_WORLD_COORDS) {
-        	//Debug("transforming");
-            mTransformation.Transform();
-        }
+		//Debug("transforming");
+		mTransformation.Transform();
         int num_indices = mIndices.Size();
         if (num_indices <= 0) {
             // There are no indices defined,

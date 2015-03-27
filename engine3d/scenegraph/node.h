@@ -21,7 +21,6 @@ class Scene;
 class Node : public Spatial
 {
 	public:
-        int TEST_WORLD_COORDS;
 		// class constructor
 		Node();
 		Node(const String& name);
