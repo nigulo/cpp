@@ -11,7 +11,7 @@ namespace engine3d {
     /**
      * No description
      */
-    class ParametricCurve : public Object
+    class ParametricCurve
     {
     	public:
     		// class constructor

@@ -65,7 +65,21 @@ void Mesh::AddVertex(const Vector& v, const Vector& texCoords)
 
 
 void Mesh::UpdateBuffers() {
-
+	if (mChildren.empty()) {
+		return;
+	}
+	int dim = (dynamic_cast<Vertex*>(mChildren[0]))->GetCoords().GetDim();
+	double vertex_coords[mChildren.size()][dim];
+	//double vertex_tex_coords[mChildren.size()];
+	int j = 0;
+	int dim;
+	for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
+        Vertex* p_vertex = dynamic_cast<Vertex*>(i);
+        for (int k = 0; k < dim; k++) {
+        	vertex_coords[j][k] = p_vertex->GetCoord(k);
+        }
+	}
+	mVertexBuffer.SetData(mChildren.size() * dim * sizeof(double), &vertex_coords, GL_STATIC_DRAW);
 }
 
 void Mesh::Render() {

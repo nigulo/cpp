@@ -39,19 +39,19 @@ class Vertex : public Node
 		void SetCoords(double x, double y, double z);
 		void SetTexCoords(const Vector& texCoords);
 		void SetTexCoords(double s, double t);
-		const Color* GetColor() const {return color;};
-		double GetCoord(int index) const {return (coords)[index];}
-		const Vector& GetCoords() const {return coords;}
-		const Vector* GetTexCoords() const {return texCoords;}
+		const Color* GetColor() const {return mpColor;};
+		double GetCoord(int index) const {return (mCoords)[index];}
+		const Vector& GetCoords() const {return mCoords;}
+		const Vector* GetTexCoords() const {return mpTexCoords;}
 		/**
 		 * Overrides Node::GetCenter
 		 * @returns the world coordinates of this vertex
 		 **/
 		//Vector GetCenter() const;
 	protected:
-        Color* color;
-        Vector coords;
-        Vector* texCoords;
+        Color* mpColor;
+        Vector mCoords;
+        Vector* mpTexCoords;
 };
 }
 #endif // VERTEX_H

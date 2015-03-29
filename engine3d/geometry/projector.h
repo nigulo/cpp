@@ -13,7 +13,7 @@ namespace engine3d {
 /*
  * Implements the parallel projection of a shape to a given plane
  */
-class Projector : public Object
+class Projector
 {
 	public:
 		// class constructor

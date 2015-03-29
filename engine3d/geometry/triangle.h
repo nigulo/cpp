@@ -12,7 +12,7 @@ namespace engine3d {
 /*
  * No description
  */
-class Triangle : public Object
+class Triangle
 {
 	public:
 		// class constructor

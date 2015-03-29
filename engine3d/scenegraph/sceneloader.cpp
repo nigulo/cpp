@@ -29,15 +29,16 @@ void SceneLoader::Load()
     }
     Debug("Objects loaded.");
     Debug("Loading scene...");
-	Load(*(mSceneParser.Load()->mSubElements[0]), NULL);
+	Load(*(mSceneParser.Load()->mSubElements[0]));
     Debug("Scene loaded.");
     mTextures.Clear();
 }
 
-void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject) 
+void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
 {
     Debug("SceneLoader::Load 0");
-    Object* p_object = 0;
+    Object* p_object = nullptr;
+    void* p_void = nullptr; // all objects that don't derive from base::Object
 
     Debug("SceneLoader::Load 1");
     if (rElement.mType == TRIANGLE) {
@@ -185,7 +186,7 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         }
         if (typeid(*pObject) == typeid(BoundingPolygon)) {
             Debug(String("vertex for boundingpolygon"));
-            p_object = new Vector(x, y, z);
+            p_void = new Vector(x, y, z);
         }
         else {
             Debug(String("vertex for node"));
@@ -271,10 +272,10 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         Debug("SceneLoader::Load 21");
     }
     if (pObject && p_object) {
-        if (typeid(*pObject) == typeid(BoundingPolygon) && typeid(*p_object) == typeid(Vector)) {
+        if (typeid(*pObject) == typeid(BoundingPolygon)) {
             BoundingPolygon* p_bound = dynamic_cast<BoundingPolygon*>(pObject);
             Debug("SceneLoader::Load 22");
-            Vector* p_vector = dynamic_cast<Vector*>(p_object);
+            Vector* p_vector = static_cast<Vector*>(p_void);
             p_bound->AddVertex(*p_vector);
             delete p_vector;
             Debug("SceneLoader::Load 23");

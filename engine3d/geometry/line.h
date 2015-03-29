@@ -16,7 +16,7 @@ namespace engine3d {
     /**
      * No description
      */
-    class Line : public Object
+    class Line
     {
     	public:
     		// class constructor

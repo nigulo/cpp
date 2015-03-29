@@ -12,7 +12,7 @@ namespace engine3d {
 /*
  * Class defining a geometrical plane
  */
-class Plane : public Object
+class Plane
 {
 	public:
         enum {

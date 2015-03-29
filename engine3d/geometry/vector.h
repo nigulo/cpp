@@ -13,7 +13,7 @@ namespace engine3d {
 /**
  * Represents geometrical vector
  **/
-class Vector : public Object
+class Vector
 {
 	public:
 		explicit Vector(int dim = 3, bool zeroCoords = true);
@@ -27,11 +27,11 @@ class Vector : public Object
 		~Vector();
 		
 		friend bool operator==(const Vector& v1, const Vector& v2) {
-            if (v1.dim != v2.dim) {
+            if (v1.mDim != v2.mDim) {
                 return false;
             }
-            for (int i = 0; i < v1.dim; i++) {
-                if (v1.coords[i] != v2.coords[i]) {
+            for (int i = 0; i < v1.mDim; i++) {
+                if (v1.mpCoords[i] != v2.mpCoords[i]) {
                     return false;
                 }
             }
@@ -82,9 +82,12 @@ class Vector : public Object
 		Vector CrossProduct(const Vector& v) const;
 		Vector& Normalize();
 		String ToString() const;
+		double* GetCoords() {
+			return mpCoords;
+		}
 	protected:
-        int dim;
-        double* coords;
+        int mDim;
+        double* mpCoords;
 };
 }
 #endif // VECTOR_H

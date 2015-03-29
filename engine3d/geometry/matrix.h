@@ -12,7 +12,7 @@ namespace engine3d {
 /*
  * Implements matrix algebra
  */
-class Matrix : public Object
+class Matrix
 {
 	public:
 		Matrix(int dim = 3);

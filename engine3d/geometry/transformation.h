@@ -13,7 +13,7 @@ namespace engine3d {
 /*
  * Implements spatial transformations
  */
-class Transformation : public Object
+class Transformation
 {
 	public:
         /**

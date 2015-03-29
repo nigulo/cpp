@@ -41,7 +41,7 @@ namespace engine3d {
             SceneLoader(Scene& rScene, const String& rSceneFileName = "scene.xml", const String& rObjFileName = "objects.xml");
             void Load();
     	private:
-            void Load(XmlParser::XmlElement& rElement, Object* pObject);
+            void Load(XmlParser::XmlElement& rElement, Object* pObject = nullptr);
             Texture* GetTexture(const String& name);
     	private:
             XmlParser mSceneParser;

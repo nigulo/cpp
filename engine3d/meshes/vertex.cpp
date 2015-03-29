@@ -6,42 +6,42 @@
 
 using namespace engine3d;
 
-Vertex::Vertex() : coords(0, 0, 0)
+Vertex::Vertex() : mCoords(0, 0, 0)
 {
-    color = nullptr;
-    texCoords = nullptr;
+    mpColor = nullptr;
+    mpTexCoords = nullptr;
 }
 
-Vertex::Vertex(double x, double y, double z) : coords(x, y, z)
+Vertex::Vertex(double x, double y, double z) : mCoords(x, y, z)
 {
-    color = nullptr;
-    texCoords = nullptr;
+    mpColor = nullptr;
+    mpTexCoords = nullptr;
 }
 
-Vertex::Vertex(const Vector& v) : coords(v) {
-    color = nullptr;
-    texCoords = nullptr;
+Vertex::Vertex(const Vector& v) : mCoords(v) {
+    mpColor = nullptr;
+    mpTexCoords = nullptr;
 }
 
-Vertex::Vertex(const Vertex& v) : coords(v.coords) {
-    color = nullptr;
-    texCoords = nullptr;
-    if (v.texCoords) {
-        texCoords = new Vector(*v.texCoords);
+Vertex::Vertex(const Vertex& v) : mCoords(v.mCoords) {
+    mpColor = nullptr;
+    mpTexCoords = nullptr;
+    if (v.mpTexCoords) {
+        mpTexCoords = new Vector(*v.mpTexCoords);
     }
-    if (v.color) {
-        color = new Color(v.color->red, v.color->green, v.color->blue, v.color->alpha);
+    if (v.mpColor) {
+        mpColor = new Color(v.mpColor->red, v.mpColor->green, v.mpColor->blue, v.mpColor->alpha);
     }
 }
 
-Vertex::Vertex(const Vertex& vertex, const Vector& vect) : coords(vect) {
-    color = nullptr;
-    texCoords = nullptr;
-    if (vertex.texCoords) {
-        texCoords = new Vector(*vertex.texCoords);
+Vertex::Vertex(const Vertex& vertex, const Vector& vect) : mCoords(vect) {
+    mpColor = nullptr;
+    mpTexCoords = nullptr;
+    if (vertex.mpTexCoords) {
+        mpTexCoords = new Vector(*vertex.mpTexCoords);
     }
-    if (vertex.color) {
-        color = new Color(vertex.color->red, vertex.color->green, vertex.color->blue, vertex.color->alpha);
+    if (vertex.mpColor) {
+        mpColor = new Color(vertex.mpColor->red, vertex.mpColor->green, vertex.mpColor->blue, vertex.mpColor->alpha);
     }
 }
 
@@ -54,31 +54,31 @@ Vertex* Vertex::Clone() const
 // class destructor
 Vertex::~Vertex()
 {
-    if (texCoords) {
-        delete texCoords;
+    if (mpTexCoords) {
+        delete mpTexCoords;
     }
-    if (color) {
-        delete color;
+    if (mpColor) {
+        delete mpColor;
     }
 }
 
 void Vertex::SetColor(const Color& c)
 {
-    if (color) {
-        delete color;
+    if (mpColor) {
+        delete mpColor;
     }
-    color = new Color(c.red, c.green, c.blue, c.alpha);
+    mpColor = new Color(c.red, c.green, c.blue, c.alpha);
 }
 
 void Vertex::SetCoords(const Vector& coords)
 {
     assert(coords.GetDim() == 3);
-    this->coords = coords;
+    this->mCoords = coords;
 }
 
 void Vertex::SetCoords(double x, double y, double z)
 {
-    this->coords = Vector(x, y, z);
+    this->mCoords = Vector(x, y, z);
 }
 
 void Vertex::SetTexCoords(const Vector& texCoords)
@@ -90,9 +90,9 @@ void Vertex::SetTexCoords(const Vector& texCoords)
 void Vertex::SetTexCoords(double s, double t)
 {
     //Debug("set tex coords");
-    if (texCoords) {
+    if (mpTexCoords) {
         //Debug("set tex coords0");
-        delete texCoords;
+        delete mpTexCoords;
     }
     //Debug("set tex coords1");
     if (s < 0.0f) {
@@ -108,7 +108,7 @@ void Vertex::SetTexCoords(double s, double t)
         t = 1.0f;
     }
     //Debug("set tex coords2");
-    this->texCoords = new Vector(s, t);
+    this->mpTexCoords = new Vector(s, t);
     //Debug("set tex coords3");
 }
 
@@ -123,16 +123,16 @@ void Vertex::Render()
 {
     //long millis = GetMillis();
     Node::Render();
-    if (color) {
-        glColor4d(color->red, color->green, color->blue, color->alpha);
+    if (mpColor) {
+        glColor4d(mpColor->red, mpColor->green, mpColor->blue, mpColor->alpha);
     }
-    if (texCoords) {
+    if (mpTexCoords) {
         //Debug(String("V::R tc ") + (*texCoords)[0] + ", " + (*texCoords)[1]);
-        glTexCoord2d((*texCoords)[0], (*texCoords)[1]);
+        glTexCoord2d((*mpTexCoords)[0], (*mpTexCoords)[1]);
     }
 	////Debug(String("WC V::R ") + (worldCoords)[0] + ", " + (worldCoords)[1] + ", " + (worldCoords)[2]);
 	//Debug((String) "V::R " + (coords)[0] + ", " + (coords)[1] + ", " + (coords)[2]);
-	glVertex3d((coords)[0], (coords)[1], (coords)[2]);
+	glVertex3d((mCoords)[0], (mCoords)[1], (mCoords)[2]);
     //Debug(String("Vertex::Render took ") + (GetMillis() - millis));
 }
 

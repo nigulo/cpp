@@ -14,11 +14,11 @@ using namespace engine3d;
 // class constructor
 Vector::Vector(int dim, bool zeroCoords)
 {
-    this->dim = dim;
-    this->coords = new double[dim];
+    this->mDim = dim;
+    this->mpCoords = new double[dim];
     if (zeroCoords) {
         for (int i = 0; i < dim; i++) {
-            coords[i] = 0;
+            mpCoords[i] = 0;
         }
     }
 }
@@ -26,144 +26,144 @@ Vector::Vector(int dim, bool zeroCoords)
 // class constructor
 Vector::Vector(int dim, double coords[])
 {
-    this->dim = dim;
-    this->coords = new double[dim];
+    this->mDim = dim;
+    this->mpCoords = new double[dim];
     for (int i = 0; i < dim; i++) {
-    	this->coords[i] = coords[i];
+    	this->mpCoords[i] = coords[i];
     }
 }
 
 Vector::Vector(double x, double y, double z, double w)
 {
-    dim = 4;
-    coords = new double[dim];
-    coords[0] = x;
-    coords[1] = y;
-    coords[2] = z;
-    coords[3] = w;
+    mDim = 4;
+    mpCoords = new double[mDim];
+    mpCoords[0] = x;
+    mpCoords[1] = y;
+    mpCoords[2] = z;
+    mpCoords[3] = w;
 }
 
 Vector::Vector(double x, double y, double z)
 {
-    dim = 3;
-    coords = new double[dim];
-    coords[0] = x;
-    coords[1] = y;
-    coords[2] = z;
+    mDim = 3;
+    mpCoords = new double[mDim];
+    mpCoords[0] = x;
+    mpCoords[1] = y;
+    mpCoords[2] = z;
 }
 
 Vector::Vector(double x, double y)
 {
-    dim = 2;
-    coords = new double[dim];
-    coords[0] = x;
-    coords[1] = y;
+    mDim = 2;
+    mpCoords = new double[mDim];
+    mpCoords[0] = x;
+    mpCoords[1] = y;
 }
 
 Vector::Vector(double x)
 {
-    dim = 1;
-    coords = new double[dim];
-    coords[0] = x;
+    mDim = 1;
+    mpCoords = new double[mDim];
+    mpCoords[0] = x;
 }
 
 Vector::Vector(const Vector& v)
 {
-    dim = v.dim;
-    coords = new double[dim];
-    for (int i = 0; i < dim; i++) {
-    	coords[i] = v.coords[i];
+    mDim = v.mDim;
+    mpCoords = new double[mDim];
+    for (int i = 0; i < mDim; i++) {
+    	mpCoords[i] = v.mpCoords[i];
     }
 }
 
 Vector& Vector::operator=(const Vector& v) {
     if (this != &v) {
-        if (coords) {
-            delete coords;
+        if (mpCoords) {
+            delete mpCoords;
         }
-        dim = v.dim;
-        coords = new double[dim];
-        for (int i = 0; i < dim; i++) {
-            coords[i] = v.coords[i];
+        mDim = v.mDim;
+        mpCoords = new double[mDim];
+        for (int i = 0; i < mDim; i++) {
+            mpCoords[i] = v.mpCoords[i];
         }
     }
     return *this;
 }
 
 Vector Vector::operator-() const {
-    Vector v(dim, false);//(*this);
-    for (int i = 0; i < dim; i++) {
-        v.coords[i] = -coords[i];
+    Vector v(mDim, false);//(*this);
+    for (int i = 0; i < mDim; i++) {
+        v.mpCoords[i] = -mpCoords[i];
     }
     return v;
 }
 
 
 double Vector::operator[](int i) const {
-    assert(i >= 0 && i < dim);
-    return coords[i];
+    assert(i >= 0 && i < mDim);
+    return mpCoords[i];
 }
 
 Vector Vector::operator+(const Vector& v) const {
-    assert(dim == v.dim);
-    Vector result(dim, false);
-    for (int i = 0; i < dim; i++) {
-        result.coords[i] = coords[i] + v.coords[i];
+    assert(mDim == v.mDim);
+    Vector result(mDim, false);
+    for (int i = 0; i < mDim; i++) {
+        result.mpCoords[i] = mpCoords[i] + v.mpCoords[i];
     }
     return result;
 }
 
 Vector Vector::operator-(const Vector& v) const {
-    assert(dim == v.dim);
-    Vector result(dim, false);
-    for (int i = 0; i < dim; i++) {
-        result.coords[i] = coords[i] - v.coords[i];
+    assert(mDim == v.mDim);
+    Vector result(mDim, false);
+    for (int i = 0; i < mDim; i++) {
+        result.mpCoords[i] = mpCoords[i] - v.mpCoords[i];
     }
     return result;
 }
 
 Vector Vector::operator*(double c) const {
-    Vector result(dim, false);
-    for (int i = 0; i < dim; i++) {
-        result.coords[i] = coords[i] * c;
+    Vector result(mDim, false);
+    for (int i = 0; i < mDim; i++) {
+        result.mpCoords[i] = mpCoords[i] * c;
     }
     return result;
 }
 
 Vector Vector::operator/(double c) const {
-    Vector result(dim, false);
-    for (int i = 0; i < dim; i++) {
-        result.coords[i] = coords[i] / c;
+    Vector result(mDim, false);
+    for (int i = 0; i < mDim; i++) {
+        result.mpCoords[i] = mpCoords[i] / c;
     }
     return result;
 }
 
 Vector& Vector::operator+=(const Vector& v) {
-    assert(dim == v.dim);
-    for (int i = 0; i < dim; i++) {
-        coords[i] += v.coords[i];
+    assert(mDim == v.mDim);
+    for (int i = 0; i < mDim; i++) {
+        mpCoords[i] += v.mpCoords[i];
     }
     return *this;
 }
 
 Vector& Vector::operator-=(const Vector& v) {
-    assert(dim == v.dim);
-    for (int i = 0; i < dim; i++) {
-        coords[i] -= v.coords[i];
+    assert(mDim == v.mDim);
+    for (int i = 0; i < mDim; i++) {
+        mpCoords[i] -= v.mpCoords[i];
     }
     return *this;
 }
 
 Vector& Vector::operator*=(double c) {
-    for (int i = 0; i < dim; i++) {
-        coords[i] *= c;
+    for (int i = 0; i < mDim; i++) {
+        mpCoords[i] *= c;
     }
     return *this;
 }
 
 Vector& Vector::operator/=(double c) {
-    for (int i = 0; i < dim; i++) {
-        coords[i] /= c;
+    for (int i = 0; i < mDim; i++) {
+        mpCoords[i] /= c;
     }
     return *this;
 }
@@ -171,8 +171,8 @@ Vector& Vector::operator/=(double c) {
 // class destructor
 Vector::~Vector()
 {
-    if (coords) {
-	   delete []coords;
+    if (mpCoords) {
+	   delete []mpCoords;
     }
 }
 
@@ -185,7 +185,7 @@ Vector::~Vector()
 
 void Vector::SetCoord(int index, double d) 
 {
-	coords[index] = d;
+	mpCoords[index] = d;
 }
 
 //double Vector::GetX() const 
@@ -238,34 +238,34 @@ void Vector::SetCoord(int index, double d)
 // Calculates the scalar product of the given vector and this vector
 double Vector::DotProduct(const Vector& v) const
 {
-    assert(v.dim == dim);
+    assert(v.mDim == mDim);
     double product = 0;
-    for (int i = 0; i < dim; i++) {
-        product += v.coords[i] * coords[i];
+    for (int i = 0; i < mDim; i++) {
+        product += v.mpCoords[i] * mpCoords[i];
     }
 	return product;
 }
 
 Vector Vector::CrossProduct(const Vector& v) const
 {
-    assert(v.dim == dim && dim == 3);
-    double vx = coords[1] * v.coords[2] - coords[2] * v.coords[1];
-    double vy = coords[2] * v.coords[0] - coords[0] * v.coords[2];
-    double vz = coords[0] * v.coords[1] - coords[1] * v.coords[0];
+    assert(v.mDim == mDim && mDim == 3);
+    double vx = mpCoords[1] * v.mpCoords[2] - mpCoords[2] * v.mpCoords[1];
+    double vy = mpCoords[2] * v.mpCoords[0] - mpCoords[0] * v.mpCoords[2];
+    double vz = mpCoords[0] * v.mpCoords[1] - mpCoords[1] * v.mpCoords[0];
 	return Vector(vx, vy, vz);
 }
 
 // Returns the dimention of this vector
 int Vector::GetDim() const
 {
-	return dim;
+	return mDim;
 }
 
 // Returns the norm of this vector
 double Vector::Length() const
 {
-    if (dim == 1) {
-        return fabs(coords[0]);
+    if (mDim == 1) {
+        return fabs(mpCoords[0]);
     }
 	return sqrt(DotProduct(*this));
 }
@@ -289,11 +289,11 @@ Vector Vector::GetProjection(const Vector& axis) const {
 
 String Vector::ToString() const {
     String s;
-    for (int i = 0; i < dim; i++) {
+    for (int i = 0; i < mDim; i++) {
         if (i != 0) {
             s = s + ",";
         }
-        s = s + coords[i];
+        s = s + mpCoords[i];
     }
     return s;
 }
