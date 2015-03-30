@@ -41,5 +41,16 @@ Program::~Program() {
     glDeleteProgram(mId);
     glDeleteShader(mVertexShader.GetId());
     glDeleteShader(mFragmentShader.GetId());
-
+	for (auto i = mAttributes.begin(); i != mAttributes.end(); i++) {
+		delete i;
+	}
+	mAttributes.clear();
 }
+
+Attribute* Program::CreateAttribute(const string& rName) {
+	Attribute* p_attribute = new Attribute(*this, rName);
+	mAttributes.push_back(p_attribute);
+	return p_attribute;
+}
+
+

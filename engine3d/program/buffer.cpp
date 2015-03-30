@@ -9,7 +9,8 @@
 
 using namespace engine3d;
 
-Buffer::Buffer(GLenum type) : mType(type){
+Buffer::Buffer(GLenum type) :
+		mType(type) {
     glGenBuffers(1, &mId);
 
 }

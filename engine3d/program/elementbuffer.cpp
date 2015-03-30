@@ -9,7 +9,8 @@
 
 using namespace engine3d;
 
-ElementBuffer::ElementBuffer(GLenum mode) : Buffer(GL_ELEMENT_ARRAY_BUFFER),
+ElementBuffer::ElementBuffer(GLenum mode) :
+		Buffer(GL_ELEMENT_ARRAY_BUFFER),
 		mMode(mode) {
 }
 
@@ -20,8 +21,17 @@ void ElementBuffer::Render() const {
 	Buffer::Render();
     glDrawElements(
         mMode,
-        mesh->element_count,
+		mElementCount,
         GL_UNSIGNED_SHORT,
         (void*)0
     );
 }
+
+void ElementBuffer::SetData(const vector<GLushort>& rIndices) {
+	if (rIndices.empty()) {
+		return;
+	}
+	mElementCount = rIndices.size() * sizeof(GLushort);
+	Buffer::SetData(mElementCount, rIndices.data(), GL_STATIC_DRAW);
+}
+

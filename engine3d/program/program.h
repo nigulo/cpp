@@ -10,13 +10,17 @@
 
 #include "vertexshader.h"
 #include "fragmentshader.h"
+#include "attribute.h"
+#include "texture.h"
 #include <string>
+#include <vector>
 
+using namespace std;
 namespace engine3d {
 
 class Program {
 public:
-	Program(const std::string& rVertexShaderScript, const std::string& rFragmentShaderScript);
+	Program(const string& rVertexShaderScript, const string& rFragmentShaderScript);
 
 	virtual ~Program();
 
@@ -24,10 +28,13 @@ public:
 		return mId;
 	}
 
+	Attribute* CreateAttribute(const string& rName);
+
 private:
 	VertexShader mVertexShader;
 	FragmentShader mFragmentShader;
 	GLuint mId;
+	vector<Attribute*> mAttributes;
 };
 
 } /* namespace engine3d */

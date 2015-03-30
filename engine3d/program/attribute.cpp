@@ -5,13 +5,13 @@
  *      Author: nigul
  */
 
-#include "object.h"
+#include "attribute.h"
 
 using namespace engine3d;
 
-Object::Object(const Program& rProgram, const std::string& rName) {
+Attribute::Attribute(const Program& rProgram, const std::string& rName) {
 	mId = glGetUniformLocation(rProgram.GetId(), rName.data());
 }
 
-Object::~Object() {
+Attribute::~Attribute() {
 }

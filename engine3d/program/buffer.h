@@ -25,7 +25,7 @@ public:
 	}
 
 	virtual void Render() const;
-private:
+protected:
 	GLuint mId;
 	GLenum mType;
 

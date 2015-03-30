@@ -9,6 +9,9 @@
 #define ELEMENTBUFFER_H_
 
 #include "buffer.h"
+#include <vector>
+
+using namespace std;
 
 namespace engine3d {
 
@@ -22,8 +25,11 @@ public:
 	GLenum GetMode() const {
 		return mMode;
 	}
+
+	void SetData(const vector<GLushort>& rIndices);
 private:
 	GLenum mMode;
+	GLsizei mElementCount;
 };
 
 } /* namespace engine3d */
