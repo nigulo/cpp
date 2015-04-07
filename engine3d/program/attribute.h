@@ -20,11 +20,11 @@ private:
 	Attribute(const Program& rProgram, const std::string& rName);
 	virtual ~Attribute();
 public:
-	GLuint GetId() const {
+	GLint GetId() const {
 		return mId;
 	}
 private:
-	GLuint mId;
+	GLint mId;
 };
 
 } /* namespace engine3d */

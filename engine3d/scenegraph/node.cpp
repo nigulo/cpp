@@ -38,9 +38,6 @@ void Node::Copy(const Node& n)
         AddChild((*i)->Clone());
     }
 
-    for (auto i = n.mIndices.begin(); i != n.mIndices.end(); i++) {
-        mIndices.push_back(*i);
-    }
     if (n.mpBound) {
         mpBound = n.mpBound->Clone();
     }
@@ -69,7 +66,6 @@ Node::~Node()
         delete mChildren[i];
     }
     mChildren.clear();
-    mIndices.clear();
 }
 
 bool Node::CheckCollisions(Node& rNode1, Node& rNode2) {
@@ -190,26 +186,13 @@ void Node::Render()
     else {
 		//Debug("transforming");
 		mTransformation.Transform();
-        int num_indices = mIndices.size();
-        if (num_indices <= 0) {
-            // There are no indices defined,
-            // render children in the regular order 
-            for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
-                glPushMatrix();
-                (*i)->Render();
-                glPopMatrix();
-            }
-        }
-        else {
-            for (auto i = mIndices.begin(); i != mIndices.end(); i++) {
-                //Debug(String("index: ") + (*i) + " Node: " + Name());
-                assert((*i) < mChildren.size());
-                glPushMatrix();
-                //Debug(String("indices[") + i + "]:" + mIndices[i]);
-                mChildren[*i]->Render();
-                glPopMatrix();
-            }
-        }
+		// There are no indices defined,
+		// render children in the regular order
+		for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
+			glPushMatrix();
+			(*i)->Render();
+			glPopMatrix();
+		}
     }
     mChanged = false;
     //Debug(String("Node::Render took ") + (GetMillis() - millis));
@@ -281,20 +264,6 @@ void Node::RemoveChild(int i)
     assert(mChildren[i]);
     delete mChildren[i];
     mChildren.erase(mChildren.begin() + i);
-}
-
-void Node::AddIndex(int index)
-{
-    assert(index >= 0);
-	mIndices.push_back(index);
-}
-
-void Node::AddIndices(const int* indices, int count)
-{
-    for (int i = 0; i < count; i++) {
-        assert(indices[i] >= 0);
-    	this->mIndices.push_back(indices[i]);
-    }
 }
 
 bool Node::IsChanged()

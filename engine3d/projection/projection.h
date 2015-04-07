@@ -11,6 +11,7 @@
 #include "base/object.h"
 #include "engine3d/geometry/plane.h"
 #include "engine3d/geometry/matrix.h"
+#include "engine3d/program/attribute.h"
 
 using namespace base;
 
@@ -20,7 +21,7 @@ class Camera;
 class Projection : public Object {
 
 protected:
-	Projection(double near, double far);
+	Projection(const Program& rProgram, double near, double far);
 	virtual ~Projection();
 
 public:
@@ -38,6 +39,10 @@ public:
 	double GetZFar() const {
         return mZFar;
     }
+
+	const Program& GetProgram() const {
+		return mrProgram;
+	}
 
 	virtual const Plane GetTopPlane(const Camera& r_camera) const = 0;
     virtual const Plane GetBottomPlane(const Camera& r_camera) const = 0;
@@ -57,6 +62,9 @@ protected:
     double mZFar;
 
     Matrix mMatrix;
+
+    const Program& mrProgram;
+    const Attribute& mrAttribute;
 };
 
 }

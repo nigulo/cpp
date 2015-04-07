@@ -15,7 +15,7 @@ using namespace engine3d;
 Vector::Vector(int dim, bool zeroCoords)
 {
     this->mDim = dim;
-    this->mpCoords = new double[dim];
+    this->mpCoords = new float[dim];
     if (zeroCoords) {
         for (int i = 0; i < dim; i++) {
             mpCoords[i] = 0;
@@ -24,53 +24,53 @@ Vector::Vector(int dim, bool zeroCoords)
 }
 
 // class constructor
-Vector::Vector(int dim, double coords[])
+Vector::Vector(int dim, float coords[])
 {
     this->mDim = dim;
-    this->mpCoords = new double[dim];
+    this->mpCoords = new float[dim];
     for (int i = 0; i < dim; i++) {
     	this->mpCoords[i] = coords[i];
     }
 }
 
-Vector::Vector(double x, double y, double z, double w)
+Vector::Vector(float x, float y, float z, float w)
 {
     mDim = 4;
-    mpCoords = new double[mDim];
+    mpCoords = new float[mDim];
     mpCoords[0] = x;
     mpCoords[1] = y;
     mpCoords[2] = z;
     mpCoords[3] = w;
 }
 
-Vector::Vector(double x, double y, double z)
+Vector::Vector(float x, float y, float z)
 {
     mDim = 3;
-    mpCoords = new double[mDim];
+    mpCoords = new float[mDim];
     mpCoords[0] = x;
     mpCoords[1] = y;
     mpCoords[2] = z;
 }
 
-Vector::Vector(double x, double y)
+Vector::Vector(float x, float y)
 {
     mDim = 2;
-    mpCoords = new double[mDim];
+    mpCoords = new float[mDim];
     mpCoords[0] = x;
     mpCoords[1] = y;
 }
 
-Vector::Vector(double x)
+Vector::Vector(float x)
 {
     mDim = 1;
-    mpCoords = new double[mDim];
+    mpCoords = new float[mDim];
     mpCoords[0] = x;
 }
 
 Vector::Vector(const Vector& v)
 {
     mDim = v.mDim;
-    mpCoords = new double[mDim];
+    mpCoords = new float[mDim];
     for (int i = 0; i < mDim; i++) {
     	mpCoords[i] = v.mpCoords[i];
     }
@@ -82,7 +82,7 @@ Vector& Vector::operator=(const Vector& v) {
             delete mpCoords;
         }
         mDim = v.mDim;
-        mpCoords = new double[mDim];
+        mpCoords = new float[mDim];
         for (int i = 0; i < mDim; i++) {
             mpCoords[i] = v.mpCoords[i];
         }
@@ -99,7 +99,7 @@ Vector Vector::operator-() const {
 }
 
 
-double Vector::operator[](int i) const {
+float Vector::operator[](int i) const {
     assert(i >= 0 && i < mDim);
     return mpCoords[i];
 }
@@ -122,7 +122,7 @@ Vector Vector::operator-(const Vector& v) const {
     return result;
 }
 
-Vector Vector::operator*(double c) const {
+Vector Vector::operator*(float c) const {
     Vector result(mDim, false);
     for (int i = 0; i < mDim; i++) {
         result.mpCoords[i] = mpCoords[i] * c;
@@ -130,7 +130,7 @@ Vector Vector::operator*(double c) const {
     return result;
 }
 
-Vector Vector::operator/(double c) const {
+Vector Vector::operator/(float c) const {
     Vector result(mDim, false);
     for (int i = 0; i < mDim; i++) {
         result.mpCoords[i] = mpCoords[i] / c;
@@ -154,14 +154,14 @@ Vector& Vector::operator-=(const Vector& v) {
     return *this;
 }
 
-Vector& Vector::operator*=(double c) {
+Vector& Vector::operator*=(float c) {
     for (int i = 0; i < mDim; i++) {
         mpCoords[i] *= c;
     }
     return *this;
 }
 
-Vector& Vector::operator/=(double c) {
+Vector& Vector::operator/=(float c) {
     for (int i = 0; i < mDim; i++) {
         mpCoords[i] /= c;
     }
@@ -177,36 +177,36 @@ Vector::~Vector()
 }
 
 // returns the coordinate of this vector at the specified index
-//double Vector::GetCoord(int index) const 
+//float Vector::GetCoord(int index) const
 //{
 //    assert(dim > index);
 //	return coords[index];
 //}
 
-void Vector::SetCoord(int index, double d) 
+void Vector::SetCoord(int index, float d)
 {
 	mpCoords[index] = d;
 }
 
-//double Vector::GetX() const 
+//float Vector::GetX() const
 //{
 //    assert(dim > 0);
 //	return coords[0];
 //}
 //
-//double Vector::GetY() const 
+//float Vector::GetY() const
 //{
 //    assert(dim > 1);
 //	return coords[1];
 //}
 //
-//double Vector::GetZ() const 
+//float Vector::GetZ() const
 //{
 //    assert(dim > 2);
 //	return coords[2];
 //}
 //
-//double Vector::GetW() const 
+//float Vector::GetW() const
 //{
 //    assert(dim > 3);
 //	return coords[3];
@@ -220,7 +220,7 @@ void Vector::SetCoord(int index, double d)
 //    }
 //}
 //
-//void Vector::Mul(const double c)
+//void Vector::Mul(const float c)
 //{
 //    for (int i = 0; i < dim; i++) {
 //        coords[i] *= c;
@@ -236,10 +236,10 @@ void Vector::SetCoord(int index, double d)
 //}
 
 // Calculates the scalar product of the given vector and this vector
-double Vector::DotProduct(const Vector& v) const
+float Vector::DotProduct(const Vector& v) const
 {
     assert(v.mDim == mDim);
-    double product = 0;
+    float product = 0;
     for (int i = 0; i < mDim; i++) {
         product += v.mpCoords[i] * mpCoords[i];
     }
@@ -249,9 +249,9 @@ double Vector::DotProduct(const Vector& v) const
 Vector Vector::CrossProduct(const Vector& v) const
 {
     assert(v.mDim == mDim && mDim == 3);
-    double vx = mpCoords[1] * v.mpCoords[2] - mpCoords[2] * v.mpCoords[1];
-    double vy = mpCoords[2] * v.mpCoords[0] - mpCoords[0] * v.mpCoords[2];
-    double vz = mpCoords[0] * v.mpCoords[1] - mpCoords[1] * v.mpCoords[0];
+    float vx = mpCoords[1] * v.mpCoords[2] - mpCoords[2] * v.mpCoords[1];
+    float vy = mpCoords[2] * v.mpCoords[0] - mpCoords[0] * v.mpCoords[2];
+    float vz = mpCoords[0] * v.mpCoords[1] - mpCoords[1] * v.mpCoords[0];
 	return Vector(vx, vy, vz);
 }
 
@@ -262,7 +262,7 @@ int Vector::GetDim() const
 }
 
 // Returns the norm of this vector
-double Vector::Length() const
+float Vector::Length() const
 {
     if (mDim == 1) {
         return fabs(mpCoords[0]);
@@ -271,7 +271,7 @@ double Vector::Length() const
 }
 
 // Returns the squared norm of this vector
-double Vector::Length2() const
+float Vector::Length2() const
 {
 	return DotProduct(*this);
 }

@@ -11,8 +11,9 @@
 
 using namespace engine3d;
 
-Perspective::Perspective(double viewAngle, double aspect, double near, double far) :
-		Projection(near, far),
+Perspective::Perspective(const Program& rProgram,
+			double viewAngle, double aspect, double near, double far) :
+		Projection(rProgram, near, far),
 	    mViewAngle(viewAngle),
 	    mAspect(aspect) {
 	double f = 1 / tan(M_PI * viewAngle / 180 / 2);

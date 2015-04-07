@@ -47,10 +47,10 @@ Program::~Program() {
 	mAttributes.clear();
 }
 
-Attribute* Program::CreateAttribute(const string& rName) {
+const Attribute& Program::CreateAttribute(const string& rName) {
 	Attribute* p_attribute = new Attribute(*this, rName);
 	mAttributes.push_back(p_attribute);
-	return p_attribute;
+	return *p_attribute;
 }
 
 

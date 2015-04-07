@@ -11,8 +11,9 @@
 
 using namespace engine3d;
 
-Ortho::Ortho(double left, double right, double bottom, double top, double near, double far) :
-		Projection(near, far),
+Ortho::Ortho(const Program& rProgram,
+			double left, double right, double bottom, double top, double near, double far) :
+		Projection(rProgram, near, far),
 		mLeft(left),
 		mRight(right),
 		mBottom(bottom),

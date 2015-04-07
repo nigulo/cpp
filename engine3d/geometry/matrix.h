@@ -22,24 +22,23 @@ class Matrix
 		void operator=(const Matrix& m);
 		void SetRow(int index, const Vector& row);
 		void SetColumn(int index, const Vector& column);
-		void Set(int row, int col, double d);
-		double Get(int row, int col) const;
+		void Set(int row, int col, float d);
+		float Get(int row, int col) const;
 		Matrix operator+(const Matrix& m) const;
 		Matrix operator-(const Matrix& m) const;
 		Matrix operator*(const Matrix& m) const;
-		Matrix operator*(double k) const;
+		Matrix operator*(float k) const;
 		/**
 		 * Multiplies the matrix with a column vector
 		 */
 		Vector operator*(const Vector& v) const;
 		Matrix Transpose() const;
-		const double* GetElements() const;
+		const float* GetElements() const;
 		static Matrix GetUnit(int dim = 3);
 	protected:
         int numRows;
         int numColumns;
-        double* elements;
-        //vector<vector<double>*> elements;
+        float* elements;
 };
 }
 #endif // MATRIX_H

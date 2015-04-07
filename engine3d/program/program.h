@@ -28,7 +28,7 @@ public:
 		return mId;
 	}
 
-	Attribute* CreateAttribute(const string& rName);
+	const Attribute& CreateAttribute(const string& rName);
 
 private:
 	VertexShader mVertexShader;

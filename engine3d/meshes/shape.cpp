@@ -6,21 +6,23 @@
 
 using namespace engine3d;
 // class constructor
-Shape::Shape(const String& name) : Node(name)
+Shape::Shape(const String& name) : Node(name),
+	    mpTexture(nullptr),
+	    mpColor(nullptr)
 {
-    mpTexture = 0;
-    mpColor = 0;
 
 }
 
-Shape::Shape(const Shape& s) : Node(s) {
-	mpTexture = s.mpTexture;
+Shape::Shape(const Shape& rShape) : Node(rShape) {
+	mpTexture = rShape.mpTexture;
+	mpColor = rShape.mpColor;
 }
 
-void Shape::Copy(const Shape& shape) 
+void Shape::Copy(const Shape& rShape)
 {
-    Node::Copy(shape);
-    mpTexture = shape.mpTexture;
+    Node::Copy(rShape);
+    mpTexture = rShape.mpTexture;
+    mpColor = rShape.mpColor;
 }
 
 Shape* Shape::Clone() const
@@ -34,51 +36,21 @@ Shape* Shape::Clone() const
 // class destructor
 Shape::~Shape()
 {
-    //MessageBox(NULL, "nurr", "", 0);
-    //for (int i = 0; i < texCoords.Size(); i++) {
-    //    delete texCoords[i];
-    //}
-    //MessageBox(NULL, "nurr1", "", 0);
-    //texCoords.Clear();
-    //MessageBox(NULL, "nurr2", "", 0);
-    //for (int i = 0; i < colors.Size(); i++) {
-    //    delete colors[i];
-    //}
-    //MessageBox(NULL, "nur3", "", 0);
-    //colors.Clear();
-    //MessageBox(NULL, "nurr4", "", 0);
 }
 
 void Shape::BeginRender() 
 {
     //static Texture* ps_texture = 0;
     if (mpTexture) {// && mpTexture != ps_texture) {
-        Debug(String("Using texture: ") + String((int) mpTexture->GetWidth()) + String(", ") + String((int) mpTexture->GetHeight()));
-        //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_PRIORITY, 1);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        //glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-        //glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        //glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-        //glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-        glTexImage2D(GL_TEXTURE_2D, 0, 4, mpTexture->GetWidth(), mpTexture->GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, mpTexture->GetPixels());
+    	mpTexture->Use();
     }
-    else {
-        //glTexImage2D(GL_TEXTURE_2D, 0, 3, 0, 0, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-        if (mpColor) {
-        	glColor4d(mpColor->red, mpColor->green, mpColor->blue, mpColor->alpha);
-        }
+    else if (mpColor) {
+		glColor4d(mpColor->red, mpColor->green, mpColor->blue, mpColor->alpha);
     }
 }
 
 void Shape::EndRender() 
 {
-//    if (texture) {
-//        glTexImage2D(GL_TEXTURE_2D, 0, 3, 0, 0, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-//    }
 }
 
 void Shape::Render()
@@ -89,14 +61,6 @@ void Shape::Render()
     Node::Render();
     EndRender();
     //Debug(String("Shape::Render took ") + (GetMillis() - millis));
-}
-
-/*
- * Projects the front face of the shape to the far plane 
- * of the clipping area
- */
-void Shape::RenderDistant()
-{
 }
 
 // No description

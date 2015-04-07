@@ -7,7 +7,9 @@
 
 #include "texture.h"
 
-Texture::Texture(const string& rTextureFile) {
+Texture::Texture(const Program& rProgram, const string& rName, const string& rTextureFile) :
+	mrAttribute(rProgram.CreateAttribute(rName))
+{
 	// Only png support currenlty
     vector<unsigned char> image;
     unsigned width, height;
@@ -51,5 +53,6 @@ Texture::~Texture() {
 }
 
 void Texture::Use() const {
+    glUniform1i(g_resources.flag_program.uniforms.texture, 0);
     glBindTexture(GL_TEXTURE_2D, mId);
 }

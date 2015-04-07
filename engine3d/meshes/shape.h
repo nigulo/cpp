@@ -5,7 +5,7 @@
 
 #include "base/list.h"
 #include "engine3d/scenegraph/node.h"
-#include "engine3d/attributes/texture.h"
+#include "engine3d/program/texture.h"
 #include "engine3d/attributes/color.h"
 
 using namespace base;
@@ -38,11 +38,6 @@ class Shape : public Node
 		void SetColor(const Color& rColor);
 		void RemoveColor();
 		const Color* GetColor() const {return mpColor;};
-		/**
-         * Projects the front face of the shape to the far plane of the clipping area
-         **/
-        virtual void RenderDistant();
-        // returns the vertices of the given shape
 	protected:
         void BeginRender();  
         void EndRender();

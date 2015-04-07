@@ -17,11 +17,11 @@ class Vector
 {
 	public:
 		explicit Vector(int dim = 3, bool zeroCoords = true);
-		Vector(int dim, double coords[]);
-		Vector(double x, double y, double z, double w);
-		Vector(double x, double y, double z);
-		Vector(double x, double y);
-		explicit Vector(double x);
+		Vector(int dim, float coords[]);
+		Vector(float x, float y, float z, float w);
+		Vector(float x, float y, float z);
+		Vector(float x, float y);
+		explicit Vector(float x);
 		Vector(const Vector& v);
 		// class destructor
 		~Vector();
@@ -46,48 +46,48 @@ class Vector
 		Vector operator-() const;
 		Vector operator+(const Vector& v) const;
 		Vector operator-(const Vector& v) const;
-		Vector operator*(double c) const;
-		Vector operator/(double c) const;
+		Vector operator*(float c) const;
+		Vector operator/(float c) const;
 		Vector& operator+=(const Vector& v);
 		Vector& operator-=(const Vector& v);
-		Vector& operator*=(double c);
-		Vector& operator/=(double c);
-		double operator[](int i) const;
+		Vector& operator*=(float c);
+		Vector& operator/=(float c);
+		float operator[](int i) const;
 		// returns the coordinate of this vector at the specified index
-		//double GetCoord(int index) const;
-		void SetCoord(int index, double d);
-		//double GetX() const;
-		//double GetY() const;
-		//double GetZ() const;
-		//double GetW() const;
+		//float GetCoord(int index) const;
+		void SetCoord(int index, float d);
+		//float GetX() const;
+		//float GetY() const;
+		//float GetZ() const;
+		//float GetW() const;
 		//void Add(const Vector& v);
 		//void Sub(const Vector& v);
-		//void Mul(const double c);
+		//void Mul(const float c);
 		
 		// Returns the squared norm of this vector
-		double Length2() const;
+		float Length2() const;
 		// Returns the norm of this vector
-		double Length() const;
+		float Length() const;
 		Vector GetProjection(const Vector& axis) const;
 		// Returns the dimention of this vector
 		int GetDim() const;
-		void Rotate(Vector& v, double angle);
+		void Rotate(Vector& v, float angle);
 		/**
          * @return the scalar product of this vector and given vector
          **/
-		double DotProduct(const Vector& v) const;
+		float DotProduct(const Vector& v) const;
 		/**
 		 * @return *this x v
 		 **/
 		Vector CrossProduct(const Vector& v) const;
 		Vector& Normalize();
 		String ToString() const;
-		double* GetCoords() {
+		float* GetCoords() {
 			return mpCoords;
 		}
 	protected:
         int mDim;
-        double* mpCoords;
+        float* mpCoords;
 };
 }
 #endif // VECTOR_H

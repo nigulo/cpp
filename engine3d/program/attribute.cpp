@@ -6,6 +6,7 @@
  */
 
 #include "attribute.h"
+#include "program.h"
 
 using namespace engine3d;
 

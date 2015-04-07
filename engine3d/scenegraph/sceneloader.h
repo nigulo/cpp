@@ -5,8 +5,10 @@
 
 #include "scene.h"
 #include "engine3d/meshes/shape.h"
-#include "engine3d/attributes/texture.h"
+#include "engine3d/program/texture.h"
 #include "utils/xmlparser.h"
+#include <map>
+#include <string>
 
 #define SCENE           "scene"
 #define NODE            "node"
@@ -28,6 +30,7 @@
 
 using namespace base;
 using namespace utils;
+using namespace std;
 
 namespace engine3d {
 
@@ -42,12 +45,12 @@ namespace engine3d {
             void Load();
     	private:
             void Load(XmlParser::XmlElement& rElement, Object* pObject = nullptr);
-            Texture* GetTexture(const String& name);
+            Texture* GetTexture(const string& rName);
     	private:
             XmlParser mSceneParser;
             XmlParser mObjParser;
             Scene& mrScene;
-            LinkedList<Texture*> mTextures;
+            map<string, Texture*> mTextures;
             Node mShapes;
     };
 }

@@ -93,6 +93,9 @@ void Scene::Render()
         //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glPolygonMode(mPolygonMode[0], mPolygonMode[1]);
+        glUseProgram(mpCamera->GetProjection().GetProgram().GetId());
+        glActiveTexture(GL_TEXTURE0);
+
         Debug("Scene::Render 2");
         mpNode->CheckCollisions();
         Debug(String("Node::CheckCollisions took ") + (GetMillis() - millis));

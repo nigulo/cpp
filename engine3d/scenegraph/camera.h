@@ -20,7 +20,7 @@ namespace engine3d {
 class Camera : public Node
 {
 	public:
-		Camera(Projection* p_projection);
+		Camera(Projection& rProjection);
 		
 		// class destructor
 		~Camera();
@@ -94,7 +94,7 @@ class Camera : public Node
         void Update();
         
         const Projection& GetProjection() const {
-        	return * mpProjection;
+        	return mrProjection;
         }
 
 	private:
@@ -117,8 +117,9 @@ class Camera : public Node
         /**
          * Specifies if perspective or parallel projection is used
          */
-        Projection* mpProjection;
+        Projection& mrProjection;
         
+        const Attribute& mrAttribute;
         Matrix mMatrix;
         
 };

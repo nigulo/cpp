@@ -6,10 +6,8 @@
 #include "engine3d/meshes/trianglestrip.h"
 #include "engine3d/meshes/trianglefan.h"
 #include "engine3d/meshes/vertex.h"
-#include "engine3d/attributes/texture.h"
 #include "engine3d/containment/boundingpolygon.h"
 #include "engine3d/containment/boundingsphere.h"
-#include "base/arraylist.h"
 
 using namespace engine3d;
 
@@ -31,7 +29,7 @@ void SceneLoader::Load()
     Debug("Loading scene...");
 	Load(*(mSceneParser.Load()->mSubElements[0]));
     Debug("Scene loaded.");
-    mTextures.Clear();
+    mTextures.clear();
 }
 
 void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
@@ -50,9 +48,9 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         Debug(String("Triangle index1: ") + (double)indices[0]);
         Debug(String("Triangle index2: ") + (double)indices[1]);
         Debug(String("Triangle index3: ") + (double)indices[2]);
-        Node* p_node = dynamic_cast<Node*>(pObject);
-        assert(p_node);
-        p_node->AddIndices(indices, 3);
+        Mesh* p_mesh = dynamic_cast<Mesh*>(pObject);
+        assert(p_mesh);
+        p_mesh->AddIndices(indices, 3);
         Debug("SceneLoader::Load 4");
         //delete[] p_data;
         Debug("SceneLoader::Load 5");
@@ -151,14 +149,14 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
     }
     else if (rElement.mType == TEXTURE) {
         Debug(String("Creating new texutre: ") + rElement.mName + ", " + rElement.mParams.GetProperty("file"));
-        Texture* p_texture = new Texture(rElement.mParams.GetProperty("file"), rElement.mName);
+        Texture* p_texture = new Texture(rElement.mParams.GetProperty("file"));
         //if (rElement.mParams.GetProperty("alphafile").Length() > 0) {
         //    Texture tex_alpha(rElement.mParams.GetProperty("alphafile"), rElement.mName + "_alpha", Texture::FORMAT_ALPHA);
         //    Debug("before modulate");
         //    //p_texture->Modulate(tex_alpha);
         //    Debug("after modulate");
         //}
-        mTextures.Add(p_texture);
+        mTextures.insert({rElement.mName, p_texture});
     }
     else if (rElement.mType == NODE) {
         Debug(String("Creating new node: ") + rElement.mName);
@@ -284,12 +282,11 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
     Debug("SceneLoader::Load 24");
 }
 
-Texture* SceneLoader::GetTexture(const String& name)
+Texture* SceneLoader::GetTexture(const string& rName)
 {
-    for (LinkedList<Texture*>::Iterator i = mTextures.Begin(); !i.Done(); i++) {
-        if ((*i)->Name() == name) {
-            return (*i);
-        }
-    }
-    return 0;
+	auto i = mTextures.find(rName);
+	if (i != mTextures.end()) {
+		return i->second;
+	}
+    return nullptr;
 }

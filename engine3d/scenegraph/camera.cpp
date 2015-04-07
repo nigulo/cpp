@@ -7,13 +7,13 @@
 
 using namespace engine3d;
 // class constructor
-Camera::Camera(Projection* p_projection) : Node("Camera"),
-		mpProjection(p_projection),
+Camera::Camera(Projection& rProjection) : Node("Camera"),
+		mrProjection(rProjection),
+		mrAttribute(rProjection.GetProgram().CreateAttribute("mv_matrix")),
 		mEye(0, 0, 0),
 		mCenter(0, 0, 1),
 		mUp(0, 1, 0), // must be normalized
 		mMatrix(4) {
-	assert(mpProjection);
 	Update();
 }
 
@@ -23,9 +23,12 @@ Camera::~Camera()
 }
 
 void engine3d::Camera::Init() {
-	mpProjection->Project();
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+	mrProjection.Project();
+    glUniformMatrix4fv(
+        mAttribute.GetId(),
+        1, GL_FALSE,
+        mMatrix.GetElements()
+    );
 }
 
 void Camera::Look()
@@ -50,7 +53,7 @@ const Plane Camera::GetFarPlane() const {
 	//Vector planePoint = eye + (planeNormal * zFar);
 	// NB! This is not correct. just added to avoid 
     // distantprojections rounded behind farplane
-	Vector plane_point = mEye + (plane_normal * mpProjection->GetZFar() * 0.99);
+	Vector plane_point = mEye + (plane_normal * mrProjection.GetZFar() * 0.99);
 	return Plane(plane_point, plane_normal * (-1));
 }
 
@@ -61,7 +64,7 @@ const Plane Camera::GetFarPlane() const {
  **/
 const Plane Camera::GetNearPlane() const {
 	Vector plane_normal = GetDirection();
-	Vector plane_point = mEye + (plane_normal * mpProjection->GetZNear());
+	Vector plane_point = mEye + (plane_normal * mrProjection.GetZNear());
 	return Plane(plane_point, plane_normal);
 }
 
@@ -71,7 +74,7 @@ const Plane Camera::GetNearPlane() const {
  * WARNING: NOT TESTED!!!
  **/
 const Plane Camera::GetTopPlane() const {
-	return mpProjection->GetTopPlane(*this);
+	return mrProjection.GetTopPlane(*this);
 }
 
 /**
@@ -80,7 +83,7 @@ const Plane Camera::GetTopPlane() const {
  * WARNING: NOT TESTED!!!
  **/
 const Plane Camera::GetBottomPlane() const {
-	return mpProjection->GetBottomPlane(*this);
+	return mrProjection.GetBottomPlane(*this);
 }
 
 /**
@@ -89,7 +92,7 @@ const Plane Camera::GetBottomPlane() const {
  * WARNING: NOT TESTED!!!
  **/
 const Plane Camera::GetLeftPlane() const {
-	return mpProjection->GetLeftPlane(*this);
+	return mrProjection.GetLeftPlane(*this);
 }
 
 /**
@@ -98,7 +101,7 @@ const Plane Camera::GetLeftPlane() const {
  * WARNING: NOT TESTED!!!
  **/
 const Plane Camera::GetRightPlane() const {
-	return mpProjection->GetRightPlane(*this);
+	return mrProjection.GetRightPlane(*this);
 }
 
 /**

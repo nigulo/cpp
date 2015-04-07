@@ -9,7 +9,7 @@
 namespace base {
 
 	
-class String : private std::string
+class String : public std::string
 {
  	public:
         static const char CHAR_TAB = '\t';

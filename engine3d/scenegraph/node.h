@@ -66,10 +66,6 @@ class Node : public Spatial
 		vector<Node*>& GetChildren() {
 			return mChildren;
 		}
-		// Adds a new child index
-		void AddIndex(int index);
-		// Adds a set of child indices
-		void AddIndices(const int* indices, int count);
 		
 		bool IsChanged();
 		bool IsLeaf() const;
@@ -108,10 +104,6 @@ class Node : public Spatial
          * Child nodes of this node
          **/
         vector<Node*> mChildren;
-        /**
-         * Child indices that edetermine the rendering sequence
-         **/
-        vector<int> mIndices;
 
         /**
          * Bounding volume of this node. Bounding volume is

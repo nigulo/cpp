@@ -6,11 +6,13 @@
  */
 
 #include "projection.h"
-#include <GL/gl.h>
+#include <GL/glew.h>
 
 using namespace engine3d;
 
-Projection::Projection(double near, double far) :
+Projection::Projection(const Program& rProgram, double near, double far) :
+	mrProgram(rProgram),
+	mrAttribute(rProgram.CreateAttribute("p_matrix")),
 	mZNear(near),
 	mZFar(far),
 	mMatrix(4) {
@@ -21,7 +23,9 @@ Projection::~Projection() {
 }
 
 void Projection::Project() const {
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-	glMultMatrixd(mMatrix.GetElements());
+    glUniformMatrix4fv(
+        mAttribute.GetId(),
+        1, GL_FALSE,
+        mMatrix.GetElements()
+    );
 }

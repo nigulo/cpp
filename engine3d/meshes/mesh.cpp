@@ -11,6 +11,9 @@ Mesh::Mesh(int mode) : mElementBuffer(mode) {
 void Mesh::Copy(const Mesh& rMesh)
 {
     Shape::Copy(rMesh);
+    for (auto i = rMesh.mIndices.begin(); i != rMesh.mIndices.end(); i++) {
+        mIndices.push_back(*i);
+    }
 }
 
 Mesh* Mesh::Clone()
@@ -24,6 +27,11 @@ Mesh* Mesh::Clone()
 // class destructor
 Mesh::~Mesh()
 {
+    for (auto i = mVertices.begin(); i != mVertices.end(); i++) {
+    	delete (*i);
+    }
+    mVertices.clear();
+    mIndices.clear();
 }
 
 /** 
@@ -34,8 +42,8 @@ Mesh::~Mesh()
  **/
 void Mesh::AddVertex(const Vertex& v)
 {
-    Vertex* vertex = new Vertex(v);
-	AddChild(vertex);
+    Vertex* p_vertex = new Vertex(v);
+	mVertices.push_back(p_vertex);
 }
 
 /**
@@ -43,14 +51,9 @@ void Mesh::AddVertex(const Vertex& v)
  **/
 void Mesh::AddVertex(const Vector& v, const Color& color)
 {
-    Vertex* vertex = new Vertex(v);
-    vertex->SetColor(color);
-	AddChild(vertex);
-}
-
-int Mesh::GetSize() const 
-{
-    return mChildren.size();
+    Vertex* p_vertex = new Vertex(v);
+    p_vertex->SetColor(color);
+	AddVertex(*p_vertex);
 }
 
 /**
@@ -58,13 +61,34 @@ int Mesh::GetSize() const
  **/
 void Mesh::AddVertex(const Vector& v, const Vector& texCoords)
 {
-    Vertex* vertex = new Vertex(v);
-    vertex->SetTexCoords(texCoords);
-	AddChild(vertex);
+    Vertex* p_vertex = new Vertex(v);
+    p_vertex->SetTexCoords(texCoords);
+	AddVertex(*p_vertex);
+}
+
+void Mesh::AddIndex(int index)
+{
+    assert(index >= 0);
+	mIndices.push_back(index);
+}
+
+void Mesh::AddIndices(const int* indices, int count)
+{
+    for (int i = 0; i < count; i++) {
+        assert(indices[i] >= 0);
+    	this->mIndices.push_back(indices[i]);
+    }
+}
+
+int Mesh::GetSize() const
+{
+    return mChildren.size();
 }
 
 
 void Mesh::UpdateBuffers() {
+	mVertexBuffer.SetData(mVertices);
+	mElementBuffer.SetData(mIndices);
 }
 
 void Mesh::Render() {
@@ -88,4 +112,5 @@ void Mesh::SetTexCoords(vector<Vector*>& texCoords)
 void Mesh::GenTexCoords()
 {
 }
+
 

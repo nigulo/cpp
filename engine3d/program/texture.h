@@ -10,16 +10,18 @@
 
 #include <GL/glew.h>
 #include <string>
+#include "attribute.h"
+#include "program.h"
 
 using namespace std;
 
 class Texture {
 public:
-	Texture(const string& rTextureFile);
+	Texture(const Program& rProgram, const string& rName, const string& rTextureFile);
 	virtual ~Texture();
 	void Use() const;
 private:
-	GLuint mId;
+	const Attribute& mrAttribute;
 };
 
 #endif /* PROGRAM_TEXTURE_H_ */

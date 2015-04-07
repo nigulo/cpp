@@ -32,6 +32,10 @@ class Mesh : public Shape
 		void AddVertex(const Vertex& vertex);
 		void AddVertex(const Vector& v, const Color& color);
 		void AddVertex(const Vector& v, const Vector& texCoords);
+		// Adds a new child index
+		void AddIndex(int index);
+		// Adds a set of child indices
+		void AddIndices(const int* indices, int count);
 		// Returns the vertex at the given index
 		//Vertex& GetVertex(int index) const;
 		int GetSize() const;
@@ -44,6 +48,8 @@ class Mesh : public Shape
 	protected:
 		VertexBuffer mVertexBuffer;
 		ElementBuffer mElementBuffer;
+		vector<Vertex*> mVertices;
+        vector<unsigned short> mIndices;
 };
 }
 #endif // MESH_H
