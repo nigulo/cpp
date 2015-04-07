@@ -22,6 +22,7 @@ public:
 	void Use() const;
 private:
 	const Attribute& mrAttribute;
+	GLuint mId;
 };
 
 #endif /* PROGRAM_TEXTURE_H_ */

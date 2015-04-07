@@ -53,6 +53,6 @@ Texture::~Texture() {
 }
 
 void Texture::Use() const {
-    glUniform1i(g_resources.flag_program.uniforms.texture, 0);
-    glBindTexture(GL_TEXTURE_2D, mId);
+    glUniform1i(mrAttribute.GetId(), 0);
+    glBindTexture(GL_TEXTURE_2D, mrAttribute.GetId());
 }
