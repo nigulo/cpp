@@ -4,13 +4,14 @@
 //#include <map>
 
 #include "scene.h"
-#include "engine3d/meshes/shape.h"
+#include "engine3d/meshes/mesh.h"
 #include "engine3d/program/texture.h"
 #include "utils/xmlparser.h"
 #include <map>
 #include <string>
 
-#define SCENE           "scene"
+#define VERTEXSHADER    "vertexshader"
+#define FRAGMENTSHADER  "fragmentshader"
 #define NODE            "node"
 #define TRIANGLES       "triangles"
 #define TRIANGLESTRIP   "trianglestrip"
@@ -41,16 +42,33 @@ namespace engine3d {
     {
     	public:
             // Creates a new SceneLoader using the given scene and object files
-            SceneLoader(Scene& rScene, const String& rSceneFileName = "scene.xml", const String& rObjFileName = "objects.xml");
+            SceneLoader(Scene& rScene,
+            		const String& rProgramFileName = "program.xml",
+            		const String& rSceneFileName = "scene.xml",
+					const String& rObjFileName = "objects.xml");
             void Load();
     	private:
+            void LoadProgram(XmlParser::XmlElement& rElement);
             void Load(XmlParser::XmlElement& rElement, Object* pObject = nullptr);
+            void LoadTriangle(XmlParser::XmlElement& rElement, Mesh* pMesh);
+            void LoadCoords(XmlParser::XmlElement& rElement, Object* pObject);
+            void LoadTexCoords(XmlParser::XmlElement& rElement, Vertex* pVertex);
+            void LoadUseTexture(XmlParser::XmlElement& rElement, Shape* pShape);
+            void LoadUseShape(XmlParser::XmlElement& rElement, Node* pNode);
+            void LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatial);
+            void LoadTranslation(XmlParser::XmlElement& rElement, Spatial* pSpatial);
+            Vector LoadVector(XmlParser::XmlElement& rElement);
+            void LoadVertex(XmlParser::XmlElement& rElement, Object* pObject);
+            BoundingPolygon* LoadBound(XmlParser::XmlElement& rElement, Node* pNode);
+
             Texture* GetTexture(const string& rName);
     	private:
+            XmlParser mProgramParser;
             XmlParser mSceneParser;
             XmlParser mObjParser;
             Scene& mrScene;
             map<string, Texture*> mTextures;
+            Program* mpProgram;
             Node mShapes;
     };
 }

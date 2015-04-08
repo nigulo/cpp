@@ -8,24 +8,22 @@
 
 using namespace engine3d;
 // class constructor
-Node::Node() : 
-    mListCode(-1),
-    mCompile(false),
-    mpParent(0),
-    mpScene(0),
-    mpBound(0), // no bounding volume by default
-    mpCollisionBound(0) // no collision bound by default
+Node::Node(Program& rProgram) :
+	mrProgram(rProgram),
+    mpParent(nullptr),
+    mpScene(nullptr),
+    mpBound(nullptr), // no bounding volume by default
+    mpCollisionBound(nullptr) // no collision bound by default
 {
 }
 
-Node::Node(const String& name) : 
-    mListCode(-1),
-    mCompile(false),
+Node::Node(Program& rProgram, const String& name) :
+	mrProgram(rProgram),
     Spatial(name),
-    mpParent(0),
-    mpScene(0),
-    mpBound(0), // no bounding volume by default
-    mpCollisionBound(0) // no bounding volume by default
+    mpParent(nullptr),
+    mpScene(nullptr),
+    mpBound(nullptr), // no bounding volume by default
+    mpCollisionBound(nullptr) // no bounding volume by default
 {
 }
 
@@ -34,6 +32,7 @@ void Node::Copy(const Node& n)
 
     Spatial::Copy(n);
     
+    mrProgram = n.GetProgram();
     for (auto i = n.mChildren.begin(); i != n.mChildren.end(); i++) {
         AddChild((*i)->Clone());
     }
@@ -59,9 +58,6 @@ Node* Node::Clone() const
 // class destructor
 Node::~Node()
 {
-    if (mListCode >= 0) {
-        glDeleteLists(mListCode, 1);
-    }
 	for (int i = 0; i < mChildren.size(); i++) {
         delete mChildren[i];
     }
@@ -135,52 +131,13 @@ void Node::CheckCollisions()
     //Debug(String("Node::CheckCollisions took ") + (GetMillis() - millis));
 }
 
-void Node::Init()
+void Node::Render()
 {
-    //long millis = GetMillis();
-    //Debug("Node::Init 1");
-//	if (mpParent) {
-//        //Debug("Node::Init 2");
-//    	const Transformation parentWT = mpParent->GetWorldTransformation();
-//       	mWorldTransformation = Transformation(mTransformation * parentWT);
-//    }
-//    else {
-//        mWorldTransformation = mTransformation;
-//        //Debug("Node::Init 4");
-//    }
     if (mpBound) {
         mpBound->SetTransformation(GetWorldTransformation());
         mpBound->Transform();
     }
-    //Debug("Node::Init 5");
-    for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
-        //Debug("Node::Init 6");
-        (*i)->Init();
-        //Debug("Node::Init 7");
-    }
-    //-----------------------------
-    // If this node and all subnodes are precompilable
-    if (mCompile && mListCode < 0) {
-        // This node must be compiled into a display list
-        Debug("Compiling...");
-        int list_code = glGenLists(1);
-        glNewList(list_code, GL_COMPILE);
-        Render();
-        glEndList();
-        mListCode = list_code;
-    }
-    //Debug(String("Node::Init took ") + (GetMillis() - millis));
-}
-
-void Node::Render()
-{
-    //long millis = GetMillis();
-    //Debug("Node::Render");
-    if (mListCode >= 0) {
-        // This node is a compiled display list
-        glCallList(mListCode);
-    }
-    else if (!mCompile && mpBound && GetScene().GetCamera().Cull(*mpBound)) {
+    if (mpBound && GetScene().GetCamera().Cull(*mpBound)) {
         Debug("Object culled");
     }
     else {
@@ -196,11 +153,6 @@ void Node::Render()
     }
     mChanged = false;
     //Debug(String("Node::Render took ") + (GetMillis() - millis));
-}
-
-void Node::Compile()
-{
-    mCompile = true;
 }
 
 void Node::SetScene(Scene* pScene)
@@ -255,7 +207,7 @@ Node* Node::GetChild(const String& name) const
             return mChildren[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 void Node::RemoveChild(int i)

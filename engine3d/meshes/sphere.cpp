@@ -212,8 +212,3 @@ void Sphere::Render()
     	SetColor(*p_color);
     }
 }
-
-void Sphere::Init() 
-{
-	Shape::Init();
-}

@@ -42,7 +42,7 @@ namespace engine3d {
     		void Move(double dt);
     		
     		// @Override Node::Init
-    		void Init();
+    		void Render();
     		
     		// @Override Node::IsChanged
     		bool IsChanged();

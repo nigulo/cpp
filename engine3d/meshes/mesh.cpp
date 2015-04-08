@@ -82,7 +82,7 @@ void Mesh::AddIndices(const int* indices, int count)
 
 int Mesh::GetSize() const
 {
-    return mChildren.size();
+    return mVertices.size();
 }
 
 
@@ -92,6 +92,7 @@ void Mesh::UpdateBuffers() {
 }
 
 void Mesh::Render() {
+	Shape::Render();
 	mVertexBuffer.Render();
 	mElementBuffer.Render();
 }
@@ -99,11 +100,9 @@ void Mesh::Render() {
 // Sets texture coordinates for all vertices
 void Mesh::SetTexCoords(vector<Vector*>& texCoords)
 {
-	assert(texCoords.size() == mChildren.size());
-	for (unsigned i = 0; i < mChildren.size(); i++) {
-        Vertex* p_child = dynamic_cast<Vertex*>(&GetChild(i));
-        assert(p_child);
-        p_child->SetTexCoords(*texCoords[i]);
+	assert(texCoords.size() == mVertices.size());
+	for (unsigned i = 0; i < mVertices.size(); i++) {
+        mVertices[i]->SetTexCoords(*texCoords[i]);
     }
 }
 

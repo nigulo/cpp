@@ -39,12 +39,8 @@ class Shape : public Node
 		void RemoveColor();
 		const Color* GetColor() const {return mpColor;};
 	protected:
-        void BeginRender();  
-        void EndRender();
-	protected:
         Texture* mpTexture;
         Color* mpColor;
-        //List<Vector*> texCoords;
 };
 }
 #endif // SHAPE_H

@@ -6,7 +6,7 @@ using namespace base;
 // class constructor
 XmlParser::XmlParser(const String& rFileName) 
 {
-	mpData = 0;
+	mpData = nullptr;
 	if (rFileName.Length() > 0) {
 		Load(rFileName);
 	}
@@ -27,7 +27,7 @@ XmlParser::XmlElement* XmlParser::Load(const String& rFileName)
 		char buf[256];
 	    //--------------------------------
 	    // Load scene data
-	    std::ifstream in; 
+	    ifstream in;
 	    Debug(rFileName.GetChars());
 	    in.open(rFileName.GetChars());
 	    assert(in);
@@ -45,12 +45,6 @@ XmlParser::XmlElement* XmlParser::Load(const String& rFileName)
 //----------------------------------------------
 // XmlElement
 
-XmlParser::XmlElement::XmlElement(const String& rType)
-{
-	mType = rType;
-	mParams = rType;
-}
-
 XmlParser::XmlElement::XmlElement(const String& rType, const String& rName, const String& rParams, String& rData, int startIndex, int endIndex) :
     mType(rType), 
     mName(rName), 
@@ -65,14 +59,14 @@ XmlParser::XmlElement::XmlElement(const String& rType, const String& rName, cons
 
 XmlParser::XmlElement::~XmlElement()
 {
-    for (LinkedList<XmlElement*>::Iterator i = mSubElements.Begin(); !i.Done(); i++) {
+    for (auto i = mSubElements.begin(); i != mSubElements.end(); i++) {
         delete (*i);
     }
-    mSubElements.Clear();
+    mSubElements.clear();
 }
 
 void XmlParser::XmlElement::AddSubElement(XmlElement* pElement) {
-	mSubElements.Add(pElement);
+	mSubElements.push_back(pElement);
 }
 
 void XmlParser::XmlElement::SetData(const String& rData) {
@@ -96,7 +90,7 @@ void XmlParser::XmlElement::Parse()
         XmlElement* pElement = FindNextSubElement(&startIndex);
         if (pElement) {
             leaf = false;
-            mSubElements.Add(pElement);
+            mSubElements.push_back(pElement);
             pElement->Parse();
         }
         else {
@@ -270,13 +264,13 @@ String XmlParser::XmlElement::ToString(const String& indent) const
 {
 	
 	String output = indent + "<" + mParams;
-	if (mSubElements.Size() == 0 && mData.Length() == 0) {
+	if (mSubElements.size() == 0 && mData.Length() == 0) {
 		output = output + "/>\n";
 	}
 	else {
 		output = output + ">\n";
-		for (int i = 0; i < mSubElements.Size(); i++) {
-			output = output + mSubElements[i]->ToString(indent + "    ");
+	    for (auto i = mSubElements.begin(); i != mSubElements.end(); i++) {
+			output = output + (*i)->ToString(indent + "    ");
 		}
 		if (mData.Length() > 0) {
 			output = output + indent + mData + "\n";
@@ -287,7 +281,7 @@ String XmlParser::XmlElement::ToString(const String& indent) const
 }
 
 void XmlParser::XmlElement::Save(const String& rFileName) const {
-	std::ofstream out(rFileName.GetChars());
+	ofstream out(rFileName.GetChars());
 	out << ToString();
 	out.close();
 }

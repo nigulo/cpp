@@ -38,29 +38,15 @@ Shape::~Shape()
 {
 }
 
-void Shape::BeginRender() 
+void Shape::Render()
 {
-    //static Texture* ps_texture = 0;
-    if (mpTexture) {// && mpTexture != ps_texture) {
+    if (mpTexture) {
     	mpTexture->Use();
     }
     else if (mpColor) {
 		glColor4d(mpColor->red, mpColor->green, mpColor->blue, mpColor->alpha);
     }
-}
-
-void Shape::EndRender() 
-{
-}
-
-void Shape::Render()
-{
-    //long millis = GetMillis();
-    //Debug("Shape::Render");
-    BeginRender();
     Node::Render();
-    EndRender();
-    //Debug(String("Shape::Render took ") + (GetMillis() - millis));
 }
 
 // No description

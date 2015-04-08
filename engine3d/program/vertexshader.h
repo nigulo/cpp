@@ -14,7 +14,7 @@
 namespace engine3d {
 
 class VertexShader : public Shader {
-public:
+protected:
 	VertexShader(const std::string& rShaderScript);
 	virtual ~VertexShader();
 };

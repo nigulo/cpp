@@ -14,15 +14,17 @@
 #include "program.h"
 
 using namespace std;
+namespace engine3d {
 
-class Texture {
-public:
-	Texture(const Program& rProgram, const string& rName, const string& rTextureFile);
-	virtual ~Texture();
-	void Use() const;
-private:
-	const Attribute& mrAttribute;
-	GLuint mId;
-};
+	class Texture {
+	public:
+		Texture(const Program& rProgram, const string& rName, const string& rTextureFile);
+		virtual ~Texture();
+		void Use() const;
+	private:
+		const Attribute& mrAttribute;
+		GLuint mId;
+	};
 
+}
 #endif /* PROGRAM_TEXTURE_H_ */

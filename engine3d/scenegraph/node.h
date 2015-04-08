@@ -5,9 +5,10 @@
 
 #include "engine3d/geometry/spatial.h"
 #include "engine3d/geometry/transformation.h"
-//#include "scene.h"
 #include "engine3d/geometry/vector.h"
 #include "engine3d/containment/boundingvolume.h"
+#include "engine3d/program/program.h"
+#include "engine3d/program/attribute.h"
 
 #include <vector>
 
@@ -25,18 +26,11 @@ class Node : public Spatial
 {
 	public:
 		// class constructor
-		Node();
-		Node(const String& name);
+		Node(Program& rProgram);
+		Node(Program& rProgram, const String& name);
 		virtual Node* Clone() const;
 		// class destructor
 		virtual ~Node();
-		// No description
-		//void Rotate(double angle, const Vector& axis);
-		/**
-		 * Sets the parent for the given node. 
-		 * Root node does not have a parent
-		 */
-		//void SetParent(Node* parent);
 		/**
 		 * Called by Scene::SetNode
 		 * Do not call this method directly
@@ -49,14 +43,7 @@ class Node : public Spatial
          * transformation and coordinates for this node 
          * and children
 		 **/
-		virtual void Init();
 		virtual void Render();
-		/**
-		 * Specifies that this node must be compiled into a display list.
-		 * This node is compiled into a display list in the Init() method 
-         * if it's not already done. listCode parameter is defined there.
-		 **/
-		void Compile();
 		Scene& GetScene() const;
 		Node* GetParent() const;
 		void AddChild(Node* n);
@@ -80,6 +67,11 @@ class Node : public Spatial
             mpCollisionBound = pCollisionBound;
         }
         
+        Program& GetProgram() {
+        	return mrProgram;
+        }
+
+
 	protected:
         void Copy(const Node& node);
         static bool CheckCollisions(Node& rNode1, Node& rNode2);
@@ -90,6 +82,7 @@ class Node : public Spatial
         Transformation GetNewWorldTransformation() const;
 
 	protected:
+        Program& mrProgram;
         /**
          * Pointer to the parent node. Must be NULL, if
          * mpScene is not NULL and vice versa.
@@ -113,17 +106,6 @@ class Node : public Spatial
 
         BoundingVolume* mpCollisionBound;
 
-        /**
-         * Specifies whether this node can be 
-         * OpenGL compiled before rendering
-         **/
-        bool mCompile;
-        /**
-         * Code of the OpenGL display list or -1 if this
-         * node is not precompiled
-         **/
-        int mListCode;
-        
 };
 }
 #endif // NODE_H

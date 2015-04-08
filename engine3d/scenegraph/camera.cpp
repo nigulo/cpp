@@ -7,13 +7,14 @@
 
 using namespace engine3d;
 // class constructor
-Camera::Camera(Projection& rProjection) : Node("Camera"),
+Camera::Camera(const Program& rProgram, Projection& rProjection) : Node(rProgram, "Camera"),
 		mrProjection(rProjection),
-		mrAttribute(rProjection.GetProgram().CreateAttribute("mv_matrix")),
+		mrAttribute(GetProgram().CreateAttribute("mv_matrix")),
 		mEye(0, 0, 0),
 		mCenter(0, 0, 1),
 		mUp(0, 1, 0), // must be normalized
 		mMatrix(4) {
+	assert(&rProgram == &rProjection.GetProgram());
 	Update();
 }
 
@@ -22,25 +23,17 @@ Camera::~Camera()
 {
 }
 
-void engine3d::Camera::Init() {
+void Camera::Render()
+{
+	Debug(String("Camera::Render eye ") + mEye.ToString());
+	Debug(String("Camera::Render center ") + mCenter.ToString());
+	Debug(String("Camera::Render up ") + mUp.ToString());
 	mrProjection.Project();
     glUniformMatrix4fv(
-        mAttribute.GetId(),
+        mrAttribute.GetId(),
         1, GL_FALSE,
         mMatrix.GetElements()
     );
-}
-
-void Camera::Look()
-{
-	Debug(String("Camera::Look eye ") + mEye.ToString());
-	Debug(String("Camera::Look center ") + mCenter.ToString());
-	Debug(String("Camera::Look up ") + mUp.ToString());
-	//gluLookAt(mEye[0], mEye[1], mEye[2],
-	//		  mCenter[0], mCenter[1], mCenter[2],
-	//		  mUp[0], mUp[1], mUp[2]);
-	glMultMatrixd(mMatrix.GetElements());
-    mChanged = false;
 }
 
 /**

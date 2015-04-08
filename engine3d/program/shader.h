@@ -13,7 +13,9 @@
 
 namespace engine3d {
 
+class Program;
 class Shader {
+	friend class Program;
 protected:
 	Shader(GLenum type, const std::string& rShaderScript);
 	virtual ~Shader();

@@ -29,9 +29,9 @@ void Body::Move(double dt) {
    	mTransformation = Transformation(dr) * mTransformation;
 }
 
-void Body::Init() {
+void Body::Render() {
     Move(GetScene().GetTimeChange());
-    Node::Init();
+    Node::Render();
 }
 
 bool Body::IsChanged() {

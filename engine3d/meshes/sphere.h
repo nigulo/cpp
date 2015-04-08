@@ -24,10 +24,6 @@ class Sphere : public Shape
 		// class destructor
 		virtual ~Sphere();
 		virtual void Render();
-		//virtual Shape GetDistantProjection();
-		// No description
-//		void SetDistant();
-        virtual void Init();
 	protected:
         double radius;
         int parts1;

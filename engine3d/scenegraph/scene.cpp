@@ -100,13 +100,7 @@ void Scene::Render()
         mpNode->CheckCollisions();
         Debug(String("Node::CheckCollisions took ") + (GetMillis() - millis));
         Debug("Scene::Render 3");
-        mpCamera->Init();
-        mpNode->Init();
-        //node->Sort();
-        Debug("Scene::Render 4");
-        Debug(String("Node::Init took ") + (GetMillis() - millis));
-        mpCamera->Look();
-        //Debug(String("Camera::Look took ") + (GetMillis() - millis));
+        mpCamera->Render();
         mpNode->Render();
         Debug(String("Scene::Render took ") + (GetMillis() - millis));
     }
