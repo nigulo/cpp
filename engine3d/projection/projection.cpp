@@ -12,7 +12,7 @@ using namespace engine3d;
 
 Projection::Projection(const Program& rProgram, double near, double far) :
 	mrProgram(rProgram),
-	mrAttribute(rProgram.CreateAttribute("p_matrix")),
+	mrAttribute(rProgram.GetAttribute("p_matrix")),
 	mZNear(near),
 	mZFar(far),
 	mMatrix(4) {

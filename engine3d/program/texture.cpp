@@ -8,7 +8,7 @@
 #include "texture.h"
 
 Texture::Texture(const Program& rProgram, const string& rName, const string& rTextureFile) :
-	mrAttribute(rProgram.CreateAttribute(rName))
+	mrAttribute(rProgram.GetAttribute(rName))
 {
 	// Only png support currenlty
     vector<unsigned char> image;

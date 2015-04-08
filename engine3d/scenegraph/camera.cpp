@@ -7,9 +7,9 @@
 
 using namespace engine3d;
 // class constructor
-Camera::Camera(const Program& rProgram, Projection& rProjection) : Node(rProgram, "Camera"),
+Camera::Camera(const Program& rProgram, Projection& rProjection) : Node("Camera"),
 		mrProjection(rProjection),
-		mrAttribute(GetProgram().CreateAttribute("mv_matrix")),
+		mrAttribute(rProgram.GetAttribute("mv_matrix")),
 		mEye(0, 0, 0),
 		mCenter(0, 0, 1),
 		mUp(0, 1, 0), // must be normalized

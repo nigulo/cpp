@@ -13,7 +13,7 @@
 #include "attribute.h"
 #include "texture.h"
 #include <string>
-#include <vector>
+#include <map>
 
 using namespace std;
 namespace engine3d {
@@ -28,13 +28,16 @@ public:
 		return mId;
 	}
 
+	const Attribute& GetAttribute(const string& rName);
+
+protected:
 	const Attribute& CreateAttribute(const string& rName);
 
 private:
 	VertexShader mVertexShader;
 	FragmentShader mFragmentShader;
 	GLuint mId;
-	vector<Attribute*> mAttributes;
+	map<string, Attribute*> mAttributes;
 };
 
 } /* namespace engine3d */

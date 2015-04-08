@@ -8,8 +8,7 @@
 #ifndef VERTEXBUFFER_H_
 #define VERTEXBUFFER_H_
 
-#include "buffer.h"
-#include "program.h"
+#include "attribute.h"
 #include "engine3d/meshes/vertex.h"
 #include <vector>
 
@@ -24,10 +23,9 @@ public:
 	virtual void Render() const;
 
 private:
-	Program* mpProgram;
 	int mDim;
-	Attribute* mpPosition;
-	Attribute* mpTexCoord;
+	const Attribute& mrPosition;
+	const Attribute* mpTexCoord;
 
 };
 

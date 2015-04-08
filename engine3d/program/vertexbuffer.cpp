@@ -9,15 +9,14 @@
 
 using namespace engine3d;
 
-VertexBuffer::VertexBuffer(Program* pProgram, int dim, bool textureOrColor) :
+VertexBuffer::VertexBuffer(Program& rProgram, int dim, bool textureOrColor) :
 		Buffer(GL_ARRAY_BUFFER),
-	mpProgram(pProgram),
-	mDim(dim)
-		{
-	assert(mpProgram);
-	mpPosition = mpProgram->CreateAttribute("position");
+		mDim(dim),
+		mrPosition(rProgram.GetAttribute("position")),
+		mpTexCoord(nullptr)
+{
 	if (textureOrColor) {
-		mpTexCoord = mpProgram->CreateAttribute("texcoord");
+		mpTexCoord = &rProgram.GetAttribute("texcoord");
 	}
 }
 
@@ -38,7 +37,7 @@ void VertexBuffer::Render() const {
 
 	GLsizei stride = mDim * sizeof(GLdouble) + (mpTexCoord ? 2 * sizeof(GLdouble) : 0);
     glVertexAttribPointer(
-        mpPosition->GetId(),
+        mrPosition.GetId(),
         3, GL_DOUBLE, GL_FALSE, stride,
         (GLvoid*) 0
     );
@@ -65,7 +64,7 @@ void VertexBuffer::Render() const {
     //    (void*)offsetof(struct flag_vertex, specular)
     //);
     //----------------------------------------------
-    glDisableVertexAttribArray(mpPosition->GetId());
+    glDisableVertexAttribArray(mrPosition.GetId());
     //glDisableVertexAttribArray(g_resources.flag_program.attributes.normal);
     if (mpTexCoord) {
     	glDisableVertexAttribArray(mpTexCoord->GetId());
