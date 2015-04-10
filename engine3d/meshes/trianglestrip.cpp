@@ -1,10 +1,9 @@
-#include <GL/gl.h>
-
 #include "trianglestrip.h" // class's header file
 
 #include "engine3d/geometry/triangle.h"
 #include "engine3d/scenegraph/scene.h"
 #include "engine3d/scenegraph/camera.h"
+#include <GL/gl.h>
 
 using namespace engine3d;
 // class constructor

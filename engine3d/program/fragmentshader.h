@@ -13,7 +13,9 @@
 
 namespace engine3d {
 
+class Program;
 class FragmentShader: public Shader {
+	friend class Program;
 protected:
 	FragmentShader(const std::string& rShaderScript);
 	virtual ~FragmentShader();

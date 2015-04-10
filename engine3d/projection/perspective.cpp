@@ -11,13 +11,13 @@
 
 using namespace engine3d;
 
-Perspective::Perspective(const Program& rProgram,
-			double viewAngle, double aspect, double near, double far) :
+Perspective::Perspective(Program& rProgram,
+			float viewAngle, float aspect, float near, float far) :
 		Projection(rProgram, near, far),
 	    mViewAngle(viewAngle),
 	    mAspect(aspect) {
-	double f = 1 / tan(M_PI * viewAngle / 180 / 2);
-	double md = near - far;
+	float f = 1 / tan(M_PI * viewAngle / 180 / 2);
+	float md = near - far;
 	mMatrix.Set(0, 0, f / aspect); mMatrix.Set(0, 1, 0); mMatrix.Set(0, 2, 0);                 mMatrix.Set(0, 3, 0);
 	mMatrix.Set(1, 0, 0);          mMatrix.Set(1, 1, f); mMatrix.Set(1, 2, 0);                 mMatrix.Set(1, 3, 0);
 	mMatrix.Set(2, 0, 0);          mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, (far + near) / md); mMatrix.Set(2, 3, 2 * far * near / md);

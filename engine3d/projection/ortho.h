@@ -15,8 +15,8 @@ namespace engine3d {
 class Camera;
 class Ortho : public Projection {
 public:
-	Ortho(const Program& rProgram,
-			double left, double right, double bottom, double top, double near, double far);
+	Ortho(Program& rProgram,
+			float left, float right, float bottom, float top, float near, float far);
 	virtual ~Ortho();
 
 	virtual const Plane GetTopPlane(const Camera& r_camera) const;
@@ -25,10 +25,10 @@ public:
     virtual const Plane GetRightPlane(const Camera& r_camera) const;
 
 private:
-    double mLeft;
-    double mRight;
-    double mBottom;
-    double mTop;
+    float mLeft;
+    float mRight;
+    float mBottom;
+    float mTop;
 };
 
 }

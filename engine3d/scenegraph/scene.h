@@ -1,10 +1,9 @@
 #ifndef SCENE_H
 #define SCENE_H
 
-#include "base/object.h" // inheriting class's header file
-//#include "camera.h"
+#include "base/object.h"
+#include "engine3d/program/program.h"
 #include "viewport.h"
-//#include "node.h"
 #include "base/linkedlist.h"
 #include "engine3d/controllers/controller.h"
 

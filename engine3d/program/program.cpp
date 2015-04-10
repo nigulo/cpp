@@ -6,10 +6,10 @@
  */
 
 #include "program.h"
+#include "utils.h"
 #include <GL/glew.h>
 #include <GL/gl.h>
 
-#include "utils.h"
 
 using namespace engine3d;
 using namespace std;
@@ -42,7 +42,8 @@ Program::~Program() {
     glDeleteShader(mVertexShader.GetId());
     glDeleteShader(mFragmentShader.GetId());
 	for (auto i = mAttributes.begin(); i != mAttributes.end(); i++) {
-		delete i->second();
+		Attribute* p_attribute = i->second;
+		delete p_attribute;
 	}
 	mAttributes.clear();
 }

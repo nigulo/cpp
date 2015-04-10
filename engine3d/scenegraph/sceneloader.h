@@ -6,6 +6,7 @@
 #include "scene.h"
 #include "engine3d/meshes/mesh.h"
 #include "engine3d/program/texture.h"
+#include "engine3d/containment/boundingvolume.h"
 #include "utils/xmlparser.h"
 #include <map>
 #include <string>
@@ -59,7 +60,7 @@ namespace engine3d {
             void LoadTranslation(XmlParser::XmlElement& rElement, Spatial* pSpatial);
             Vector LoadVector(XmlParser::XmlElement& rElement);
             void LoadVertex(XmlParser::XmlElement& rElement, Object* pObject);
-            BoundingPolygon* LoadBound(XmlParser::XmlElement& rElement, Node* pNode);
+            BoundingVolume* LoadBound(XmlParser::XmlElement& rElement, Node* pNode);
 
             Texture* GetTexture(const string& rName);
     	private:

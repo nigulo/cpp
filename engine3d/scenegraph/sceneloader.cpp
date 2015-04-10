@@ -30,12 +30,13 @@ void SceneLoader::Load()
 {
     Debug("Loading objects...");
 	LoadProgram(*(mProgramParser.Load()));
-    for (int i = 0; i  < mObjParser.Load()->mSubElements.Size(); i++) {
-    	Load(*(mObjParser.Load()->mSubElements[i]), &mShapes);
+	XmlParser::XmlElement* p_objects = mObjParser.Load();
+    for (auto i = p_objects->mSubElements.begin(); i != p_objects->mSubElements.end(); i++) {
+    	Load(*(*i), &mShapes);
     }
     Debug("Objects loaded.");
     Debug("Loading scene...");
-	Load(*(mSceneParser.Load()->mSubElements[0]));
+	Load(*(mSceneParser.Load()->mSubElements.front()));
     Debug("Scene loaded.");
     mTextures.clear();
 }
@@ -71,7 +72,7 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         LoadTranslation(rElement, p_spatial);
     } else if (rElement.mType == TEXTURE) {
         Debug(String("Creating new texutre: ") + rElement.mName + ", " + rElement.mParams.GetProperty("file"));
-        Texture* p_texture = new Texture(rElement.mParams.GetProperty("file"));
+        Texture* p_texture = new Texture(*mpProgram, rElement.mName, rElement.mParams.GetProperty("file"));
         //if (rElement.mParams.GetProperty("alphafile").Length() > 0) {
         //    Texture tex_alpha(rElement.mParams.GetProperty("alphafile"), rElement.mName + "_alpha", Texture::FORMAT_ALPHA);
         //    Debug("before modulate");
@@ -122,8 +123,8 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
 	    }
 	    if (p_object) {
 	        Debug("SceneLoader::Load 20.1");
-	    	for (int i = 0; i < rElement.mSubElements.Size(); i++) {
-	            Load(*rElement.mSubElements[i], p_object);
+	    	for (auto i = rElement.mSubElements.begin(); i != rElement.mSubElements.end(); i++) {
+	            Load(*(*i), p_object);
 	        }
 	        Debug("SceneLoader::Load 21");
 	    }
@@ -289,7 +290,7 @@ void SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject) {
     }
 }
 
-BoundingPolygon* SceneLoader::LoadBound(XmlParser::XmlElement& rElement, Node* pNode) {
+BoundingVolume* SceneLoader::LoadBound(XmlParser::XmlElement& rElement, Node* pNode) {
     String type = rElement.mParams.GetProperty("type");
     ArrayList<String> usages = rElement.mParams.GetProperty("usage").Split(",");
     Debug(String("Creating new bound: ") + rElement.mName + "; " + type + "; " + rElement.mParams.GetProperty("usage"));

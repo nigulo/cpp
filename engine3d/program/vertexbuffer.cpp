@@ -6,6 +6,7 @@
  */
 
 #include "vertexbuffer.h"
+#include "engine3d/meshes/vertex.h"
 
 using namespace engine3d;
 
@@ -24,8 +25,7 @@ VertexBuffer::~VertexBuffer() {
 }
 
 void VertexBuffer::Render() const {
-	assert(mpPosition);
-    glEnableVertexAttribArray(mpPosition->GetId());
+    glEnableVertexAttribArray(mrPosition.GetId());
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.normal);
     if (mpTexCoord) {
     	glEnableVertexAttribArray(mpTexCoord->GetId());
@@ -50,7 +50,7 @@ void VertexBuffer::Render() const {
 		glVertexAttribPointer(
 			mpTexCoord->GetId(),
 			2, GL_DOUBLE, GL_FALSE, stride,
-			mDim * sizeof(GLdouble) // offset
+			(GLvoid*) (mDim * sizeof(GLdouble)) // offset
 		);
     }
     //glVertexAttribPointer(
@@ -83,13 +83,13 @@ void VertexBuffer::SetData(vector<Vertex*> vertices) {
 	//double vertex_tex_coords[mChildren.size()];
 	int j = 0;
 	for (auto i = vertices.begin(); i != vertices.end(); i++) {
-        Vertex* p_vertex = dynamic_cast<Vertex*>(i);
+        Vertex* p_vertex = *i;
         for (int k = 0; k < mDim; k++) {
         	vertex_coords[j][k] = p_vertex->GetCoord(k);
         }
         if (mpTexCoord) {
         	for (int k = 0; k < texDim; k++) {
-    			vertex_coords[j][mDim + k] = *(p_vertex->GetTexCoords())[k];
+    			vertex_coords[j][mDim + k] = (*(p_vertex->GetTexCoords()))[k];
         	}
         }
 	}

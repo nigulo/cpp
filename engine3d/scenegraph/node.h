@@ -16,7 +16,6 @@ using namespace std;
 namespace engine3d {
 
 class Scene;
-
 class Node : public Spatial
 {
 	public:

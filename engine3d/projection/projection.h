@@ -11,6 +11,7 @@
 #include "base/object.h"
 #include "engine3d/geometry/plane.h"
 #include "engine3d/geometry/matrix.h"
+#include "engine3d/program/program.h"
 #include "engine3d/program/attribute.h"
 
 using namespace base;
@@ -21,7 +22,7 @@ class Camera;
 class Projection : public Object {
 
 protected:
-	Projection(const Program& rProgram, double near, double far);
+	Projection(Program& rProgram, float near, float far);
 	virtual ~Projection();
 
 public:
@@ -29,14 +30,14 @@ public:
     /**
      * @return disctance of the near clipping plane measured from eye point
      **/
-	double GetZNear() const {
+	float GetZNear() const {
         return mZNear;
     }
 
     /**
      * @return disctance of the far clipping plane measured from eye point
      **/
-	double GetZFar() const {
+	float GetZFar() const {
         return mZFar;
     }
 
@@ -54,16 +55,16 @@ protected:
     /**
      * Disctance of the near clipping plane measured from eye point
      **/
-    double mZNear;
+    float mZNear;
 
     /**
      * Disctance of the far clipping plane measured from eye point
      **/
-    double mZFar;
+    float mZFar;
 
     Matrix mMatrix;
 
-    const Program& mrProgram;
+    Program& mrProgram;
     const Attribute& mrAttribute;
 };
 

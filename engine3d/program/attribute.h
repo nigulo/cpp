@@ -17,7 +17,7 @@ class Program;
 class Attribute {
 	friend class Program;
 private:
-	Attribute(const Program& rProgram, const std::string& rName);
+	Attribute(Program& rProgram, const std::string& rName);
 	virtual ~Attribute();
 public:
 	GLint GetId() const {

@@ -15,21 +15,21 @@ namespace engine3d {
 class Camera;
 class Perspective : public Projection {
 public:
-	Perspective(const Program& rProgram,
-			double viewAngle = 90.0f, double aspect = 1.0f, double near = 0.1f, double far = 100.0f);
+	Perspective(Program& rProgram,
+			float viewAngle = 90.0f, float aspect = 1.0f, float near = 0.1f, float far = 100.0f);
 	virtual ~Perspective();
 
 	/**
 	 * @return view angle in y-direction in degrees
 	 **/
-	double GetViewAngle() const {
+	float GetViewAngle() const {
         return mViewAngle;
     }
 
 	/**
 	 * @return ratio of x (width) to y (height)
 	 **/
-	double GetAspect() const {
+	float GetAspect() const {
         return mAspect;
     }
 
@@ -42,12 +42,12 @@ private:
 	/**
 	 * View angle in y-direction in degrees
 	 **/
-	double mViewAngle;
+	float mViewAngle;
 
 	/**
 	 * Ratio of x to y
 	 **/
-	double mAspect;
+	float mAspect;
 };
 
 }

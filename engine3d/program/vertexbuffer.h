@@ -8,15 +8,19 @@
 #ifndef VERTEXBUFFER_H_
 #define VERTEXBUFFER_H_
 
+#include "buffer.h"
+#include "program.h"
 #include "attribute.h"
-#include "engine3d/meshes/vertex.h"
 #include <vector>
+
+using namespace std;
 
 namespace engine3d {
 
+class Vertex;
 class VertexBuffer : public Buffer {
 public:
-	VertexBuffer(Program* rProgram, int dim = 3, bool textureOrColor = true);
+	VertexBuffer(Program& rProgram, int dim = 3, bool textureOrColor = true);
 	virtual ~VertexBuffer();
 
 	void SetData(vector<Vertex*> vertices);

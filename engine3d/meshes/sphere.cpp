@@ -9,7 +9,7 @@
 using namespace engine3d;
 
 // class constructor
-Sphere::Sphere(double radius, int parts1, int parts2, bool genTexCoords, double completeness) :
+Sphere::Sphere(float radius, int parts1, int parts2, bool genTexCoords, float completeness) :
     rings(parts1 - 2)
 {
     assert(radius >= 0);
@@ -23,23 +23,23 @@ Sphere::Sphere(double radius, int parts1, int parts2, bool genTexCoords, double 
 	this->parts2 = parts2;
 	this->completeness = completeness;
 	
-    double dTheta = M_PI / parts1;
-    double theta = dTheta;
-    double dPhi = 2.0f * M_PI / parts2;
-    double phi = 0.0f;
-    double ds = 1.0f / parts2;
-    double dt = 1.0f / parts1;
-    double s = 0.0f;
-    double t = 1.0f - dt / 2.0f;
+    float dTheta = M_PI / parts1;
+    float theta = dTheta;
+    float dPhi = 2.0f * M_PI / parts2;
+    float phi = 0.0f;
+    float ds = 1.0f / parts2;
+    float dt = 1.0f / parts1;
+    float s = 0.0f;
+    float t = 1.0f - dt / 2.0f;
 
     // Create top
-    double y = radius * cos(theta);
-    double r = sqrt(radius * radius - y * y);
+    float y = radius * cos(theta);
+    float r = sqrt(radius * radius - y * y);
 	for (int i = 0; i < parts2; i++) {
-        double z1 = r * cos(phi);
-        double x1 = r * sin(phi);
-        double z2 = r * cos(phi + dPhi);
-        double x2 = r * sin(phi + dPhi);
+        float z1 = r * cos(phi);
+        float x1 = r * sin(phi);
+        float z2 = r * cos(phi + dPhi);
+        float x2 = r * sin(phi + dPhi);
         if (i == 0) {
             z1 = r;
             x1 = 0.0f;
@@ -66,22 +66,22 @@ Sphere::Sphere(double radius, int parts1, int parts2, bool genTexCoords, double 
         s += ds;
     }
     
-	double yStop = radius - (2 * radius * completeness); 
+	float yStop = radius - (2 * radius * completeness);
     // Create middle rings
     for (int i = 0; i < parts1 - 2 && y >= yStop; i++) {
         TriangleStrip* ring = new TriangleStrip();
-        double r1 = sqrt(radius * radius - y * y);
-        double y2 = radius * cos(theta + dTheta);
-        double r2 = sqrt(radius * radius - y2 * y2);
+        float r1 = sqrt(radius * radius - y * y);
+        float y2 = radius * cos(theta + dTheta);
+        float r2 = sqrt(radius * radius - y2 * y2);
         phi = 0;
         s = 0;
         for (int j = 0; j < parts2 + 1; j++) {
-            double cosPhi = cos(phi);
-            double sinPhi = sin(phi);
-            double z1 = r1 * cosPhi;
-            double x1 = r1 * sinPhi;
-            double z2 = r2 * cosPhi;
-            double x2 = r2 * sinPhi;
+            float cosPhi = cos(phi);
+            float sinPhi = sin(phi);
+            float z1 = r1 * cosPhi;
+            float x1 = r1 * sinPhi;
+            float z2 = r2 * cosPhi;
+            float x2 = r2 * sinPhi;
             if (j == 0) {
                 z1 = r1;
                 x1 = 0.0f;
@@ -116,10 +116,10 @@ Sphere::Sphere(double radius, int parts1, int parts2, bool genTexCoords, double 
 	    t = dt / 2.0f;
 	    r = sqrt(radius * radius - y * y);
 		for (int i = 0; i < parts1; i++) {
-	        double z1 = r * cos(phi);
-	        double x1 = r * sin(phi);
-	        double z2 = r * cos(phi - dPhi);
-	        double x2 = r * sin(phi - dPhi);
+	        float z1 = r * cos(phi);
+	        float x1 = r * sin(phi);
+	        float z2 = r * cos(phi - dPhi);
+	        float x2 = r * sin(phi - dPhi);
 	        if (i == 0) {
 	            z1 = r;
 	            x1 = 0.0f;

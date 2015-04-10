@@ -1,7 +1,6 @@
-#include <GL/gl.h>
-
 #include "camera.h"
 #include "scene.h"
+#include <GL/gl.h>
 
 using namespace engine3d;
 

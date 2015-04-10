@@ -1,8 +1,6 @@
-#include <GL/gl.h>
-
-#include "trianglefan.h" // class's header file
-
+#include "trianglefan.h"
 #include "engine3d/geometry/triangle.h"
+#include <GL/gl.h>
 
 using namespace engine3d;
 // class constructor

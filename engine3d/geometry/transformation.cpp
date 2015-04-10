@@ -1,7 +1,6 @@
+#include "transformation.h"
 #include <GL/gl.h>
 #include <math.h>
-
-#include "transformation.h" // class's header file
 
 using namespace engine3d;
 
@@ -25,13 +24,13 @@ Transformation::Transformation(const Vector& translation) :
     SetTranslation(translation);
 }
 
-Transformation::Transformation(const Vector& rotAxis, double rotAngle) :
+Transformation::Transformation(const Vector& rotAxis, float rotAngle) :
     mMatrix(Matrix::GetUnit(4))
 {
     SetRotation(rotAxis, rotAngle);
 }
 
-Transformation::Transformation(const Vector& rotAxis, double rotAngle, const Vector& translation)  :
+Transformation::Transformation(const Vector& rotAxis, float rotAngle, const Vector& translation)  :
     mMatrix(Matrix::GetUnit(4))
 {
     SetRotation(rotAxis, rotAngle);
@@ -52,22 +51,22 @@ Transformation::~Transformation()
 }
 
 // Rotates around the given axes
-void Transformation::SetRotation(const Vector& axis, double angle)
+void Transformation::SetRotation(const Vector& axis, float angle)
 {
     Vector a(axis);
     a.Normalize();
-    double x = a[0];
-    double y = a[1];
-    double z = a[2];
-    double s = sin(angle);
-    double c = cos(angle);
-    double c1 = 1 - c;
-    double xs = x * s;
-    double ys = y * s;
-    double zs = z * s;
-    double xy = x * y;
-    double yz = y * z;
-    double xz = x * z;
+    float x = a[0];
+    float y = a[1];
+    float z = a[2];
+    float s = sin(angle);
+    float c = cos(angle);
+    float c1 = 1 - c;
+    float xs = x * s;
+    float ys = y * s;
+    float zs = z * s;
+    float xy = x * y;
+    float yz = y * z;
+    float xz = x * z;
     mMatrix = Matrix::GetUnit(4);
     mMatrix.Set(0, 0, x * x * c1 + c); mMatrix.Set(0, 1, xy * c1 - zs);   mMatrix.Set(0, 2, xz * c1 + ys);
     mMatrix.Set(1, 0, xy * c1 + zs);   mMatrix.Set(1, 1, y * y * c1 + c); mMatrix.Set(1, 2, yz * c1 - xs);
@@ -95,8 +94,8 @@ const Matrix& Transformation::GetMatrix() const {
 void Transformation::Transform() const
 {
     
-    const double* trMatrix = mMatrix.GetElements();
-    glMultMatrixd(trMatrix);
+    const float* trMatrix = mMatrix.GetElements();
+    glMultMatrixf(trMatrix);
 }
 
 Transformation Transformation::operator*(const Transformation& t) const

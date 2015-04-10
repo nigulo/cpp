@@ -6,8 +6,11 @@
  */
 
 #include "texture.h"
+#include "lodepng/lodepng.h"
 
-Texture::Texture(const Program& rProgram, const string& rName, const string& rTextureFile) :
+using namespace engine3d;
+
+Texture::Texture(Program& rProgram, const string& rName, const string& rTextureFile) :
 	mrAttribute(rProgram.GetAttribute(rName))
 {
 	// Only png support currenlty
@@ -15,7 +18,7 @@ Texture::Texture(const Program& rProgram, const string& rName, const string& rTe
     unsigned width, height;
 	unsigned error = lodepng::decode(image, width, height, rTextureFile.c_str());
 	if (error != 0) {
-		throw (string("Loading texture ") + rTextureFile + " failed: " + string((int) error) + ", " + lodepng_error_text(error));
+		throw (string("Loading texture ") + rTextureFile + " failed: " + to_string(error) + ", " + lodepng_error_text(error));
 	}
 
 	vector<unsigned char>* p_image = new std::vector<unsigned char>(width * height * 4);
@@ -44,7 +47,7 @@ Texture::Texture(const Program& rProgram, const string& rName, const string& rTe
 
 	if (p_image) {
 		p_image->clear();
-		delete p_image();
+		delete p_image;
 	}
 }
 

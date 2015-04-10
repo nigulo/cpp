@@ -13,7 +13,9 @@
 
 namespace engine3d {
 
+class Program;
 class VertexShader : public Shader {
+	friend class Program;
 protected:
 	VertexShader(const std::string& rShaderScript);
 	virtual ~VertexShader();

@@ -16,7 +16,7 @@ class Sphere : public Shape
 {
 	public:
 		// class constructor
-		Sphere(double radius, int parts1 = 10, int parts2 = 10, bool genTexCoords = true, double completeness = 1.0);
+		Sphere(float radius, int parts1 = 10, int parts2 = 10, bool genTexCoords = true, float completeness = 1.0);
 	protected:
         void Copy(const Sphere& ts);
     public:
@@ -25,7 +25,7 @@ class Sphere : public Shape
 		virtual ~Sphere();
 		virtual void Render();
 	protected:
-        double radius;
+        float radius;
         int parts1;
         int parts2;
         /**
@@ -35,7 +35,7 @@ class Sphere : public Shape
          * 0.5 - half sphere is created
          * All completeness levels from 0 to 1 are supported
          **/ 
-        double completeness;
+        float completeness;
         //----------------------------
         Triangles* top;
         ArrayList<TriangleStrip*> rings;

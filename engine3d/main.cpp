@@ -4,7 +4,7 @@
  **************************/
 
 #include <math.h>
-//#include <GL/glew.h>
+#include <GL/glew.h>
 #include <GL/glut.h>
 #include <fstream>
 
@@ -15,7 +15,6 @@
 #include "engine3d/meshes/triangles.h"
 #include "engine3d/scenegraph/node.h"
 #include "engine3d/attributes/color.h"
-#include "engine3d/attributes/texture.h"
 #include "engine3d/meshes/sphere.h"
 #include "engine3d/scenegraph/camera.h"
 #include "engine3d/geometry/transformation.h"
@@ -32,16 +31,10 @@
 using namespace engine3d;
 using namespace base;
 
-/**************************
- * Function Declarations
- *
- **************************/
-
 MouseController* pMouseController;
 double theta = 0;
-Scene* scene;
-Perspective projection;
-Camera camera(&projection);
+Program* pProgram = nullptr;
+Scene* pScene = nullptr;
 bool doubleBuffer = true;
 long tickCount = 0;
 
@@ -55,11 +48,6 @@ Triangles tr;
 Node n("W");
 ////////////////////////////
 
-/**************************
- * WinMain
- *
- **************************/
-// test
 void motionFunc(int x, int y) {
     Object::Dbg("motionFunc 1");
     pMouseController->OnMove(x, y);
@@ -82,7 +70,7 @@ void keyboardFunc(unsigned char key, int x, int y) {
 
 void renderFunc() {
     Object::Dbg("renderFunc 1");
-	scene->Render();
+	pScene->Render();
 	if (doubleBuffer) {
 		glutSwapBuffers();
 	} else {
@@ -98,19 +86,22 @@ void init() {
     p_bp->AddVertex(Vector(0, 0, 0));
     //camera.SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
 
-    scene = new Scene();
-    scene->SetCamera(&camera);
 
-    SceneLoader sl(*scene);
+    pScene = new Scene(*pProgram);
+    Perspective projection(*pProgram);
+    Camera camera(*pProgram, projection);
+    pScene->SetCamera(&camera);
+
+    SceneLoader sl(*pScene);
     sl.Load();
     //Object::Dbg("main -2");
     //Object::Dbg("main -1");
 
-    String textureFile("ConcreteWall.png");
-    Texture* p_tex = new Texture(textureFile);
+    //String textureFile("ConcreteWall.png");
+    //Texture* p_tex = new Texture(textureFile);
     //Object::Dbg("main -0.5");
     Sphere* p_s = new Sphere(0.5, 10, 10);
-    p_s->SetTexture(p_tex);
+    //p_s->SetTexture(p_tex);
     Transformation t;
     //t.SetRotation(Vector(1, 1, 0), -M_PI / 4);
     t.SetTranslation(Vector(2, 2, 2));
@@ -158,8 +149,8 @@ void init() {
 
     Object::Dbg("main 3");
 
-    pMouseController = new MouseController(*scene);
-    pMouseController->AddTarget(&scene->GetCamera());
+    pMouseController = new MouseController(*pScene);
+    pMouseController->AddTarget(&pScene->GetCamera());
     
     Object::Dbg("main 4");
     /*
@@ -245,6 +236,6 @@ int main (int argc, char* argv[]) {
     }
 	*/
     glutMainLoop();
-    delete scene;
+    delete pScene;
     return 0;
 }

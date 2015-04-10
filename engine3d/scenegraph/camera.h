@@ -14,7 +14,7 @@ namespace engine3d {
 class Camera : public Node
 {
 	public:
-		Camera(const Program& rProgram, Projection& rProjection);
+		Camera(Program& rProgram, Projection& rProjection);
 		
 		virtual ~Camera();
 		

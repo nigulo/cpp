@@ -15,14 +15,14 @@ TransformationController::~TransformationController()
 
 void TransformationController::AddTarget(Spatial* target)
 {
-    mTargets.Add(target);
+    mTargets.push_back(target);
 }
 
 void TransformationController::Rotate(const Vector& rotVector, double rotAngle) 
 {
      
-    for (LinkedList<Spatial*>::Iterator i = mTargets.Begin(); !i.Done(); i++) {
-        Spatial* p_target = (*i);
+    for (auto i = mTargets.begin(); i != mTargets.end(); i++) {
+        Spatial* p_target = *i;
         assert(p_target);
         Transformation t1(rotVector, rotAngle);
         if (mRelative) {
@@ -35,8 +35,8 @@ void TransformationController::Rotate(const Vector& rotVector, double rotAngle)
 
 void TransformationController::Translate(const Vector& trVector) 
 {
-    for (LinkedList<Spatial*>::Iterator i = mTargets.Begin(); !i.Done(); i++) {
-        Spatial* p_target = (*i);
+    for (auto i = mTargets.begin(); i != mTargets.end(); i++) {
+        Spatial* p_target = *i;
         assert(p_target);
         Transformation t1(trVector);
         if (mRelative) {
@@ -50,8 +50,8 @@ void TransformationController::Translate(const Vector& trVector)
 
 void TransformationController::Transform(const Vector& rotVector, double rotAngle, const Vector& trVector)
 {
-    for (LinkedList<Spatial*>::Iterator i = mTargets.Begin(); !i.Done(); i++) {
-        Spatial* p_target = (*i);
+    for (auto i = mTargets.begin(); i != mTargets.end(); i++) {
+        Spatial* p_target = *i;
         assert(p_target);
         Transformation t1(rotVector, rotAngle, trVector);
         if (mRelative) {

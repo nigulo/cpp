@@ -11,20 +11,20 @@
 
 using namespace engine3d;
 
-Ortho::Ortho(const Program& rProgram,
-			double left, double right, double bottom, double top, double near, double far) :
+Ortho::Ortho(Program& rProgram,
+			float left, float right, float bottom, float top, float near, float far) :
 		Projection(rProgram, near, far),
 		mLeft(left),
 		mRight(right),
 		mBottom(bottom),
 		mTop(top) {
 
-	double w = right - left;
-	double h = top - bottom;
-	double d = far - near;
-	double tx = (right + left) / w;
-	double ty = (top + bottom) / h;
-	double tz = (far + near) / d;
+	float w = right - left;
+	float h = top - bottom;
+	float d = far - near;
+	float tx = (right + left) / w;
+	float ty = (top + bottom) / h;
+	float tz = (far + near) / d;
 	mMatrix.Set(0, 0, 2 / w); mMatrix.Set(0, 1, 0);     mMatrix.Set(0, 2, 0);      mMatrix.Set(0, 3, tx);
 	mMatrix.Set(1, 0, 0);     mMatrix.Set(1, 1, 2 / h); mMatrix.Set(1, 2, 0);      mMatrix.Set(1, 3, ty);
 	mMatrix.Set(2, 0, 0);     mMatrix.Set(2, 1, 0);     mMatrix.Set(2, 2, -2 / d); mMatrix.Set(2, 3, tz);

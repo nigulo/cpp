@@ -6,9 +6,9 @@
  */
 
 #include "shader.h"
+#include "utils.h"
 #include <GL/glew.h>
 #include <GL/gl.h>
-#include "utils.h"
 
 using namespace engine3d;
 using namespace std;

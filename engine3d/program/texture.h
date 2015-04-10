@@ -18,7 +18,7 @@ namespace engine3d {
 
 	class Texture {
 	public:
-		Texture(const Program& rProgram, const string& rName, const string& rTextureFile);
+		Texture(Program& rProgram, const string& rName, const string& rTextureFile);
 		virtual ~Texture();
 		void Use() const;
 	private:

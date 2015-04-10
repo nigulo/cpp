@@ -1,11 +1,11 @@
-#include <GL/gl.h>
-
 #include "mesh.h"
+#include "engine3d/scenegraph/scene.h"
+#include <GL/gl.h>
 
 using namespace engine3d;
 
 // class constructor
-Mesh::Mesh(int mode) : mElementBuffer(mode) {
+Mesh::Mesh(int mode) : mVertexBuffer(GetScene().GetProgram()), mElementBuffer(mode) {
 }
 
 void Mesh::Copy(const Mesh& rMesh)

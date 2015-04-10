@@ -10,7 +10,7 @@
 
 using namespace engine3d;
 
-Projection::Projection(const Program& rProgram, double near, double far) :
+Projection::Projection(Program& rProgram, float near, float far) :
 	mrProgram(rProgram),
 	mrAttribute(rProgram.GetAttribute("p_matrix")),
 	mZNear(near),
@@ -24,7 +24,7 @@ Projection::~Projection() {
 
 void Projection::Project() const {
     glUniformMatrix4fv(
-        mAttribute.GetId(),
+        mrAttribute.GetId(),
         1, GL_FALSE,
         mMatrix.GetElements()
     );
