@@ -1,0 +1,4 @@
+<vertexshader script="engine3d.v.glsl">
+</vertexshader>
+<fragmentshader script="engine3d.f.glsl">
+</fragmentshader>
