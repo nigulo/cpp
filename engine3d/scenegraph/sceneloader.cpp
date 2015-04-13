@@ -13,23 +13,23 @@
 
 using namespace engine3d;
 
-SceneLoader::SceneLoader(Scene& rScene,
+SceneLoader::SceneLoader(
 		const String& rProgramFileName,
 		const String& rSceneFileName,
 		const String& rObjFileName) :
-    mrScene(rScene),
 	mProgramParser(rProgramFileName),
     mSceneParser(rSceneFileName),
     mObjParser(rObjFileName),
-    mShapes("Predefined shapes"),
-	mpProgram(nullptr)
+    mShapes("Predefined shapes")
 {
 }
 
-void SceneLoader::Load() 
+Scene* SceneLoader::Load()
 {
+	mpScene = new Scene();
+    Debug("Loading program...");
+	mpScene->SetProgram(LoadProgram(*(mProgramParser.Load())));
     Debug("Loading objects...");
-	LoadProgram(*(mProgramParser.Load()));
 	XmlParser::XmlElement* p_objects = mObjParser.Load();
     for (auto i = p_objects->mSubElements.begin(); i != p_objects->mSubElements.end(); i++) {
     	Load(*(*i), &mShapes);
@@ -39,6 +39,7 @@ void SceneLoader::Load()
 	Load(*(mSceneParser.Load()->mSubElements.front()));
     Debug("Scene loaded.");
     mTextures.clear();
+    return mpScene;
 }
 
 void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
@@ -72,7 +73,7 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         LoadTranslation(rElement, p_spatial);
     } else if (rElement.mType == TEXTURE) {
         Debug(String("Creating new texutre: ") + rElement.mName + ", " + rElement.mParams.GetProperty("file"));
-        Texture* p_texture = new Texture(*mpProgram, rElement.mName, rElement.mParams.GetProperty("file"));
+        Texture* p_texture = new Texture(mpScene->GetProgram(), rElement.mName, rElement.mParams.GetProperty("file"));
         //if (rElement.mParams.GetProperty("alphafile").Length() > 0) {
         //    Texture tex_alpha(rElement.mParams.GetProperty("alphafile"), rElement.mName + "_alpha", Texture::FORMAT_ALPHA);
         //    Debug("before modulate");
@@ -113,7 +114,7 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
 	        Node* p_parent_node = dynamic_cast<Node*>(pObject);
 	        if (!p_parent_node) {
 	            Debug(String("First node"));
-	            mrScene.SetNode(p_node);
+	            mpScene->SetNode(p_node);
 	        }
 	        else {
 	            Debug(String("Not first node"));
@@ -132,7 +133,7 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
     Debug("SceneLoader::Load 24");
 }
 
-void SceneLoader::LoadProgram(XmlParser::XmlElement& rElement) {
+Program* SceneLoader::LoadProgram(XmlParser::XmlElement& rElement) {
 	list<XmlParser::XmlElement*> r_sub_elements = rElement.GetSubElements();
 	assert(r_sub_elements.size() == 2);
 	string vertex_shader;
@@ -146,8 +147,9 @@ void SceneLoader::LoadProgram(XmlParser::XmlElement& rElement) {
 	}
 	assert(vertex_shader.length() > 0);
 	assert(fragment_shader.length() > 0);
-	mpProgram = new Program(vertex_shader, fragment_shader);
-	assert(mpProgram);
+	Program* p_program = new Program(vertex_shader, fragment_shader);
+	assert(p_program);
+	return p_program;
 }
 
 void SceneLoader::LoadTriangle(XmlParser::XmlElement& rElement, Mesh* pMesh) {

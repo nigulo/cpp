@@ -21,7 +21,7 @@ class Scene : public Object
 {
 	public:
 		// class constructor
-		Scene(Program& rProgram);
+		Scene();
 		// class destructor
 		~Scene();
         
@@ -85,13 +85,17 @@ class Scene : public Object
          **/
         void AddController(Controller* pController);
         
+        void SetProgram(Program* pProgram) {
+        	mpProgram = pProgram;
+        }
+
         Program& GetProgram() {
-        	return mrProgram;
+        	return *mpProgram;
         }
 
 	protected:
         
-        Program& mrProgram;
+        Program* mpProgram;
         Camera* mpCamera;
         // root node
         Node* mpNode;

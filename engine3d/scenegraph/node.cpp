@@ -163,7 +163,7 @@ Node* Node::GetParent() const
 
 Scene& Node::GetScene() const
 {
-    if (mpParent == NULL) {
+    if (mpParent == nullptr) {
         assert(mpScene);
         return *mpScene;
     }

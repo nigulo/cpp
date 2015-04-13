@@ -33,7 +33,6 @@ using namespace base;
 
 MouseController* pMouseController;
 double theta = 0;
-Program* pProgram = nullptr;
 Scene* pScene = nullptr;
 bool doubleBuffer = true;
 long tickCount = 0;
@@ -87,13 +86,11 @@ void init() {
     //camera.SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
 
 
-    pScene = new Scene(*pProgram);
-    Perspective projection(*pProgram);
-    Camera camera(*pProgram, projection);
+    SceneLoader sl;
+    pScene = sl.Load();
+    Perspective projection(pScene->GetProgram());
+    Camera camera(pScene->GetProgram(), projection);
     pScene->SetCamera(&camera);
-
-    SceneLoader sl(*pScene);
-    sl.Load();
     //Object::Dbg("main -2");
     //Object::Dbg("main -1");
 

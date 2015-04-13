@@ -43,13 +43,12 @@ namespace engine3d {
     {
     	public:
             // Creates a new SceneLoader using the given scene and object files
-            SceneLoader(Scene& rScene,
-            		const String& rProgramFileName = "program.xml",
+            SceneLoader(const String& rProgramFileName = "program.xml",
             		const String& rSceneFileName = "scene.xml",
 					const String& rObjFileName = "objects.xml");
-            void Load();
+            Scene* Load();
     	private:
-            void LoadProgram(XmlParser::XmlElement& rElement);
+            Program* LoadProgram(XmlParser::XmlElement& rElement);
             void Load(XmlParser::XmlElement& rElement, Object* pObject = nullptr);
             void LoadTriangle(XmlParser::XmlElement& rElement, Mesh* pMesh);
             void LoadCoords(XmlParser::XmlElement& rElement, Object* pObject);
@@ -67,9 +66,8 @@ namespace engine3d {
             XmlParser mProgramParser;
             XmlParser mSceneParser;
             XmlParser mObjParser;
-            Scene& mrScene;
+            Scene* mpScene;
             map<string, Texture*> mTextures;
-            Program* mpProgram;
             Node mShapes;
     };
 }

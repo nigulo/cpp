@@ -4,8 +4,8 @@
 
 using namespace engine3d;
 
-Scene::Scene(Program& rProgram) :
-	mrProgram(rProgram),
+Scene::Scene() :
+	mpProgram(nullptr),
     mpNode(nullptr),
     mpCamera(nullptr)
 {
@@ -71,7 +71,7 @@ void Scene::Render()
         //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glPolygonMode(mPolygonMode[0], mPolygonMode[1]);
-        glUseProgram(mrProgram.GetId());
+        glUseProgram(mpProgram->GetId());
         glActiveTexture(GL_TEXTURE0);
 
         Debug("Scene::Render 2");
