@@ -10,6 +10,7 @@
 //#include <cstdlib>
 //#include <sstream>
 #include <boost/algorithm/string.hpp>
+#include "spline.h"
 
 using namespace std;
 
@@ -17,7 +18,9 @@ string fileName;
 string prefix;
 double precision = 0.01;
 bool header = true;
-double xScale = 1;
+double xStep = 1;
+vector<double> xs;
+double xRange;
 
 void multComplex(double x[2], double y[2]) {
 	double x0 = x[0];
@@ -59,7 +62,7 @@ void fft(bool direction, int n, fftw_complex* data, double phaseShift) {
 
 }
 
-double getTangent(int i, double* data) {
+double getTangent(int i, const vector<double>& data) {
 	return (data[i + 1] - data[i - 1]) / 2;
 }
 
@@ -67,27 +70,133 @@ double getRealTangent(int i, fftw_complex* data) {
 	return (data[i + 1][0] - data[i - 1][0]) / 2;
 }
 
-void analyticSignal(int n, double* realSignal) {
-    fftw_complex* conjugatedSignal = (fftw_complex*) malloc(sizeof(fftw_complex) * n);
-    for (int i = 0; i < n; i++) {
+void analyticSignal(const vector<double>& realSignal, int modeNo) {
+    fftw_complex* conjugatedSignal = (fftw_complex*) malloc(sizeof(fftw_complex) * realSignal.size());
+    for (int i = 0; i < realSignal.size(); i++) {
     	conjugatedSignal[i][0] = realSignal[i];
     	conjugatedSignal[i][1] = 0;
     }
-	fft(true, n, conjugatedSignal, 0);
-	fft(false, n, conjugatedSignal, (M_PI_2));
-	double* amplitude = (double*) malloc(sizeof(double) * n);
-	double* phase = (double*) malloc(sizeof(double) * n);
-	double* frequency = (double*) malloc(sizeof(double) * (n - 2));
-	for (int i = 0; i < n; i++) {
+	fft(true, realSignal.size(), conjugatedSignal, 0);
+	fft(false, realSignal.size(), conjugatedSignal, (M_PI_2));
+	//double* amplitude = (double*) malloc(sizeof(double) * n);
+	//double* phase = (double*) malloc(sizeof(double) * n);
+	//double* frequency = (double*) malloc(sizeof(double) * (n - 2));
+	ofstream imfStream(prefix + "_imf_" + modeNo + ".csv");
+	ofstream ampStream(prefix + "_amp_" + modeNo + ".csv");
+	ofstream freqStream(prefix + "_freq_" + modeNo + ".csv");
+	for (int i = 0; i < realSignal.size(); i++) {
+		double x = xs[i];
 		double u = realSignal[i];
 		double v = conjugatedSignal[i][0];
 		double u2v2 = u * u + v * v;
-		amplitude[i] = sqrt(u2v2);
-		phase[i] = atan(v / u);
-		if (i > 0 && i < n - 1) {
-			frequency[i] = (getRealTangent(i, conjugatedSignal) * u - getTangent(i, realSignal) * v) / u2v2;
+		double amplitude = sqrt(u2v2);
+		//double phase = atan(v / u);
+		imfStream << x << " " << v << endl;
+		ampStream << x << " " << amplitude << endl;
+		if (i > 0 && i < realSignal.size() - 1) {
+			double frequency = (getRealTangent(i, conjugatedSignal) * u - getTangent(i, realSignal) * v) / u2v2 / xStep;
+			freqStream << x << " " << frequency << endl;
 		}
 	}
+	imfStream.close();
+	ampStream.close();
+	freqStream.close();
+}
+
+pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>> findExtrema(const vector<double>& xs, const vector<double>& ys) {
+	vector<double>* minima_x = new vector<double>();
+	vector<double>* minima_y = new vector<double>();
+	vector<double>* maxima_x = new vector<double>();
+	vector<double>* maxima_y = new vector<double>();
+	int j = 0;
+	for (int i = 1; i < ys.size() -  1; i++) {
+		double y1 = ys[i];
+		double y2 = ys[i + 1];
+		if (y1 != y2) {
+			double y0 = ys[j]; // in a regular case j = i - 1
+			if (y1 - y0 < 0 && y1 - y2 < 0 ){
+				minima_y->push_back(y1);
+				minima_x->push_back(xs[i]);
+			} else if (y1 - y0 > 0 && y1 - y2 > 0 ) {
+				maxima_y->push_back(y1);
+				maxima_x->push_back(xs[i]);
+			}
+			j = i;
+		}
+	}
+	return {{minima_x, minima_y}, {maxima_x, maxima_y}};
+}
+/*
+const vector<double>* findZeroCrossings(const vector<double>& xs, const vector<double>& ys) {
+	vector<double>* zeroCrossings = new vector<double>();
+	int j = 0;
+	for (int i = 0; i < ys.size() - 1; i++) {
+		double y1 = ys[i];
+        if (y1 == 0) {
+        	zeroCrossings->push_back(xs[i]);
+        } else {
+    		double y2 = ys[i + 1];
+        	if ((y1 > 0 && y2 <= 0) || (y1 < 0 && y2 >= 0)) {
+            	zeroCrossings->push_back(abs(y1) < abs(y2) ? xs[i] : xs[i + 1]);
+        	}
+        }
+	}
+	return zeroCrossings;
+}
+*/
+
+int findNumZeroCrossings(const vector<double>& xs, const vector<double>& ys) {
+	int numZeroCrossings = 0;
+	int j = 0;
+	for (int i = 0; i < ys.size() - 1; i++) {
+		double y1 = ys[i];
+        if (y1 == 0) {
+        	numZeroCrossings++;
+        } else {
+    		double y2 = ys[i + 1];
+        	if ((y1 > 0 && y2 <= 0) || (y1 < 0 && y2 >= 0)) {
+            	numZeroCrossings++;
+        	}
+        }
+	}
+	return numZeroCrossings;
+}
+
+int /*numZeroCrossings*/ imfStep(vector<double>& imf, pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>>& stepExtrema) {
+	tk::spline lowerEnv;
+	lowerEnv.set_points(*stepExtrema.first.first, *stepExtrema.first.second);
+	tk::spline upperEnv;
+	upperEnv.set_points(*stepExtrema.second.first, *stepExtrema.second.second);
+	//vector<double>* dat1 = new vector<double>(dat.size());
+	for (int i = 0; i < imf.size(); i++) {
+		double x = xs[i];
+		imf[i] = imf[i] - (lowerEnv(x) + upperEnv(x)) / 2;
+	}
+	auto newExtrema = findExtrema(xs, imf);
+	auto numExtrema = min(newExtrema.first.first->size(), newExtrema.second.first->size());
+	int numZeroCrossings = findNumZeroCrossings(xs, imf);
+    cout << endl << "NE: " << numExtrema << ", NZC: " << numZeroCrossings;
+	if (numExtrema - numZeroCrossings <= 1) {
+		return numZeroCrossings;
+	}
+	imfStep(imf, newExtrema);
+}
+
+pair<const vector<double>* /*imf*/, double /*avgFreq*/> imf(int modeNo, vector<double>& dat) {
+	auto extrema = findExtrema(xs, dat);
+	auto numExtrema = min(extrema.first.first->size(), extrema.second.first->size());
+	if (numExtrema <= 2) {
+		return {&dat, 0};
+	}
+	cout << "Extracting mode " << modeNo << " (" << numExtrema << ") ... ";
+	vector<double>* imf = new vector<double>(dat);
+    int numZeroCrossings = imfStep(*imf, extrema);
+    cout << " done." << endl;
+
+    for (int i = 0; i < dat.size(); i++) {
+        dat[i] -= (*imf)[i];
+    }
+    return {imf, 0.5 * numZeroCrossings / xRange};
 }
 
 int main(int argc, char** argv) {
@@ -95,8 +204,8 @@ int main(int argc, char** argv) {
 	string::size_type n = fileName.find('.');
 	prefix = fileName.substr(0, n);
 
+	vector<double> ys;
 	ifstream input(fileName);
-	vector<double> xs, ys;
 	for (string line; getline(input, line);) {
 		//cout << line << endl;
 		std::vector<std::string> words;
@@ -123,8 +232,19 @@ int main(int argc, char** argv) {
     }
 	input.close();
 	if (xs.size() > 1) {
-		xScale = xs[1] - xs[0]; // Assuming even sampling
+		xStep = xs[1] - xs[0]; // Assuming even sampling
+		xRange = xs.end() - xs.begin();
+		n = xs.size();
+		cout << "xStep: " << xStep << ", xRange: " << xRange << endl;
 	}
 
-	return 0;
+	for(int modeNo = 1;; modeNo++) {
+		auto imfAndFreq = imf(modeNo, ys);
+		if (imfAndFreq.second == 0) {
+			break;
+		}
+		analyticSignal(*imfAndFreq.first, modeNo);
+	}
+
+	return EXIT_SUCCESS;
 }
