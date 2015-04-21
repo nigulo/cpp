@@ -23,6 +23,7 @@ double xStep = 1;
 vector<double> xs;
 double xRange;
 
+/*
 pair<double, double> meanVariance(const vector<double>& dat) {
 	assert(dat.size() > 0);
 	double sum = 0;
@@ -35,7 +36,7 @@ pair<double, double> meanVariance(const vector<double>& dat) {
 	double mean = sum / n;
 	return {mean,  sumSquares / n - mean * mean};
 }
-
+*/
 void multComplex(double x[2], double y[2]) {
 	double x0 = x[0];
 	x[0] = x0 * y[0] - x[1] * y[1];
@@ -178,7 +179,7 @@ int findNumZeroCrossings(const vector<double>& xs, const vector<double>& ys) {
 	return numZeroCrossings;
 }
 
-int /*numZeroCrossings*/ imfStep(vector<double>& imf, pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>>& stepExtrema) {
+pair<int, pair<double, double>> imfStep(vector<double>& imf, pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>>& stepExtrema) {
 	tk::spline lowerEnv;
 	lowerEnv.set_points(*stepExtrema.first.first, *stepExtrema.first.second);
 	tk::spline upperEnv;
@@ -197,11 +198,13 @@ int /*numZeroCrossings*/ imfStep(vector<double>& imf, pair<pair<const vector<dou
 	int numZeroCrossings = findNumZeroCrossings(xs, imf);
     cout << endl << "NE: " << numExtrema << ", NZC: " << numZeroCrossings;
 	if (abs(numExtrema - numZeroCrossings) <= 1) {
+		double extremaStart = max(*(newExtrema.first.first->begin()), *(newExtrema.second.first->begin()));
+		double extremaEnd = min(*(newExtrema.first.first->end() - 1), *(newExtrema.second.first->end() - 1));
 		delete newExtrema.first.first;
 		delete newExtrema.first.second;
 		delete newExtrema.second.first;
 		delete newExtrema.second.second;
-		return numZeroCrossings;
+		return {numZeroCrossings, {extremaStart, extremaEnd}};
 	}
 	return imfStep(imf, newExtrema);
 }
@@ -218,12 +221,33 @@ pair<const vector<double>* /*imf*/, double /*avgFreq*/> imf(int modeNo, vector<d
 	}
 	cout << "Extracting mode " << modeNo << " (" << numExtrema << ") ... ";
 	vector<double>* imf = new vector<double>(dat);
-    int numZeroCrossings = imfStep(*imf, extrema);
+	auto imfResult = imfStep(*imf, extrema);
+    int numZeroCrossings = imfResult.first;
+    auto extremaStart = imfResult.second.first;
+    auto extremaEnd = imfResult.second.second;
     cout << " done." << endl;
 
-    for (unsigned i = 0; i < dat.size(); i++) {
-        dat[i] -= (*imf)[i];
+    auto xsIter = xs.begin();
+    auto datIter = dat.begin();
+    auto imfIter = imf->begin();
+    for (;xsIter != xs.end();) {
+    	double x = *xsIter;
+    	if (x < extremaStart || x > extremaEnd) {
+    		xs.erase(xsIter);
+    		dat.erase(datIter);
+    		imf->erase(imfIter);
+    	} else {
+    		*datIter -= *imfIter;
+    		xsIter++;
+    		datIter++;
+    		imfIter++;
+    	}
     }
+	xRange = *(xs.end() - 1) - *(xs.begin());
+
+    //for (unsigned i = 0; i < dat.size(); i++) {
+   	//	dat[i] -= (*imf)[i];
+    //}
     return {imf, 0.5 * numZeroCrossings / xRange};
 }
 
