@@ -212,16 +212,18 @@ pair<int, pair<double, double>> imfStep(vector<double>& imf, pair<pair<const vec
 }
 
 pair<const vector<double>* /*imf*/, double /*avgFreq*/> imf(int modeNo, vector<double>& dat) {
+	assert(xs.size() == dat.size());
 	auto extrema = findExtrema(xs, dat);
 	int numExtrema = min(extrema.first.first->size(), extrema.second.first->size());
-	if (numExtrema <= 2) {
+	if (numExtrema <= 3) {
 		delete extrema.first.first;
 		delete extrema.first.second;
 		delete extrema.second.first;
 		delete extrema.second.second;
 		return {&dat, 0};
 	}
-	cout << "Extracting mode " << modeNo << " (" << numExtrema << ") ... ";
+	cout << "Extracting mode " << modeNo << " (" << numExtrema << ") ...";
+	cout.flush();
 	vector<double>* imf = new vector<double>(dat);
 	auto imfResult = imfStep(*imf, extrema);
     int numZeroCrossings = imfResult.first;
@@ -235,9 +237,9 @@ pair<const vector<double>* /*imf*/, double /*avgFreq*/> imf(int modeNo, vector<d
     for (;xsIter != xs.end();) {
     	double x = *xsIter;
     	if (x < extremaStart || x > extremaEnd) {
-    		xs.erase(xsIter);
-    		dat.erase(datIter);
-    		imf->erase(imfIter);
+    		xsIter = xs.erase(xsIter);
+    		datIter = dat.erase(datIter);
+    		imfIter = imf->erase(imfIter);
     	} else {
     		*datIter -= *imfIter;
     		xsIter++;
@@ -275,22 +277,22 @@ pair<double, double> getLatR(const string& fileName) {
 }
 
 void collect() {
-
 	vector<vector<tuple<double, double, double, double>>> allModes;
 	directory_iterator end_itr; // default construction yields past-the-end
-	path currentDir;
+	path currentDir(".");
 	for (directory_iterator itr(currentDir); itr != end_itr; ++itr) {
 		if (is_regular_file(itr->status())) {
 			const string& fileName = itr->path().generic_string();
 			if (fileName.substr(fileName.length() - 4) != ".log") {
 				continue;
 			}
+		    cout << "Processing " << fileName << endl;
 			auto latR = getLatR(fileName);
 			double lat = latR.first;
 			double r = latR.second;
 			vector<double[4]> modes;
 			ifstream input(fileName);
-			unsigned i = 0;
+			unsigned modeNo = 0;
 			for (string line; getline(input, line);) {
 				//cout << line << endl;
 				std::vector<std::string> words;
@@ -301,10 +303,10 @@ void collect() {
 					}
 				}
 				//double mode[4] = {latR.first, latR.second, stod(words[1]), stod(words[2])};
-				if (i >= allModes.size()) {
+				if (modeNo >= allModes.size()) {
 					allModes.push_back(vector<tuple<double, double, double, double>>());
 				}
-				vector<tuple<double, double, double, double>>& mode = allModes[i];
+				vector<tuple<double, double, double, double>>& mode = allModes[modeNo];
 				auto i = mode.begin();
 				for (; i != mode.end(); i++) {
 					double currentLat = get<0>(*i);
@@ -314,16 +316,16 @@ void collect() {
 					}
 				}
 				mode.insert(i, make_tuple(lat, r, stod(words[1]), stod(words[2])));
-				i++;
+				modeNo++;
 		    }
 			input.close();
 		}
 	}
-	for (int i = 0; i < allModes.size(); i++) {
+	for (unsigned i = 0; i < allModes.size(); i++) {
 		string modeNo = to_string(i + 1);
 		ofstream enStream(string("ens") + modeNo + ".csv");
 		ofstream freqStream(string("freqs") + modeNo + ".csv");
-		for (int j = 0; j < allModes[i].size(); j++) {
+		for (unsigned j = 0; j < allModes[i].size(); j++) {
 			auto dat = allModes[i][j];
 			double lat = get<0>(dat);
 			double r = get<1>(dat);
@@ -347,6 +349,7 @@ int main(int argc, char** argv) {
 		return EXIT_SUCCESS;
 	}
 	fileName = argv[1];
+    cout << "Processing " << fileName << endl;
 	string::size_type n = fileName.find('.');
 	prefix = fileName.substr(0, n);
 
@@ -367,7 +370,7 @@ int main(int argc, char** argv) {
 			}
 		}
 		if (words.size() > 0 && words[0][0] == '#') {
-			cout << "Skipping comment line: " << line << endl;
+			//cout << "Skipping comment line: " << line << endl;
 		} else if (words.size() == 2) {
 			try {
 				double xVal = stod(words[0]);
@@ -386,17 +389,22 @@ int main(int argc, char** argv) {
 		xStep = xs[1] - xs[0]; // Assuming even sampling
 		xRange = *(xs.end() - 1) - *(xs.begin());
 		n = xs.size();
-		cout << "xStep: " << xStep << ", xRange: " << xRange << endl;
+		//cout << "xStep: " << xStep << ", xRange: " << xRange << endl;
 	}
 
 	stringstream logText;
 	for (int modeNo = 1;; modeNo++) {
+		cout << "Before IMF " << modeNo << " " << ys.size() << endl;
 		auto imfAndFreq = imf(modeNo, ys);
+		cout << "After IMF "<< endl;
 		if (imfAndFreq.second == 0) {
 			break;
 		}
+		cout << "Before AS"<< endl;
 		double meanEnergy = analyticSignal(*imfAndFreq.first, modeNo);
+		cout << "After AS1 "<< endl;
         logText << modeNo << ": " << imfAndFreq.second << " " << meanEnergy << endl;
+		cout << "After AS2 "<< endl;
 	}
 	ofstream logStream(prefix + ".log");
 	logStream << logText.str();
