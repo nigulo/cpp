@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
+#include <sstream>
 //#include <iostream>
 #include <fstream>
 //#include <cstdlib>
@@ -22,13 +23,26 @@ double xStep = 1;
 vector<double> xs;
 double xRange;
 
+pair<double, double> meanVariance(const vector<double>& dat) {
+	assert(dat.size() > 0);
+	double sum = 0;
+	double sumSquares = 0;
+	for(auto val = dat.begin(); val != dat.end(); val++) {
+		sum += (*val);
+		sumSquares += (*val) * (*val);
+	}
+	int n = dat.size();
+	double mean = sum / n;
+	return {mean,  sumSquares / n - mean * mean};
+}
+
 void multComplex(double x[2], double y[2]) {
 	double x0 = x[0];
 	x[0] = x0 * y[0] - x[1] * y[1];
 	x[1] = x[1] * y[0] + x0 * y[1];
 }
 
-void shift(int n, fftw_complex* data, double phaseShift) {
+void shiftPhase(int n, fftw_complex* data, double phaseShift) {
 	int nDiv2 = n >> 1;
 	double c1[2] = {cos(-phaseShift), sin(-phaseShift)};
 	double c2[2] = {cos(phaseShift), sin(phaseShift)};
@@ -50,7 +64,7 @@ void fft(bool direction, int n, fftw_complex* data, double phaseShift) {
     fftw_complex* out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n);
 
     memcpy(in, data, sizeof(fftw_complex) * n);
-	shift(n, in, phaseShift);
+	shiftPhase(n, in, phaseShift);
 	fftw_plan p = fftw_plan_dft_1d(n, in, out, direction ? FFTW_FORWARD : FFTW_BACKWARD, FFTW_ESTIMATE);
 
     fftw_execute(p); /* repeat as needed */
@@ -70,9 +84,9 @@ double getRealTangent(int i, fftw_complex* data) {
 	return (data[i + 1][0] - data[i - 1][0]) / 2;
 }
 
-void analyticSignal(const vector<double>& realSignal, int modeNo) {
+double /*meanEnergy*/ analyticSignal(const vector<double>& realSignal, int modeNo) {
     fftw_complex* conjugatedSignal = (fftw_complex*) malloc(sizeof(fftw_complex) * realSignal.size());
-    for (int i = 0; i < realSignal.size(); i++) {
+    for (unsigned i = 0; i < realSignal.size(); i++) {
     	conjugatedSignal[i][0] = realSignal[i];
     	conjugatedSignal[i][1] = 0;
     }
@@ -81,15 +95,17 @@ void analyticSignal(const vector<double>& realSignal, int modeNo) {
 	//double* amplitude = (double*) malloc(sizeof(double) * n);
 	//double* phase = (double*) malloc(sizeof(double) * n);
 	//double* frequency = (double*) malloc(sizeof(double) * (n - 2));
-	ofstream imfStream(prefix + "_imf_" + modeNo + ".csv");
-	ofstream ampStream(prefix + "_amp_" + modeNo + ".csv");
-	ofstream freqStream(prefix + "_freq_" + modeNo + ".csv");
-	for (int i = 0; i < realSignal.size(); i++) {
+	ofstream imfStream(prefix + "_imf_" + to_string(modeNo) + ".csv");
+	ofstream ampStream(prefix + "_amp_" + to_string(modeNo) + ".csv");
+	ofstream freqStream(prefix + "_freq_" + to_string(modeNo) + ".csv");
+	double totalEnergy = 0;
+	for (unsigned i = 0; i < realSignal.size(); i++) {
 		double x = xs[i];
 		double u = realSignal[i];
 		double v = conjugatedSignal[i][0];
 		double u2v2 = u * u + v * v;
 		double amplitude = sqrt(u2v2);
+		totalEnergy += u2v2;
 		//double phase = atan(v / u);
 		imfStream << x << " " << v << endl;
 		ampStream << x << " " << amplitude << endl;
@@ -101,6 +117,7 @@ void analyticSignal(const vector<double>& realSignal, int modeNo) {
 	imfStream.close();
 	ampStream.close();
 	freqStream.close();
+	return totalEnergy / realSignal.size();
 }
 
 pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>> findExtrema(const vector<double>& xs, const vector<double>& ys) {
@@ -109,7 +126,7 @@ pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<doubl
 	vector<double>* maxima_x = new vector<double>();
 	vector<double>* maxima_y = new vector<double>();
 	int j = 0;
-	for (int i = 1; i < ys.size() -  1; i++) {
+	for (unsigned i = 1; i < ys.size() -  1; i++) {
 		double y1 = ys[i];
 		double y2 = ys[i + 1];
 		if (y1 != y2) {
@@ -129,7 +146,6 @@ pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<doubl
 /*
 const vector<double>* findZeroCrossings(const vector<double>& xs, const vector<double>& ys) {
 	vector<double>* zeroCrossings = new vector<double>();
-	int j = 0;
 	for (int i = 0; i < ys.size() - 1; i++) {
 		double y1 = ys[i];
         if (y1 == 0) {
@@ -147,8 +163,7 @@ const vector<double>* findZeroCrossings(const vector<double>& xs, const vector<d
 
 int findNumZeroCrossings(const vector<double>& xs, const vector<double>& ys) {
 	int numZeroCrossings = 0;
-	int j = 0;
-	for (int i = 0; i < ys.size() - 1; i++) {
+	for (unsigned i = 0; i < ys.size() - 1; i++) {
 		double y1 = ys[i];
         if (y1 == 0) {
         	numZeroCrossings++;
@@ -168,18 +183,26 @@ int /*numZeroCrossings*/ imfStep(vector<double>& imf, pair<pair<const vector<dou
 	tk::spline upperEnv;
 	upperEnv.set_points(*stepExtrema.second.first, *stepExtrema.second.second);
 	//vector<double>* dat1 = new vector<double>(dat.size());
-	for (int i = 0; i < imf.size(); i++) {
+	for (unsigned i = 0; i < imf.size(); i++) {
 		double x = xs[i];
 		imf[i] = imf[i] - (lowerEnv(x) + upperEnv(x)) / 2;
 	}
+	delete stepExtrema.first.first;
+	delete stepExtrema.first.second;
+	delete stepExtrema.second.first;
+	delete stepExtrema.second.second;
 	auto newExtrema = findExtrema(xs, imf);
 	auto numExtrema = min(newExtrema.first.first->size(), newExtrema.second.first->size());
 	int numZeroCrossings = findNumZeroCrossings(xs, imf);
     cout << endl << "NE: " << numExtrema << ", NZC: " << numZeroCrossings;
 	if (numExtrema - numZeroCrossings <= 1) {
+		delete newExtrema.first.first;
+		delete newExtrema.first.second;
+		delete newExtrema.second.first;
+		delete newExtrema.second.second;
 		return numZeroCrossings;
 	}
-	imfStep(imf, newExtrema);
+	return imfStep(imf, newExtrema);
 }
 
 pair<const vector<double>* /*imf*/, double /*avgFreq*/> imf(int modeNo, vector<double>& dat) {
@@ -193,13 +216,19 @@ pair<const vector<double>* /*imf*/, double /*avgFreq*/> imf(int modeNo, vector<d
     int numZeroCrossings = imfStep(*imf, extrema);
     cout << " done." << endl;
 
-    for (int i = 0; i < dat.size(); i++) {
+    for (unsigned i = 0; i < dat.size(); i++) {
         dat[i] -= (*imf)[i];
     }
     return {imf, 0.5 * numZeroCrossings / xRange};
 }
 
+void collect() {}
+
 int main(int argc, char** argv) {
+	if (argc == 1) {
+		collect();
+		return EXIT_SUCCESS;
+	}
 	fileName = argv[0];
 	string::size_type n = fileName.find('.');
 	prefix = fileName.substr(0, n);
@@ -238,13 +267,18 @@ int main(int argc, char** argv) {
 		cout << "xStep: " << xStep << ", xRange: " << xRange << endl;
 	}
 
+	stringstream logText;
 	for(int modeNo = 1;; modeNo++) {
 		auto imfAndFreq = imf(modeNo, ys);
 		if (imfAndFreq.second == 0) {
 			break;
 		}
-		analyticSignal(*imfAndFreq.first, modeNo);
+		double meanEnergy = analyticSignal(*imfAndFreq.first, modeNo);
+        logText << modeNo << ": " << imfAndFreq.second << " " << meanEnergy << endl;
 	}
-
+	ofstream logStream(prefix + ".log");
+	logStream << logText;
+	logStream.close();
+	cout << logText;
 	return EXIT_SUCCESS;
 }
