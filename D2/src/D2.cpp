@@ -295,7 +295,7 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 		for (j=0; j < lp; j++) {
 			if (!bootstrap) {
 				output << d << " " << (wmin + j * step) << " " << cum[j] << "\n";
-				if (d == dmin) {
+				if (d == minCoherence) {
 					output1 << (wmin + j * step) << " " << cum[j] << "\n";
 				}
 			}
