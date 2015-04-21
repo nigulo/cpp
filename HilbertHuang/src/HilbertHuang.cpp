@@ -192,7 +192,7 @@ int /*numZeroCrossings*/ imfStep(vector<double>& imf, pair<pair<const vector<dou
 	delete stepExtrema.second.first;
 	delete stepExtrema.second.second;
 	auto newExtrema = findExtrema(xs, imf);
-	auto numExtrema = min(newExtrema.first.first->size(), newExtrema.second.first->size());
+	auto numExtrema = newExtrema.first.first->size() + newExtrema.second.first->size();
 	int numZeroCrossings = findNumZeroCrossings(xs, imf);
     cout << endl << "NE: " << numExtrema << ", NZC: " << numZeroCrossings;
 	if (numExtrema - numZeroCrossings <= 1) {
@@ -209,6 +209,10 @@ pair<const vector<double>* /*imf*/, double /*avgFreq*/> imf(int modeNo, vector<d
 	auto extrema = findExtrema(xs, dat);
 	auto numExtrema = min(extrema.first.first->size(), extrema.second.first->size());
 	if (numExtrema <= 2) {
+		delete extrema.first.first;
+		delete extrema.first.second;
+		delete extrema.second.first;
+		delete extrema.second.second;
 		return {&dat, 0};
 	}
 	cout << "Extracting mode " << modeNo << " (" << numExtrema << ") ... ";
@@ -229,7 +233,7 @@ int main(int argc, char** argv) {
 		collect();
 		return EXIT_SUCCESS;
 	}
-	fileName = argv[0];
+	fileName = argv[1];
 	string::size_type n = fileName.find('.');
 	prefix = fileName.substr(0, n);
 
@@ -268,7 +272,7 @@ int main(int argc, char** argv) {
 	}
 
 	stringstream logText;
-	for(int modeNo = 1;; modeNo++) {
+	for (int modeNo = 1;; modeNo++) {
 		auto imfAndFreq = imf(modeNo, ys);
 		if (imfAndFreq.second == 0) {
 			break;
@@ -277,8 +281,8 @@ int main(int argc, char** argv) {
         logText << modeNo << ": " << imfAndFreq.second << " " << meanEnergy << endl;
 	}
 	ofstream logStream(prefix + ".log");
-	logStream << logText;
+	logStream << logText.str();
 	logStream.close();
-	cout << logText;
+	cout << logText.str();
 	return EXIT_SUCCESS;
 }
