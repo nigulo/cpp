@@ -85,13 +85,14 @@ double getRealTangent(int i, fftw_complex* data) {
 }
 
 double /*meanEnergy*/ analyticSignal(const vector<double>& realSignal, int modeNo) {
-    fftw_complex* conjugatedSignal = (fftw_complex*) malloc(sizeof(fftw_complex) * realSignal.size());
-    for (unsigned i = 0; i < realSignal.size(); i++) {
+	unsigned n = realSignal.size();
+    fftw_complex* conjugatedSignal = (fftw_complex*) malloc(sizeof(fftw_complex) * n);
+    for (unsigned i = 0; i < n; i++) {
     	conjugatedSignal[i][0] = realSignal[i];
     	conjugatedSignal[i][1] = 0;
     }
 	fft(true, realSignal.size(), conjugatedSignal, 0);
-	fft(false, realSignal.size(), conjugatedSignal, (M_PI_2));
+	fft(false, realSignal.size(), conjugatedSignal, M_PI_2);
 	//double* amplitude = (double*) malloc(sizeof(double) * n);
 	//double* phase = (double*) malloc(sizeof(double) * n);
 	//double* frequency = (double*) malloc(sizeof(double) * (n - 2));
@@ -99,25 +100,25 @@ double /*meanEnergy*/ analyticSignal(const vector<double>& realSignal, int modeN
 	ofstream ampStream(prefix + "_amp_" + to_string(modeNo) + ".csv");
 	ofstream freqStream(prefix + "_freq_" + to_string(modeNo) + ".csv");
 	double totalEnergy = 0;
-	for (unsigned i = 0; i < realSignal.size(); i++) {
+	for (unsigned i = 0; i < n; i++) {
 		double x = xs[i];
 		double u = realSignal[i];
-		double v = conjugatedSignal[i][0];
+		double v = conjugatedSignal[i][0] / n; // the fft is unnormalized
 		double u2v2 = u * u + v * v;
 		double amplitude = sqrt(u2v2);
 		totalEnergy += u2v2;
 		//double phase = atan(v / u);
-		imfStream << x << " " << v << endl;
+		imfStream << x << " " << u << endl;
 		ampStream << x << " " << amplitude << endl;
-		if (i > 0 && i < realSignal.size() - 1) {
-			double frequency = (getRealTangent(i, conjugatedSignal) * u - getTangent(i, realSignal) * v) / u2v2 / xStep;
+		if (i > 0 && i < n - 1) {
+			double frequency = (getRealTangent(i, conjugatedSignal) * u / n - getTangent(i, realSignal) * v) / u2v2 / xStep;
 			freqStream << x << " " << frequency << endl;
 		}
 	}
 	imfStream.close();
 	ampStream.close();
 	freqStream.close();
-	return totalEnergy / realSignal.size();
+	return totalEnergy / n;
 }
 
 pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>> findExtrema(const vector<double>& xs, const vector<double>& ys) {
@@ -192,10 +193,10 @@ int /*numZeroCrossings*/ imfStep(vector<double>& imf, pair<pair<const vector<dou
 	delete stepExtrema.second.first;
 	delete stepExtrema.second.second;
 	auto newExtrema = findExtrema(xs, imf);
-	auto numExtrema = newExtrema.first.first->size() + newExtrema.second.first->size();
+	int numExtrema = newExtrema.first.first->size() + newExtrema.second.first->size();
 	int numZeroCrossings = findNumZeroCrossings(xs, imf);
     cout << endl << "NE: " << numExtrema << ", NZC: " << numZeroCrossings;
-	if (numExtrema - numZeroCrossings <= 1) {
+	if (abs(numExtrema - numZeroCrossings) <= 1) {
 		delete newExtrema.first.first;
 		delete newExtrema.first.second;
 		delete newExtrema.second.first;
@@ -207,7 +208,7 @@ int /*numZeroCrossings*/ imfStep(vector<double>& imf, pair<pair<const vector<dou
 
 pair<const vector<double>* /*imf*/, double /*avgFreq*/> imf(int modeNo, vector<double>& dat) {
 	auto extrema = findExtrema(xs, dat);
-	auto numExtrema = min(extrema.first.first->size(), extrema.second.first->size());
+	int numExtrema = min(extrema.first.first->size(), extrema.second.first->size());
 	if (numExtrema <= 2) {
 		delete extrema.first.first;
 		delete extrema.first.second;
@@ -266,7 +267,7 @@ int main(int argc, char** argv) {
 	input.close();
 	if (xs.size() > 1) {
 		xStep = xs[1] - xs[0]; // Assuming even sampling
-		xRange = xs.end() - xs.begin();
+		xRange = *(xs.end() - 1) - *(xs.begin());
 		n = xs.size();
 		cout << "xStep: " << xStep << ", xRange: " << xRange << endl;
 	}
