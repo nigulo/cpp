@@ -280,6 +280,7 @@ void collect() {
 	vector<vector<tuple<double, double, double, double>>> allModes;
 	directory_iterator end_itr; // default construction yields past-the-end
 	path currentDir(".");
+	double totalEnergy = 0;
 	for (directory_iterator itr(currentDir); itr != end_itr; ++itr) {
 		if (is_regular_file(itr->status())) {
 			const string& fileName = itr->path().generic_string();
@@ -289,6 +290,9 @@ void collect() {
 		    cout << "Processing " << fileName << endl;
 			auto latR = getLatR(fileName);
 			double lat = latR.first;
+			if (lat < 15 || lat > 240) {
+				continue;
+			}
 			double r = latR.second;
 			vector<double[4]> modes;
 			ifstream input(fileName);
@@ -315,13 +319,17 @@ void collect() {
 						break;
 					}
 				}
-				mode.insert(i, make_tuple(lat, r, stod(words[1]), stod(words[2])));
+				double freq = stod(words[1]);
+				double en = stod(words[2]);
+				totalEnergy += en;
+				mode.insert(i, make_tuple(lat, r, freq, en));
 				modeNo++;
 		    }
 			input.close();
 		}
 	}
 	for (unsigned i = 0; i < allModes.size(); i++) {
+		double modeEnergy = 0;
 		string modeNo = to_string(i + 1);
 		ofstream enStream(string("ens") + modeNo + ".csv");
 		ofstream freqStream(string("freqs") + modeNo + ".csv");
@@ -331,15 +339,17 @@ void collect() {
 			double r = get<1>(dat);
 			double freq = get<2>(dat);
 			double en = get<3>(dat);
+			modeEnergy += en;
 			if (j > 0 && lat != get<0>(allModes[i][j - 1])) {
 				enStream << endl;
 				freqStream << endl;
 			}
-			enStream << lat << " " << r << " " << en << endl;
+			enStream << lat << " " << r << " " << (en / totalEnergy) << endl;
 			freqStream << lat << " " << r << " " << freq << endl;
 		}
 		enStream.close();
 		freqStream.close();
+		cout << "Mode " << modeNo << " energy: " << (modeEnergy / totalEnergy) << endl;
 	}
 }
 
@@ -394,17 +404,12 @@ int main(int argc, char** argv) {
 
 	stringstream logText;
 	for (int modeNo = 1;; modeNo++) {
-		cout << "Before IMF " << modeNo << " " << ys.size() << endl;
 		auto imfAndFreq = imf(modeNo, ys);
-		cout << "After IMF "<< endl;
 		if (imfAndFreq.second == 0) {
 			break;
 		}
-		cout << "Before AS"<< endl;
 		double meanEnergy = analyticSignal(*imfAndFreq.first, modeNo);
-		cout << "After AS1 "<< endl;
         logText << modeNo << ": " << imfAndFreq.second << " " << meanEnergy << endl;
-		cout << "After AS2 "<< endl;
 	}
 	ofstream logStream(prefix + ".log");
 	logStream << logText.str();
