@@ -1,18 +1,7 @@
 #include "HilbertHuang.h"
-#include <cstring>
-#include <cctype>
-#include <iostream>
-#include <fftw3.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string>
-#include <sstream>
 #include <fstream>
-#include <cstdio>
-#include <tuple>
 #include <boost/algorithm/string.hpp>
 #include "boost/filesystem.hpp"
-#include "spline.h"
 
 using namespace boost::filesystem;
 
@@ -21,6 +10,7 @@ string prefix;
 double precision = 0.01;
 bool header = true;
 unsigned numBootstrapRuns = 0;
+double noisePercent = 0.1;
 
 pair<double, double> getLatR(const string& fileName) {
 	int index = fileName.find('_');
