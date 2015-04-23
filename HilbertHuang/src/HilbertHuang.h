@@ -12,15 +12,18 @@ public:
 	HilbertHuang(const vector<double>& xs, const vector<double>& ys, const string& prefix);
 	virtual ~HilbertHuang();
 	void calculate();
+	const vector<pair<const vector<double>* /*xs*/, const vector<double>* /*ys*/>>& getImfs() const {
+		return imfs;
+	}
 private:
 	pair<int /*numZeroCrossings*/, pair<double, double> /*extremaStart, extremaEnd*/> imfStep(vector<double>& imf,
 			pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>>& stepExtrema);
-	pair<const vector<double>* /*imf*/, double /*avgFreq*/> imf(int modeNo, vector<double>& dat);
+	bool /*found*/ imf(vector<double>& dat);
 private:
 	vector<double> xs;
 	vector<double> ys;
+	vector<pair<const vector<double>* /*xs*/, const vector<double>* /*ys*/>> imfs;
 	const string prefix;
-	double xStep;
 	double xRange;
 
 };

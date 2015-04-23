@@ -161,9 +161,25 @@ int main(int argc, char** argv) {
 		//cout << "xStep: " << xStep << ", xRange: " << xRange << endl;
 	}
 
+	vector<pair<const vector<double>* /*xs*/, const vector<double>* /*ys*/>> ensemble;
+	//HilbertHuang ensemble[numBootstrapRuns];
 	for (unsigned i = 0; i < numBootstrapRuns; i++) {
 		HilbertHuang hh(xs, ys, prefix);
 		hh.calculate();
+		vector<pair<const vector<double>* /*xs*/, const vector<double>* /*ys*/>> imfs = hh.getImfs();
+		for (unsigned i = 0; i < imfs.size(); i++) {
+			if (i >= ensemble.size()) {
+				ensemble.push_back(imfs);
+			} else {
+				// add
+			}
+		}
+	}
+	for (auto i = ensemble.begin(); i != ensemble.end(); i++) {
+		// normalize
+		pair<const vector<double>* /*xs*/, const vector<double>* /*ys*/> imf;
+		double meanEnergy = AnalyticSignal::calculate(*imf.first, *imf.second, modeNo, prefix);
+        logText << modeNo << ": " << imfAndFreq.second << " " << meanEnergy << endl;
 	}
 	return EXIT_SUCCESS;
 }

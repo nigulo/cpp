@@ -9,7 +9,6 @@
 
 HilbertHuang::HilbertHuang(const vector<double>& xs, const vector<double>& ys, const string& prefix) :
 		xs(xs), ys(ys), prefix(prefix) {
-	xStep = xs[1] - xs[0]; // Assuming even sampling
 	xRange = *(xs.end() - 1) - *(xs.begin());
 }
 
@@ -104,8 +103,9 @@ pair<int, pair<double, double>> HilbertHuang::imfStep(vector<double>& imf, pair<
 	return imfStep(imf, newExtrema);
 }
 
-pair<const vector<double>* /*imf*/, double /*avgFreq*/> HilbertHuang::imf(int modeNo, vector<double>& dat) {
+bool HilbertHuang::imf(vector<double>& dat) {
 	assert(xs.size() == dat.size());
+	unsigned modeNo = imfs.size() + 1;
 	auto extrema = findExtrema(xs, dat);
 	int numExtrema = min(extrema.first.first->size(), extrema.second.first->size());
 	if (numExtrema <= 3) {
@@ -113,7 +113,7 @@ pair<const vector<double>* /*imf*/, double /*avgFreq*/> HilbertHuang::imf(int mo
 		delete extrema.first.second;
 		delete extrema.second.first;
 		delete extrema.second.second;
-		return {&dat, 0};
+		return false;
 	}
 	cout << "Extracting mode " << modeNo << " (" << numExtrema << ") ...";
 	cout.flush();
@@ -145,7 +145,9 @@ pair<const vector<double>* /*imf*/, double /*avgFreq*/> HilbertHuang::imf(int mo
     //for (unsigned i = 0; i < dat.size(); i++) {
    	//	dat[i] -= (*imf)[i];
     //}
-    return {imf, 0.5 * numZeroCrossings / xRange};
+    //imfs.push_back({imf, 0.5 * numZeroCrossings / xRange});
+    imfs.push_back({new vector<double>(xs), imf});
+    return true;
 }
 
 void HilbertHuang::calculate() {
@@ -155,8 +157,6 @@ void HilbertHuang::calculate() {
 		if (imfAndFreq.second == 0) {
 			break;
 		}
-		double meanEnergy = AnalyticSignal::calculate(xs, *imfAndFreq.first, modeNo, prefix);
-        logText << modeNo << ": " << imfAndFreq.second << " " << meanEnergy << endl;
 	}
 	ofstream logStream(prefix + ".log");
 	logStream << logText.str();
