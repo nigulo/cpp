@@ -7,6 +7,7 @@
 
 #include "TimeSeries.h"
 #include <cassert>
+#include <iostream>
 
 TimeSeries::TimeSeries() {
 }
@@ -96,7 +97,7 @@ void TimeSeries::begin() {
 }
 
 bool TimeSeries::hasNext() {
-	return (xsIter == xs.end());
+	return (xsIter != xs.end());
 }
 
 bool TimeSeries::next() {

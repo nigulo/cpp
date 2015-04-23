@@ -8,11 +8,11 @@
 
 #include "spline.h"
 
-HilbertHuang::HilbertHuang(TimeSeries* ts, const string& prefix) : ts(unique_ptr<TimeSeries>(ts)), prefix(prefix) {
+HilbertHuang::HilbertHuang(TimeSeries* ts) : ts(unique_ptr<TimeSeries>(ts)) {
 }
 
-HilbertHuang::HilbertHuang(const vector<double>& xs, const vector<double>& ys, const string& prefix) :
-		ts(new TimeSeries(xs, ys)), prefix(prefix) {
+HilbertHuang::HilbertHuang(const vector<double>& xs, const vector<double>& ys) :
+		ts(new TimeSeries(xs, ys)) {
 }
 
 HilbertHuang::~HilbertHuang() {
@@ -25,14 +25,13 @@ pair<int, pair<double, double>> HilbertHuang::imfStep(TimeSeries& imf, pair<uniq
 	lowerEnv.set_points(stepExtrema.first->getXs(), stepExtrema.first->getYs());
 	tk::spline upperEnv;
 	upperEnv.set_points(stepExtrema.second->getXs(), stepExtrema.second->getYs());
-	//vector<double>* dat1 = new vector<double>(dat.size());
 	for (imf.begin(); imf.hasNext(); imf.next()) {
 		double x = imf.getX();
 		imf.setY(imf.getY() - (lowerEnv(x) + upperEnv(x)) / 2);
 	}
-	auto newExtrema = ts->findExtrema();
+	auto newExtrema = imf.findExtrema();
 	unsigned numExtrema = newExtrema.first->size() + newExtrema.second->size();
-	unsigned numZeroCrossings = ts->findNumZeroCrossings();
+	unsigned numZeroCrossings = imf.findNumZeroCrossings();
     //cout << endl << "NE: " << numExtrema << ", NZC: " << numZeroCrossings;
 	if (abs(numExtrema - numZeroCrossings) <= 1) {
 		double extremaStart = max(*(newExtrema.first->getXs().begin()), *(newExtrema.second->getXs().begin()));
@@ -51,8 +50,7 @@ bool HilbertHuang::imf() {
 	}
 	cout << "Extracting mode " << modeNo << " (" << numExtrema << ") ...";
 	cout.flush();
-	TimeSeries* imf = new TimeSeries(ts->getXs(), ts->getYs());
-	//vector<double>* imf = new vector<double>(ts.getYs());
+	TimeSeries* imf = new TimeSeries(*ts);
 	auto imfResult = imfStep(*imf, extrema);
     auto extremaStart = imfResult.second.first;
     auto extremaEnd = imfResult.second.second;

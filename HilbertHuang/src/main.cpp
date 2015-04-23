@@ -2,7 +2,6 @@
 #include "AnalyticSignal.h"
 #include "TimeSeries.h"
 #include <fstream>
-//#include <cstdlib>
 #include <sstream>
 #include <iostream>
 #include <boost/algorithm/string.hpp>
@@ -123,6 +122,10 @@ int main(int argc, char** argv) {
 		return EXIT_SUCCESS;
 	}
 	fileName = argv[1];
+	if (!exists(fileName)) {
+		cout << "Input file not found" << endl;
+		return EXIT_FAILURE;
+	}
     cout << "Processing " << fileName << endl;
 	string::size_type n = fileName.find('.');
 	prefix = fileName.substr(0, n);
@@ -171,14 +174,14 @@ int main(int argc, char** argv) {
 	auto noiseStdDev = sqrt(ts.meanVariance().second) * noisePercent;
 	vector<TimeSeries> ensemble;
     random_device rd;
+	default_random_engine e1(rd());
+	normal_distribution<double> dist(0, noiseStdDev);
 	for (unsigned i = 0; i < numBootstrapRuns; i++) {
 		TimeSeries* ts1 = new TimeSeries(ts);
 		if (noisePercent > 0) {
-			default_random_engine e1(rd());
-			normal_distribution<double> dist(0, noiseStdDev);
 			*ts1 = *ts1 + dist(e1);
 		}
-		HilbertHuang hh(ts1, prefix);
+		HilbertHuang hh(ts1);
 		hh.calculate();
 		const vector<unique_ptr<TimeSeries>>& imfs = hh.getImfs();
 		for (unsigned i = 0; i < imfs.size(); i++) {

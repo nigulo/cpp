@@ -11,8 +11,8 @@ using namespace std;
 class HilbertHuang {
 
 public:
-	HilbertHuang(TimeSeries* ts, const string& prefix);
-	HilbertHuang(const vector<double>& xs, const vector<double>& ys, const string& prefix);
+	HilbertHuang(TimeSeries* ts);
+	HilbertHuang(const vector<double>& xs, const vector<double>& ys);
 	virtual ~HilbertHuang();
 	void calculate();
 
@@ -27,7 +27,6 @@ private:
 private:
 	unique_ptr<TimeSeries> ts;
 	vector<unique_ptr<TimeSeries>> imfs;
-	const string prefix;
 };
 
 
