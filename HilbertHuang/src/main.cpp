@@ -179,7 +179,9 @@ int main(int argc, char** argv) {
 	for (unsigned i = 0; i < numBootstrapRuns; i++) {
 		TimeSeries* ts1 = new TimeSeries(ts);
 		if (noisePercent > 0) {
-			*ts1 = *ts1 + dist(e1);
+			for (ts1->begin(); ts1->hasNext(); ts1->next()) {
+				ts1->setY(ts1->getY() + dist(e1));
+			}
 		}
 		HilbertHuang hh(ts1);
 		hh.calculate();
@@ -195,7 +197,7 @@ int main(int argc, char** argv) {
 	stringstream logText;
 	int modeNo = 1;
 	for (auto i = ensemble.begin(); i != ensemble.end(); i++) {
-		TimeSeries& imf = (*i) / numBootstrapRuns;
+		TimeSeries& imf = (*i);// / numBootstrapRuns;
 		int numZeroCrossings = imf.findNumZeroCrossings();
 		double xRange = *(imf.getXs().end() - 1) - *(imf.getXs().begin());
 		double meanFreq = 0.5 * numZeroCrossings / xRange;
