@@ -1,5 +1,10 @@
 #include "HilbertHuang.h"
+#include "AnalyticSignal.h"
+#include "TimeSeries.h"
 #include <fstream>
+//#include <cstdlib>
+#include <sstream>
+#include <iostream>
 #include <boost/algorithm/string.hpp>
 #include "boost/filesystem.hpp"
 
@@ -161,26 +166,35 @@ int main(int argc, char** argv) {
 		//cout << "xStep: " << xStep << ", xRange: " << xRange << endl;
 	}
 
-	vector<pair<const vector<double>* /*xs*/, const vector<double>* /*ys*/>> ensemble;
+	vector<TimeSeries> ensemble;
 	//HilbertHuang ensemble[numBootstrapRuns];
 	for (unsigned i = 0; i < numBootstrapRuns; i++) {
 		HilbertHuang hh(xs, ys, prefix);
 		hh.calculate();
-		vector<pair<const vector<double>* /*xs*/, const vector<double>* /*ys*/>> imfs = hh.getImfs();
+		const vector<unique_ptr<TimeSeries>>& imfs = hh.getImfs();
 		for (unsigned i = 0; i < imfs.size(); i++) {
 			if (i >= ensemble.size()) {
-				ensemble.push_back(imfs);
+				ensemble.push_back(*imfs[i].get());
 			} else {
-				// add
+				ensemble[i] = ensemble[i] + *imfs[i].get();
 			}
 		}
 	}
+	stringstream logText;
+	int modeNo = 1;
 	for (auto i = ensemble.begin(); i != ensemble.end(); i++) {
-		// normalize
-		pair<const vector<double>* /*xs*/, const vector<double>* /*ys*/> imf;
-		double meanEnergy = AnalyticSignal::calculate(*imf.first, *imf.second, modeNo, prefix);
-        logText << modeNo << ": " << imfAndFreq.second << " " << meanEnergy << endl;
+		TimeSeries& imf = (*i) / numBootstrapRuns;
+		int numZeroCrossings = imf.findNumZeroCrossings();
+		double xRange = *(imf.getXs().end() - 1) - *(imf.getXs().begin());
+		double meanFreq = 0.5 * numZeroCrossings / xRange;
+		double meanEnergy = AnalyticSignal::calculate(imf, modeNo, prefix);
+        logText << modeNo << ": " << meanFreq << " " << meanEnergy << endl;
+        modeNo++;
 	}
+	ofstream logStream(prefix + ".log");
+	logStream << logText.str();
+	logStream.close();
+	cout << logText.str();
 	return EXIT_SUCCESS;
 }
 

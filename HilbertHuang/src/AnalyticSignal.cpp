@@ -2,7 +2,6 @@
 #include <fftw3.h>
 #include <math.h>
 #include <cstring>
-#include <cstdlib>
 #include <fstream>
 
 AnalyticSignal::AnalyticSignal() {
@@ -73,7 +72,9 @@ double getRealTangent(int i, fftw_complex* data) {
 	return (data[i + 1][0] - data[i - 1][0]) / 2;
 }
 
-double AnalyticSignal::calculate(const vector<double>& xs, const vector<double>& realSignal, int modeNo, const string& prefix) {
+double AnalyticSignal::calculate(const TimeSeries& ts, int modeNo, const string& prefix) {
+	const vector<double>& xs = ts.getXs();
+	const vector<double>& realSignal = ts.getYs();
 	unsigned n = realSignal.size();
 	double 	xStep = xs[1] - xs[0]; // Assuming even sampling
     fftw_complex* conjugatedSignal = (fftw_complex*) malloc(sizeof(fftw_complex) * n);
