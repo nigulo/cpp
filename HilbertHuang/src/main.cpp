@@ -6,7 +6,9 @@
 #include <sstream>
 #include <iostream>
 #include <boost/algorithm/string.hpp>
-#include "boost/filesystem.hpp"
+#include <boost/filesystem.hpp>
+#include <random>
+#include <memory>
 
 using namespace boost::filesystem;
 
@@ -14,8 +16,8 @@ string fileName;
 string prefix;
 double precision = 0.01;
 bool header = true;
-unsigned numBootstrapRuns = 0;
-double noisePercent = 0.1;
+unsigned numBootstrapRuns = 1;
+double noisePercent = 0;
 
 pair<double, double> getLatR(const string& fileName) {
 	int index = fileName.find('_');
@@ -132,9 +134,14 @@ int main(int argc, char** argv) {
 
 	if (argc > 2) {
 		numBootstrapRuns = stoi(argv[2]);
+		noisePercent = 0.1;
 	}
-	vector<double> xs;
-	vector<double> ys;
+
+	if (argc > 3) {
+		noisePercent = stod(argv[3]);
+	}
+
+	TimeSeries ts;
 	ifstream input(fileName);
 	for (string line; getline(input, line);) {
 		//cout << line << endl;
@@ -151,8 +158,7 @@ int main(int argc, char** argv) {
 			try {
 				double xVal = stod(words[0]);
 				double yVal = stod(words[1]);
-				xs.push_back(xVal);
-				ys.push_back(yVal);
+				ts.add(xVal, yVal);
 			} catch (invalid_argument& ex) {
 				cout << "Skipping line, invalid number: " << line << endl;
 			}
@@ -161,15 +167,18 @@ int main(int argc, char** argv) {
 		}
     }
 	input.close();
-	if (xs.size() > 1) {
-		n = xs.size();
-		//cout << "xStep: " << xStep << ", xRange: " << xRange << endl;
-	}
 
+	auto noiseStdDev = sqrt(ts.meanVariance().second) * noisePercent;
 	vector<TimeSeries> ensemble;
-	//HilbertHuang ensemble[numBootstrapRuns];
+    random_device rd;
 	for (unsigned i = 0; i < numBootstrapRuns; i++) {
-		HilbertHuang hh(xs, ys, prefix);
+		TimeSeries* ts1 = new TimeSeries(ts);
+		if (noisePercent > 0) {
+			default_random_engine e1(rd());
+			normal_distribution<double> dist(0, noiseStdDev);
+			*ts1 = *ts1 + dist(e1);
+		}
+		HilbertHuang hh(ts1, prefix);
 		hh.calculate();
 		const vector<unique_ptr<TimeSeries>>& imfs = hh.getImfs();
 		for (unsigned i = 0; i < imfs.size(); i++) {

@@ -11,18 +11,21 @@ using namespace std;
 class HilbertHuang {
 
 public:
+	HilbertHuang(TimeSeries* ts, const string& prefix);
 	HilbertHuang(const vector<double>& xs, const vector<double>& ys, const string& prefix);
 	virtual ~HilbertHuang();
 	void calculate();
+
 	const vector<unique_ptr<TimeSeries>>& getImfs() const {
 		return imfs;
 	}
+
 private:
 	pair<int /*numZeroCrossings*/, pair<double, double> /*extremaStart, extremaEnd*/> imfStep(TimeSeries& imf,
-			pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>>& stepExtrema);
+			pair<unique_ptr<const TimeSeries>, unique_ptr<const TimeSeries>>& stepExtrema);
 	bool /*found*/ imf();
 private:
-	TimeSeries ts;
+	unique_ptr<TimeSeries> ts;
 	vector<unique_ptr<TimeSeries>> imfs;
 	const string prefix;
 };

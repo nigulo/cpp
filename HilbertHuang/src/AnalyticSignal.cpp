@@ -10,20 +10,6 @@ AnalyticSignal::AnalyticSignal() {
 AnalyticSignal::~AnalyticSignal() {
 }
 
-/*
-pair<double, double> meanVariance(const vector<double>& dat) {
-	assert(dat.size() > 0);
-	double sum = 0;
-	double sumSquares = 0;
-	for(auto val = dat.begin(); val != dat.end(); val++) {
-		sum += (*val);
-		sumSquares += (*val) * (*val);
-	}
-	int n = dat.size();
-	double mean = sum / n;
-	return {mean,  sumSquares / n - mean * mean};
-}
-*/
 void multComplex(double x[2], double y[2]) {
 	double x0 = x[0];
 	x[0] = x0 * y[0] - x[1] * y[1];

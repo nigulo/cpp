@@ -8,6 +8,9 @@
 #include "TimeSeries.h"
 #include <cassert>
 
+TimeSeries::TimeSeries() {
+}
+
 TimeSeries::TimeSeries(const vector<double>& xs, const vector<double>& ys) :
 	xs(xs), ys(ys) {
 	assert(xs.size() == ys.size());
@@ -16,11 +19,27 @@ TimeSeries::TimeSeries(const vector<double>& xs, const vector<double>& ys) :
 TimeSeries::~TimeSeries() {
 }
 
-pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>> TimeSeries::findExtrema() const {
-	vector<double>* minima_x = new vector<double>();
-	vector<double>* minima_y = new vector<double>();
-	vector<double>* maxima_x = new vector<double>();
-	vector<double>* maxima_y = new vector<double>();
+void TimeSeries::add(double x, double y) {
+	xs.push_back(x);
+	ys.push_back(y);
+}
+
+pair<double /*mean*/, double /*variance*/> TimeSeries::meanVariance() const {
+	assert(ys.size() > 0);
+	double sum = 0;
+	double sumSquares = 0;
+	for(auto val = ys.begin(); val != ys.end(); val++) {
+		sum += (*val);
+		sumSquares += (*val) * (*val);
+	}
+	int n = ys.size();
+	double mean = sum / n;
+	return {mean,  sumSquares / n - mean * mean};
+}
+
+pair<unique_ptr<const TimeSeries>, unique_ptr<const TimeSeries>> TimeSeries::findExtrema() const {
+	TimeSeries* minima = new TimeSeries();
+	TimeSeries* maxima = new TimeSeries();
 	int j = 0;
 	for (unsigned i = 1; i < ys.size() -  1; i++) {
 		double y1 = ys[i];
@@ -28,16 +47,14 @@ pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<doubl
 		if (y1 != y2) {
 			double y0 = ys[j]; // in a regular case j = i - 1
 			if (y1 - y0 < 0 && y1 - y2 < 0 ){
-				minima_y->push_back(y1);
-				minima_x->push_back(xs[i]);
+				minima->add(xs[i], y1);
 			} else if (y1 - y0 > 0 && y1 - y2 > 0 ) {
-				maxima_y->push_back(y1);
-				maxima_x->push_back(xs[i]);
+				maxima->add(xs[i], y1);
 			}
 			j = i;
 		}
 	}
-	return {{minima_x, minima_y}, {maxima_x, maxima_y}};
+	return {unique_ptr<TimeSeries>(minima), unique_ptr<TimeSeries>(maxima)};
 }
 /*
 const vector<double>* findZeroCrossings(const vector<double>& xs, const vector<double>& ys) {
@@ -130,6 +147,20 @@ TimeSeries& TimeSeries::operator-(const TimeSeries& ts) {
 			i++;
 			j++;
 		}
+	}
+	return *this;
+}
+
+TimeSeries& TimeSeries::operator+(double k) {
+	for (auto i = ys.begin(); i != ys.end(); i++) {
+		*i += k;
+	}
+	return *this;
+}
+
+TimeSeries& TimeSeries::operator-(double k) {
+	for (auto i = ys.begin(); i != ys.end(); i++) {
+		*i -= k;
 	}
 	return *this;
 }

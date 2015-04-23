@@ -9,16 +9,39 @@
 #define SRC_TIMESERIES_H_
 
 #include <vector>
+#include <memory>
 
 using namespace std;
 
 class TimeSeries {
 public:
+	TimeSeries();
+	TimeSeries(const TimeSeries& ts) :
+		xs(ts.xs),
+		ys(ts.ys),
+		xsIter(ts.xsIter),
+		ysIter(ts.ysIter) {
+	}
+
 	TimeSeries(const vector<double>& xs, const vector<double>& ys);
 	virtual ~TimeSeries();
 
-	pair<pair<const vector<double>*, const vector<double>*>, pair<const vector<double>*, const vector<double>*>> findExtrema() const;
+	void operator=(const TimeSeries& ts) {
+		xs = ts.xs;
+		ys = ts.ys;
+		xsIter = ts.xsIter;
+		ysIter = ts.ysIter;
+	}
+
+	void add(double x, double y);
+
+	pair<double /*mean*/, double /*variance*/> meanVariance() const;
+	pair<unique_ptr<const TimeSeries>, unique_ptr<const TimeSeries>> findExtrema() const;
 	unsigned findNumZeroCrossings() const;
+
+	unsigned size() const {
+		return xs.size();
+	}
 
 	const vector<double>& getXs() const {
 		return xs;
@@ -30,6 +53,8 @@ public:
 
 	TimeSeries& operator+(const TimeSeries& ts);
 	TimeSeries& operator-(const TimeSeries& ts);
+	TimeSeries& operator+(double k);
+	TimeSeries& operator-(double k);
 	TimeSeries& operator*(double k);
 	TimeSeries& operator/(double k);
 
