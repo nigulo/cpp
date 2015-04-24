@@ -76,7 +76,7 @@ const vector<double>* findZeroCrossings(const vector<double>& xs, const vector<d
 */
 
 unsigned TimeSeries::findNumZeroCrossings() const {
-	int numZeroCrossings = 0;
+	unsigned numZeroCrossings = 0;
 	for (unsigned i = 0; i < ys.size() - 1; i++) {
 		double y1 = ys[i];
         if (y1 == 0) {
@@ -121,10 +121,10 @@ void TimeSeries::setY(double y) {
 TimeSeries& TimeSeries::operator+(const TimeSeries& ts) {
 	for (unsigned i = 0, j = 0; i < xs.size() && j < ts.xs.size();) {
 		double x1 = xs[i];
-		double x2 = ts.xs[i];
-		if (x1 > x2) {
+		double x2 = ts.xs[j];
+		if (x1 < x2) {
 			i++;
-		} else if (x2 > x1) {
+		} else if (x2 < x1) {
 			j++;
 		} else {
 			ys[i] += ts.ys[j];
@@ -138,7 +138,7 @@ TimeSeries& TimeSeries::operator+(const TimeSeries& ts) {
 TimeSeries& TimeSeries::operator-(const TimeSeries& ts) {
 	for (unsigned i = 0, j = 0; i < xs.size() && j < ts.xs.size();) {
 		double x1 = xs[i];
-		double x2 = ts.xs[i];
+		double x2 = ts.xs[j];
 		if (x1 > x2) {
 			i++;
 		} else if (x2 > x1) {

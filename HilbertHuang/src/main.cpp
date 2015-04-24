@@ -188,16 +188,16 @@ int main(int argc, char** argv) {
 		const vector<unique_ptr<TimeSeries>>& imfs = hh.getImfs();
 		for (unsigned i = 0; i < imfs.size(); i++) {
 			if (i >= ensemble.size()) {
-				ensemble.push_back(*imfs[i].get());
+				ensemble.push_back(*imfs[i]);
 			} else {
-				ensemble[i] = ensemble[i] + *imfs[i].get();
+				ensemble[i] + *imfs[i];
 			}
 		}
 	}
 	stringstream logText;
 	int modeNo = 1;
 	for (auto i = ensemble.begin(); i != ensemble.end(); i++) {
-		TimeSeries& imf = (*i);// / numBootstrapRuns;
+		TimeSeries& imf = (*i) / numBootstrapRuns;
 		int numZeroCrossings = imf.findNumZeroCrossings();
 		double xRange = *(imf.getXs().end() - 1) - *(imf.getXs().begin());
 		double meanFreq = 0.5 * numZeroCrossings / xRange;

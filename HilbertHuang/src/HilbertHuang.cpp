@@ -30,8 +30,8 @@ pair<int, pair<double, double>> HilbertHuang::imfStep(TimeSeries& imf, pair<uniq
 		imf.setY(imf.getY() - (lowerEnv(x) + upperEnv(x)) / 2);
 	}
 	auto newExtrema = imf.findExtrema();
-	unsigned numExtrema = newExtrema.first->size() + newExtrema.second->size();
-	unsigned numZeroCrossings = imf.findNumZeroCrossings();
+	int numExtrema = newExtrema.first->size() + newExtrema.second->size();
+	int numZeroCrossings = imf.findNumZeroCrossings();
     //cout << endl << "NE: " << numExtrema << ", NZC: " << numZeroCrossings;
 	if (abs(numExtrema - numZeroCrossings) <= 1) {
 		double extremaStart = max(*(newExtrema.first->getXs().begin()), *(newExtrema.second->getXs().begin()));
