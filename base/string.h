@@ -22,13 +22,11 @@ class String : public std::string
          **/
         String(const String& s) : std::string(s) {};
 
-    private:
         /**
          * Constructs a string from std::string
          **/
         String(std::string s) : std::string(s) {};
 
-    public:
         /**
          * Constructs a string from a regular C string
          **/
