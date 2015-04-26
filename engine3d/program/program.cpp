@@ -14,8 +14,8 @@
 using namespace engine3d;
 using namespace std;
 
-Program::Program(const std::string& rVertexShaderScript,
-			const std::string& rFragmentShaderScript) :
+Program::Program(const string& rVertexShaderScript,
+			const string& rFragmentShaderScript) :
 		mVertexShader(rVertexShaderScript),
 		mFragmentShader(rFragmentShaderScript) {
 

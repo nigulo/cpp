@@ -38,13 +38,13 @@ bool doubleBuffer = true;
 long tickCount = 0;
 
 ////////////////////////////
-Vertex v1(-0.1, -0.1, 2);
-Vertex v2(-0.1, 0.1, 2);
-Vertex v3(0.1, 0.1, 2);
-Vertex v4(0.1, -0.1, 2);
-Triangles tr;
+//Vertex v1(-0.1, -0.1, 2);
+//Vertex v2(-0.1, 0.1, 2);
+//Vertex v3(0.1, 0.1, 2);
+//Vertex v4(0.1, -0.1, 2);
+//Triangles tr;
 
-Node n("W");
+//Node n("W");
 ////////////////////////////
 
 void motionFunc(int x, int y) {
@@ -79,6 +79,15 @@ void renderFunc() {
 }
 
 void init() {
+	GLenum err = glewInit();
+	if (err != GLEW_OK) {
+		Object::Dbg("glewInit failed");
+		exit(1);
+	}
+	if (!GLEW_VERSION_2_1) { // check that the machine supports the 2.1 API.
+		Object::Dbg("!GLEW_VERSION_2_1");
+		exit(1);
+	}
     Object::Dbg("main -4");
     BoundingPolygon* p_bp = new BoundingPolygon();
     p_bp->AddVertex(Vector(0, 0, 0.5));
@@ -97,13 +106,13 @@ void init() {
     //String textureFile("ConcreteWall.png");
     //Texture* p_tex = new Texture(textureFile);
     //Object::Dbg("main -0.5");
-    Sphere* p_s = new Sphere(0.5, 10, 10);
+    //Sphere* p_s = new Sphere(0.5, 10, 10);
     //p_s->SetTexture(p_tex);
-    Transformation t;
+    //Transformation t;
     //t.SetRotation(Vector(1, 1, 0), -M_PI / 4);
-    t.SetTranslation(Vector(2, 2, 2));
-    p_s->SetTransformation(t);
-    n.AddChild(p_s);
+    //t.SetTranslation(Vector(2, 2, 2));
+    //p_s->SetTransformation(t);
+    //n.AddChild(p_s);
     //scene->SetNode(&n);
 
     Object::Dbg("main 0");
