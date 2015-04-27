@@ -8,6 +8,7 @@
 #include "engine3d/program/elementbuffer.h"
 
 #include <vector>
+#include <memory>
 
 using namespace base;
 using namespace std;
@@ -39,15 +40,16 @@ class Mesh : public Shape
 		// Returns the vertex at the given index
 		//Vertex& GetVertex(int index) const;
 		int GetSize() const;
+		virtual void Update();
 		virtual void Render();
 		// Generates texture coordinates for the vertices
 		virtual void GenTexCoords();
 		void SetTexCoords(vector<Vector*>& texCoords);
-		void UpdateBuffers();
 	protected:
 	protected:
-		VertexBuffer mVertexBuffer;
-		ElementBuffer mElementBuffer;
+		int mMode;
+		unique_ptr<VertexBuffer> mpVertexBuffer;
+		unique_ptr<ElementBuffer> mpElementBuffer;
 		vector<Vertex*> mVertices;
         vector<unsigned short> mIndices;
 };

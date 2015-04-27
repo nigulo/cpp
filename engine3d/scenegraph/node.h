@@ -31,12 +31,7 @@ class Node : public Spatial
 		 */
 		void SetScene(Scene* parent);
 		
-		/**
-		 * Initializes the node. This method is called 
-         * before the Render. It calculates world 
-         * transformation and coordinates for this node 
-         * and children
-		 **/
+		virtual void Update() {}
 		virtual void Render();
 		Scene& GetScene() const;
 		Node* GetParent() const;

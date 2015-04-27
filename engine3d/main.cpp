@@ -97,9 +97,9 @@ void init() {
 
     SceneLoader sl;
     pScene = sl.Load();
-    Perspective projection(pScene->GetProgram());
-    Camera camera(pScene->GetProgram(), projection);
-    pScene->SetCamera(&camera);
+    Perspective* p_projection = new Perspective(pScene->GetProgram());
+    Camera* p_camera = new Camera(pScene->GetProgram(), p_projection);
+    pScene->SetCamera(p_camera);
     //Object::Dbg("main -2");
     //Object::Dbg("main -1");
 
@@ -216,7 +216,7 @@ static void reshape(int w, int h) {
 int main (int argc, char* argv[]) {
     glutInit(&argc, argv);
     glutInitDisplayMode(doubleBuffer ? GLUT_DOUBLE : GLUT_SINGLE);
-    glutInitWindowSize(100, 100);
+    glutInitWindowSize(800, 600);
     glutInitWindowPosition(100,100);
     glutCreateWindow("OpenGL - First window demo");
     init();

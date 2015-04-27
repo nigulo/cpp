@@ -8,13 +8,14 @@
 #include "engine3d/geometry/transformation.h"
 #include "engine3d/containment/boundingvolume.h"
 #include "engine3d/projection/projection.h"
+#include <memory>
 
 namespace engine3d {
     
 class Camera : public Node
 {
 	public:
-		Camera(Program& rProgram, Projection& rProjection);
+		Camera(Program& rProgram, Projection* pProjection);
 		
 		virtual ~Camera();
 		
@@ -83,7 +84,7 @@ class Camera : public Node
         void Update();
         
         const Projection& GetProjection() const {
-        	return mrProjection;
+        	return *mpProjection;
         }
 
 	private:
@@ -106,7 +107,7 @@ class Camera : public Node
         /**
          * Specifies if perspective or parallel projection is used
          */
-        Projection& mrProjection;
+        unique_ptr<Projection> mpProjection;
         
         const Attribute& mrAttribute;
         Matrix mMatrix;

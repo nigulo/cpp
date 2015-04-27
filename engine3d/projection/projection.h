@@ -23,9 +23,9 @@ class Projection : public Object {
 
 protected:
 	Projection(Program& rProgram, float near, float far);
-	virtual ~Projection();
 
 public:
+	virtual ~Projection();
 	void Project() const;
     /**
      * @return disctance of the near clipping plane measured from eye point

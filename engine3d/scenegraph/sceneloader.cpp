@@ -73,14 +73,18 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         LoadTranslation(rElement, p_spatial);
     } else if (rElement.mType == TEXTURE) {
         Debug(String("Creating new texutre: ") + rElement.mName + ", " + rElement.mParams.GetProperty("file"));
-        Texture* p_texture = new Texture(mpScene->GetProgram(), rElement.mName, rElement.mParams.GetProperty("file"));
+        try {
+        	Texture* p_texture = new Texture(mpScene->GetProgram(), rElement.mName, rElement.mParams.GetProperty("file"));
+            mTextures.insert({rElement.mName, p_texture});
+        } catch (const string& ex) {
+        	Debug(ex);
+        }
         //if (rElement.mParams.GetProperty("alphafile").Length() > 0) {
         //    Texture tex_alpha(rElement.mParams.GetProperty("alphafile"), rElement.mName + "_alpha", Texture::FORMAT_ALPHA);
         //    Debug("before modulate");
         //    //p_texture->Modulate(tex_alpha);
         //    Debug("after modulate");
         //}
-        mTextures.insert({rElement.mName, p_texture});
     } else if (rElement.mType == VERTEX) {
     	LoadVertex(rElement, pObject);
     } else {

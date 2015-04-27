@@ -136,14 +136,13 @@ void Node::Render()
         Debug("Object culled");
     }
     else {
-		//Debug("transforming");
+		Debug("transforming");
 		mTransformation.Transform();
-		// There are no indices defined,
-		// render children in the regular order
+		if (mChanged) {
+			Update();
+		}
 		for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
-			glPushMatrix();
 			(*i)->Render();
-			glPopMatrix();
 		}
     }
     mChanged = false;

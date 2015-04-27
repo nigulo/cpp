@@ -5,12 +5,18 @@
 using namespace engine3d;
 
 // class constructor
-Mesh::Mesh(int mode) : mVertexBuffer(GetScene().GetProgram()), mElementBuffer(mode) {
+Mesh::Mesh(int mode) :
+		mMode(mode),
+		mpVertexBuffer(nullptr),
+		mpElementBuffer(nullptr) {
 }
 
 void Mesh::Copy(const Mesh& rMesh)
 {
     Shape::Copy(rMesh);
+    for (auto i = rMesh.mVertices.begin(); i != rMesh.mVertices.end(); i++) {
+    	mVertices.push_back(*i);
+    }
     for (auto i = rMesh.mIndices.begin(); i != rMesh.mIndices.end(); i++) {
         mIndices.push_back(*i);
     }
@@ -19,7 +25,7 @@ void Mesh::Copy(const Mesh& rMesh)
 Mesh* Mesh::Clone()
 {
     Debug("Mesh.Clone");
-    Mesh* p_m = new Mesh(mElementBuffer.GetMode());
+    Mesh* p_m = new Mesh(mMode);
     p_m->Copy(*this);
     return p_m;
 }
@@ -86,15 +92,24 @@ int Mesh::GetSize() const
 }
 
 
-void Mesh::UpdateBuffers() {
-	mVertexBuffer.SetData(mVertices);
-	mElementBuffer.SetData(mIndices);
+void Mesh::Update() {
+	Shape::Update();
+	Debug("Mesh::UpdateBuffers");
+	if (!mpVertexBuffer) {
+		mpVertexBuffer.reset(new VertexBuffer(GetScene().GetProgram()));
+	}
+	if (!mpElementBuffer) {
+		mpElementBuffer.reset(new ElementBuffer(mMode));
+	}
+	mpVertexBuffer->SetData(mVertices);
+	mpElementBuffer->SetData(mIndices);
 }
 
 void Mesh::Render() {
+	Debug("Mesh::Render");
 	Shape::Render();
-	mVertexBuffer.Render();
-	mElementBuffer.Render();
+	mpVertexBuffer->Render();
+	mpElementBuffer->Render();
 }
 
 // Sets texture coordinates for all vertices

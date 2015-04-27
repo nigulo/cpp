@@ -29,8 +29,7 @@ class Shape : public Node
 		void Copy(const Shape& shape);
 	public:
 		virtual Shape* Clone() const;
-		// No description
-		//void SetTexCoords(vector<Vector*>* coords);
+		virtual void Update() {Node::Update();}
 		virtual void Render();
 		// No description
 		void SetTexture(Texture* pTexture);
