@@ -76,7 +76,9 @@ double AnalyticSignal::calculate(const TimeSeries& ts, int modeNo, const string&
 	ofstream imfStream(prefix + "_imf_" + to_string(modeNo) + ".csv");
 	ofstream ampStream(prefix + "_amp_" + to_string(modeNo) + ".csv");
 	ofstream freqStream(prefix + "_freq_" + to_string(modeNo) + ".csv");
+	ofstream perStream(prefix + "_per_" + to_string(modeNo) + ".csv");
 	double totalEnergy = 0;
+	double prevZeroCross = xs[0];
 	for (unsigned i = 0; i < n; i++) {
 		double x = xs[i];
 		double u = realSignal[i];
@@ -91,9 +93,20 @@ double AnalyticSignal::calculate(const TimeSeries& ts, int modeNo, const string&
 			double frequency = (getRealTangent(i, conjugatedSignal) * u / n - getTangent(i, realSignal) * v) / u2v2 / xStep;
 			freqStream << x << " " << frequency << endl;
 		}
+		// Calculating average period based on zero-crossings (not part of Analytic signal calculation actually)
+		if (i > 0) {
+			if ((u > 0 && realSignal[i - 1] < 0) || (u < 0 && realSignal[i - 1] > 0)) {
+				double zeroCross = (x + xs[i - 1]) / 2;
+				if (prevZeroCross > xs[0]) {
+					perStream << (zeroCross + prevZeroCross) / 2 << " " << 2 * (zeroCross - prevZeroCross) << endl;
+				}
+				prevZeroCross = zeroCross;
+			}
+		}
 	}
 	imfStream.close();
 	ampStream.close();
 	freqStream.close();
+	perStream.close();
 	return totalEnergy / n;
 }
