@@ -30,9 +30,9 @@ class Mesh : public Shape
 		// class destructor
 		virtual ~Mesh();
 		// Adds a vertex to the mesh
-		void AddVertex(const Vertex& vertex);
-		void AddVertex(const Vector& v, const Color& color);
-		void AddVertex(const Vector& v, const Vector& texCoords);
+		Vertex& AddVertex(const Vertex& vertex);
+		Vertex& AddVertex(const Vector& v, const Color& color);
+		Vertex& AddVertex(const Vector& v, const Vector& texCoords);
 		// Adds a new child index
 		void AddIndex(int index);
 		// Adds a set of child indices

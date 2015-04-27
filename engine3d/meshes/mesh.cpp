@@ -46,30 +46,33 @@ Mesh::~Mesh()
  * after all vertex attributes have been set.
  * Otherwise use Node::AddChild
  **/
-void Mesh::AddVertex(const Vertex& v)
+Vertex& Mesh::AddVertex(const Vertex& v)
 {
     Vertex* p_vertex = new Vertex(v);
 	mVertices.push_back(p_vertex);
+	return *p_vertex;
 }
 
 /**
  * Adds new vertex to the set of vertices.
  **/
-void Mesh::AddVertex(const Vector& v, const Color& color)
+Vertex& Mesh::AddVertex(const Vector& v, const Color& color)
 {
     Vertex* p_vertex = new Vertex(v);
     p_vertex->SetColor(color);
 	AddVertex(*p_vertex);
+	return *p_vertex;
 }
 
 /**
  * Adds new vertex to the set of vertices
  **/
-void Mesh::AddVertex(const Vector& v, const Vector& texCoords)
+Vertex& Mesh::AddVertex(const Vector& v, const Vector& texCoords)
 {
     Vertex* p_vertex = new Vertex(v);
     p_vertex->SetTexCoords(texCoords);
 	AddVertex(*p_vertex);
+	return *p_vertex;
 }
 
 void Mesh::AddIndex(int index)

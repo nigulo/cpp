@@ -58,7 +58,7 @@ namespace engine3d {
             void LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatial);
             void LoadTranslation(XmlParser::XmlElement& rElement, Spatial* pSpatial);
             Vector LoadVector(XmlParser::XmlElement& rElement);
-            void LoadVertex(XmlParser::XmlElement& rElement, Object* pObject);
+            Vertex* LoadVertex(XmlParser::XmlElement& rElement, Object* pObject);
             BoundingVolume* LoadBound(XmlParser::XmlElement& rElement, Node* pNode);
 
             Texture* GetTexture(const string& rName);

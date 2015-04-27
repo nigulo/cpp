@@ -85,11 +85,11 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         //    //p_texture->Modulate(tex_alpha);
         //    Debug("after modulate");
         //}
-    } else if (rElement.mType == VERTEX) {
-    	LoadVertex(rElement, pObject);
     } else {
         Object* p_object = nullptr;
-		if (rElement.mType == NODE) {
+        if (rElement.mType == VERTEX) {
+        	p_object = LoadVertex(rElement, pObject);
+        } else if (rElement.mType == NODE) {
 			Debug(String("Creating new node: ") + rElement.mName);
 			p_object = new Node(rElement.mName);
 		} else if (rElement.mType == TRIANGLES) {
@@ -198,16 +198,14 @@ void SceneLoader::LoadCoords(XmlParser::XmlElement& rElement, Object* pObject) {
 }
 
 void SceneLoader::LoadTexCoords(XmlParser::XmlElement& rElement, Vertex* pVertex) {
-    Debug("SceneLoader::Load 13");
+    Debug("SceneLoader::LoadTexCoords 1");
     ArrayList<String> data = rElement.mData.Split(",");
-    Debug("SceneLoader::Load 14");
     double s = data[0].ToDouble();
     double t = data[1].ToDouble();
     Debug(String("Vertex s: ") + s);
     Debug(String("Vertex t: ") + t);
     pVertex->SetTexCoords(s, t);
-    Debug("SceneLoader::Load 15");
-    Debug("SceneLoader::Load 16");
+    Debug("SceneLoader::LoadTexCoords 2");
 }
 
 void SceneLoader::LoadUseTexture(XmlParser::XmlElement& rElement, Shape* pShape) {
@@ -279,21 +277,21 @@ Vector SceneLoader::LoadVector(XmlParser::XmlElement& rElement) {
     return Vector(x, y, z);
 }
 
-void SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject) {
+Vertex* SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject) {
 	Vector v = LoadVector(rElement);
     if (typeid(*pObject) == typeid(BoundingPolygon)) {
         Debug(String("vertex for boundingpolygon"));
         BoundingPolygon* p_bound = dynamic_cast<BoundingPolygon*>(pObject);
-        Debug("SceneLoader::Load 22");
         p_bound->AddVertex(v);
-        Debug("SceneLoader::Load 23");
     }
-    else if (typeid(*pObject) == typeid(Mesh)) {
-        Debug(String("vertex for mesh"));
+    else {
         Mesh* p_mesh = dynamic_cast<Mesh*>(pObject);
-        Debug("SceneLoader::Load 22");
-        p_mesh->AddVertex(v);
+        if (p_mesh) {
+            Debug(String("vertex for mesh"));
+			return &p_mesh->AddVertex(v);
+        }
     }
+    return nullptr;
 }
 
 BoundingVolume* SceneLoader::LoadBound(XmlParser::XmlElement& rElement, Node* pNode) {

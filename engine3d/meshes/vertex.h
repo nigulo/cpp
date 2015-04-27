@@ -12,7 +12,7 @@ namespace engine3d {
 /*
  * The class containing vertex attributes
  */
-class Vertex
+class Vertex : public Object
 {
 	public:
 		Vertex();
