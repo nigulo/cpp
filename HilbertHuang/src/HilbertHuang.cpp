@@ -25,15 +25,28 @@ pair<int, pair<double, double>> HilbertHuang::imfStep(TimeSeries& imf, pair<uniq
 	lowerEnv.set_points(stepExtrema.first->getXs(), stepExtrema.first->getYs());
 	tk::spline upperEnv;
 	upperEnv.set_points(stepExtrema.second->getXs(), stepExtrema.second->getYs());
+	double maxEnvMean = 0;
+	double sum = 0;
+	double sumSquares = 0;
 	for (imf.begin(); imf.hasNext(); imf.next()) {
 		double x = imf.getX();
-		imf.setY(imf.getY() - (lowerEnv(x) + upperEnv(x)) / 2);
+		double y = imf.getY();
+		double envMean = (lowerEnv(x) + upperEnv(x)) / 2;
+		if (abs(envMean) > maxEnvMean) {
+			maxEnvMean = abs(envMean);
+		}
+		imf.setY(y - envMean);
+		sum += y;
+		sumSquares += y * y;
 	}
+	int n = imf.size();
+	double mean = sum / n;
+	double stDev = sqrt(sumSquares / n - mean * mean);
 	auto newExtrema = imf.findExtrema();
 	int numExtrema = newExtrema.first->size() + newExtrema.second->size();
 	int numZeroCrossings = imf.findNumZeroCrossings();
-    //cout << endl << "NE: " << numExtrema << ", NZC: " << numZeroCrossings;
-	if (abs(numExtrema - numZeroCrossings) <= 1) {
+    //cout << endl << "NE: " << numExtrema << ", NZC: " << numZeroCrossings << ", MEM: " << maxEnvMean << ", stDev: " << stDev;
+	if (maxEnvMean < 0.05 * stDev && abs(numExtrema - numZeroCrossings) <= 1) {
 		double extremaStart = max(*(newExtrema.first->getXs().begin()), *(newExtrema.second->getXs().begin()));
 		double extremaEnd = min(*(newExtrema.first->getXs().end() - 1), *(newExtrema.second->getXs().end() - 1));
 		return {numZeroCrossings, {extremaStart, extremaEnd}};
