@@ -193,6 +193,8 @@ int main(int argc, char** argv) {
 				ensemble[i] + *imfs[i];
 			}
 		}
+		auto meanVar = ts1->meanVariance();
+		cout << "Residue variance: " << meanVar.second << endl;
 	}
 	stringstream logText;
 	int modeNo = 1;

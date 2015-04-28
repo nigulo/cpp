@@ -28,10 +28,23 @@ pair<int, pair<double, double>> HilbertHuang::imfStep(TimeSeries& imf, pair<uniq
 	double maxEnvMean = 0;
 	double sum = 0;
 	double sumSquares = 0;
+	unsigned i = 0;
 	for (imf.begin(); imf.hasNext(); imf.next()) {
 		double x = imf.getX();
 		double y = imf.getY();
-		double envMean = (lowerEnv(x) + upperEnv(x)) / 2;
+		double lower = lowerEnv(x);
+		double upper = upperEnv(x);
+		// End-point corrections
+		if (i == 0 || i == imf.size() - 1) {
+			if (upper < y) {
+				upper = y;
+			}
+			if (lower > y) {
+				lower = y;
+			}
+		}
+		i++;
+		double envMean = (lower + upper) / 2;
 		if (abs(envMean) > maxEnvMean) {
 			maxEnvMean = abs(envMean);
 		}
@@ -58,7 +71,7 @@ bool HilbertHuang::imf() {
 	unsigned modeNo = imfs.size() + 1;
 	auto extrema = ts->findExtrema();
 	int numExtrema = min(extrema.first->size(), extrema.second->size());
-	if (numExtrema <= 3) {
+	if (numExtrema <= 2) {
 		return false;
 	}
 	cout << "Extracting mode " << modeNo << " (" << numExtrema << ") ...";
@@ -69,7 +82,9 @@ bool HilbertHuang::imf() {
     auto extremaEnd = imfResult.second.second;
     cout << " done." << endl;
 
-    for (ts->begin(), imf->begin(); ts->hasNext();) {
+    *ts - *imf;
+
+    /*for (ts->begin(), imf->begin(); ts->hasNext();) {
     	double x = ts->getX();
     	if (x < extremaStart || x > extremaEnd) {
     		ts->erase();
@@ -79,7 +94,16 @@ bool HilbertHuang::imf() {
     		ts->next();
     		imf->next();
     	}
-    }
+    }*/
+
+    /*for (imf->begin(); imf->hasNext();) {
+    	double x = imf->getX();
+    	if (x < extremaStart || x > extremaEnd) {
+    		imf->erase();
+    	} else {
+    		imf->next();
+    	}
+    }*/
 
     imfs.push_back(unique_ptr<TimeSeries>(imf));
     return true;
