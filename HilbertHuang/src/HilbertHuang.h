@@ -21,12 +21,11 @@ public:
 	}
 
 private:
-	pair<int /*numZeroCrossings*/, pair<double, double> /*extremaStart, extremaEnd*/> imfStep(TimeSeries& imf,
-			pair<unique_ptr<const TimeSeries>, unique_ptr<const TimeSeries>>& stepExtrema);
 	bool /*found*/ imf();
 private:
 	unique_ptr<TimeSeries> ts;
 	vector<unique_ptr<TimeSeries>> imfs;
+
 };
 
 
