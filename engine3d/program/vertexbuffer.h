@@ -23,7 +23,7 @@ public:
 	VertexBuffer(Program& rProgram, int dim = 3, bool textureOrColor = true);
 	virtual ~VertexBuffer();
 
-	void SetData(vector<Vertex*> vertices);
+	void SetData(const vector<Vertex*>& rVertices);
 	virtual void Render() const;
 
 private:

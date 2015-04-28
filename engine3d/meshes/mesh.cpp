@@ -110,8 +110,9 @@ void Mesh::Update() {
 }
 
 void Mesh::Render() {
-	Debug("Mesh::Render");
+	Debug("Mesh::Render 1");
 	Shape::Render();
+	Debug("Mesh::Render 2");
 	mpVertexBuffer->Render();
 	mpElementBuffer->Render();
 }

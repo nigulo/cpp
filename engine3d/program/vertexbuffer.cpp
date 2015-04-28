@@ -7,6 +7,7 @@
 
 #include "vertexbuffer.h"
 #include "engine3d/meshes/vertex.h"
+#include "base/object.h"
 
 using namespace engine3d;
 
@@ -33,7 +34,9 @@ void VertexBuffer::Render() const {
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.shininess);
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.specular);
 
+	base::Object::Dbg("VertexBuffer::Render 1");
     Buffer::Render();
+    base::Object::Dbg("VertexBuffer::Render 2");
 
 	GLsizei stride = mDim * sizeof(GLdouble) + (mpTexCoord ? 2 * sizeof(GLdouble) : 0);
     glVertexAttribPointer(
@@ -47,6 +50,7 @@ void VertexBuffer::Render() const {
     //    (void*)offsetof(struct flag_vertex, normal)
     //);
     if (mpTexCoord) {
+    	base::Object::Dbg("VertexBuffer::Render 3");
 		glVertexAttribPointer(
 			mpTexCoord->GetId(),
 			2, GL_DOUBLE, GL_FALSE, stride,
@@ -74,24 +78,27 @@ void VertexBuffer::Render() const {
 
 	}
 
-void VertexBuffer::SetData(vector<Vertex*> vertices) {
-	if (vertices.empty()) {
+void VertexBuffer::SetData(const vector<Vertex*>& rVertices) {
+	if (rVertices.empty()) {
 		return;
 	}
 	int texDim = mpTexCoord ? 2 : 0;
-	GLdouble vertex_coords[vertices.size()][mDim + texDim];
+	GLfloat vertex_coords[rVertices.size()][mDim + texDim];
 	//double vertex_tex_coords[mChildren.size()];
 	int j = 0;
-	for (auto i = vertices.begin(); i != vertices.end(); i++) {
+	for (auto i = rVertices.begin(); i != rVertices.end(); i++) {
         Vertex* p_vertex = *i;
         for (int k = 0; k < mDim; k++) {
         	vertex_coords[j][k] = p_vertex->GetCoord(k);
+        	base::Object::Dbg(string("VertexBuffer::SetData coord ") + std::to_string(k) + ": " + std::to_string(vertex_coords[j][k]));
         }
         if (mpTexCoord) {
         	for (int k = 0; k < texDim; k++) {
     			vertex_coords[j][mDim + k] = (*(p_vertex->GetTexCoords()))[k];
+            	base::Object::Dbg(string("VertexBuffer::SetData texcoord ") + std::to_string(k) + ": " + std::to_string(vertex_coords[j][mDim + k]));
         	}
         }
 	}
-	Buffer::SetData(vertices.size() * (mDim + texDim) * sizeof(GLdouble), &vertex_coords, GL_STATIC_DRAW);
+	base::Object::Dbg(string("VertexBuffer::SetData ") + std::to_string(rVertices.size()));
+	Buffer::SetData(rVertices.size() * (mDim + texDim) * sizeof(GLfloat), &vertex_coords, GL_STATIC_DRAW);
 }
