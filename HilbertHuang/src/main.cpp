@@ -183,6 +183,7 @@ int main(int argc, char** argv) {
 				ts1->setY(ts1->getY() + dist(e1));
 			}
 		}
+		//TimeSeries ts2(*ts1);
 		HilbertHuang hh(ts1);
 		hh.calculate();
 		const vector<unique_ptr<TimeSeries>>& imfs = hh.getImfs();
@@ -192,9 +193,12 @@ int main(int argc, char** argv) {
 			} else {
 				ensemble[i] + *imfs[i];
 			}
+			// Reconstruction error check
+			//*ts1 + *imfs[i];
 		}
-		auto meanVar = ts1->meanVariance();
-		cout << "Residue variance: " << meanVar.second << endl;
+		//ts2 - *ts1;
+		//auto meanVar = ts2.meanVariance();
+		//cout << "Residue variance: " << meanVar.second << endl;
 	}
 	stringstream logText;
 	int modeNo = 1;
