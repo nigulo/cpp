@@ -54,6 +54,7 @@ Node* Node::Clone() const
 Node::~Node()
 {
 	for (int i = 0; i < mChildren.size(); i++) {
+		assert(mChildren[i]);
         delete mChildren[i];
     }
     mChildren.clear();

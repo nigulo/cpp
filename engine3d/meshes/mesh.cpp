@@ -14,11 +14,11 @@ Mesh::Mesh(int mode) :
 void Mesh::Copy(const Mesh& rMesh)
 {
     Shape::Copy(rMesh);
-    for (auto i = rMesh.mVertices.begin(); i != rMesh.mVertices.end(); i++) {
-    	mVertices.push_back(*i);
+    for (auto&& v : rMesh.mVertices) {
+    	mVertices.push_back(new Vertex(*v));
     }
-    for (auto i = rMesh.mIndices.begin(); i != rMesh.mIndices.end(); i++) {
-        mIndices.push_back(*i);
+    for (auto&& i : rMesh.mIndices) {
+        mIndices.push_back(i);
     }
 }
 
@@ -34,6 +34,7 @@ Mesh* Mesh::Clone()
 Mesh::~Mesh()
 {
     for (auto i = mVertices.begin(); i != mVertices.end(); i++) {
+    	assert(*i);
     	delete (*i);
     }
     mVertices.clear();
