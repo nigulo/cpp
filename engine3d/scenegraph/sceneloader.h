@@ -43,9 +43,9 @@ namespace engine3d {
     {
     	public:
             // Creates a new SceneLoader using the given scene and object files
-            SceneLoader(const String& rProgramFileName = "program.xml",
-            		const String& rSceneFileName = "scene.xml",
-					const String& rObjFileName = "objects.xml");
+            SceneLoader(const string& rProgramFileName = "program.xml",
+            		const string& rSceneFileName = "scene.xml",
+					const string& rObjFileName = "objects.xml");
             Scene* Load();
     	private:
             Program* LoadProgram(XmlParser::XmlElement& rElement);

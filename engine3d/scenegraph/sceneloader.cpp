@@ -1,6 +1,7 @@
 #include <math.h>
 #include <typeinfo>
 #include <list>
+#include <vector>
 
 #include "sceneloader.h"
 #include "engine3d/meshes/triangles.h"
@@ -14,9 +15,9 @@
 using namespace engine3d;
 
 SceneLoader::SceneLoader(
-		const String& rProgramFileName,
-		const String& rSceneFileName,
-		const String& rObjFileName) :
+		const string& rProgramFileName,
+		const string& rSceneFileName,
+		const string& rObjFileName) :
 	mProgramParser(rProgramFileName),
     mSceneParser(rSceneFileName),
     mObjParser(rObjFileName),
@@ -72,9 +73,9 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         assert(p_spatial);
         LoadTranslation(rElement, p_spatial);
     } else if (rElement.mType == TEXTURE) {
-        Debug(String("Creating new texutre: ") + rElement.mName + ", " + rElement.mParams.GetProperty("file"));
+        Debug(string("Creating new texutre: ") + rElement.mName + ", " + Utils::GetProperty(rElement.mParams, "file"));
         try {
-        	Texture* p_texture = new Texture(mpScene->GetProgram(), rElement.mName, rElement.mParams.GetProperty("file"));
+        	Texture* p_texture = new Texture(mpScene->GetProgram(), rElement.mName, Utils::GetProperty(rElement.mParams, "file"));
             mTextures.insert({rElement.mName, p_texture});
         } catch (const string& ex) {
         	Debug(ex);
@@ -90,26 +91,26 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         if (rElement.mType == VERTEX) {
         	p_object = LoadVertex(rElement, pObject);
         } else if (rElement.mType == NODE) {
-			Debug(String("Creating new node: ") + rElement.mName);
+			Debug(string("Creating new node: ") + rElement.mName);
 			p_object = new Node(rElement.mName);
 		} else if (rElement.mType == TRIANGLES) {
-			Debug(String("Creating new triangle mesh"));
+			Debug(string("Creating new triangle mesh"));
 			p_object = new Triangles();
 		} else if (rElement.mType == TRIANGLESTRIP) {
-			Debug(String("Creating new trianglestrip"));
+			Debug(string("Creating new trianglestrip"));
 			p_object = new TriangleStrip();
 		} else if (rElement.mType == TRIANGLEFAN) {
-			Debug(String("Creating new trianglefan"));
+			Debug(string("Creating new trianglefan"));
 			p_object = new TriangleFan();
 		} else if (rElement.mType == SHAPE) {
-			Debug(String("Creating new shape: ") + rElement.mName);
+			Debug(string("Creating new shape: ") + rElement.mName);
 			p_object = new Shape(rElement.mName);
 		} else if (rElement.mType == BOUND) {
 			Node* p_parent_node = dynamic_cast<Node*>(pObject);
 			assert(p_parent_node);
 			p_object = LoadBound(rElement, p_parent_node);
 		} else {
-			Debug(String("Unknown element type: ") + rElement.mType);
+			Debug(string("Unknown element type: ") + rElement.mType);
 		}
 	    Debug("SceneLoader::Load 18");
 	    Node* p_node = dynamic_cast<Node*>(p_object);
@@ -117,11 +118,11 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
 	        Debug("SceneLoader::Load 19");
 	        Node* p_parent_node = dynamic_cast<Node*>(pObject);
 	        if (!p_parent_node) {
-	            Debug(String("First node"));
+	            Debug(string("First node"));
 	            mpScene->SetNode(p_node);
 	        }
 	        else {
-	            Debug(String("Not first node"));
+	            Debug(string("Not first node"));
 	            p_parent_node->AddChild(p_node);
 	        }
 	        Debug("SceneLoader::Load 20");
@@ -158,13 +159,13 @@ Program* SceneLoader::LoadProgram(XmlParser::XmlElement& rElement) {
 
 void SceneLoader::LoadTriangle(XmlParser::XmlElement& rElement, Mesh* pMesh) {
     Debug("SceneLoader::Load 2");
-    Debug(String("indices: ") + rElement.mData);
-    ArrayList<String> data = rElement.mData.Split(",");
+    Debug(string("indices: ") + rElement.mData);
+    vector<string> data = Utils::Split(rElement.mData, ",");
     Debug("SceneLoader::Load 3");
-    int indices[] = {data[0].ToInt(), data[1].ToInt(), data[2].ToInt()};
-    Debug(String("Triangle index1: ") + (double)indices[0]);
-    Debug(String("Triangle index2: ") + (double)indices[1]);
-    Debug(String("Triangle index3: ") + (double)indices[2]);
+    int indices[] = {stoi(data[0]), stoi(data[1]), stoi(data[2])};
+    Debug(string("Triangle index1: ") + to_string(indices[0]));
+    Debug(string("Triangle index2: ") + to_string(indices[1]));
+    Debug(string("Triangle index3: ") + to_string(indices[2]));
     pMesh->AddIndices(indices, 3);
     Debug("SceneLoader::Load 4");
     Debug("SceneLoader::Load 5");
@@ -172,14 +173,14 @@ void SceneLoader::LoadTriangle(XmlParser::XmlElement& rElement, Mesh* pMesh) {
 
 void SceneLoader::LoadCoords(XmlParser::XmlElement& rElement, Object* pObject) {
     Debug("SceneLoader::Load 9");
-    ArrayList<String> data = rElement.mData.Split(",");
+    vector<string> data = Utils::Split(rElement.mData, ",");
     Debug("SceneLoader::Load 10");
-    double x = data[0].ToDouble();
-    double y = data[1].ToDouble();
-    double z = data[2].ToDouble();
-    Debug(String("Vertex x: ") + x);
-    Debug(String("Vertex y: ") + y);
-    Debug(String("Vertex z: ") + z);
+    double x = stod(data[0]);
+    double y = stod(data[1]);
+    double z = stod(data[2]);
+    Debug(string("Vertex x: ") + to_string(x));
+    Debug(string("Vertex y: ") + to_string(y));
+    Debug(string("Vertex z: ") + to_string(z));
     if (typeid(*pObject) == typeid(Vertex)) {
         Vertex* p_vertex = dynamic_cast<Vertex*>(pObject);
         assert(p_vertex);
@@ -199,40 +200,40 @@ void SceneLoader::LoadCoords(XmlParser::XmlElement& rElement, Object* pObject) {
 
 void SceneLoader::LoadTexCoords(XmlParser::XmlElement& rElement, Vertex* pVertex) {
     Debug("SceneLoader::LoadTexCoords 1");
-    ArrayList<String> data = rElement.mData.Split(",");
-    double s = data[0].ToDouble();
-    double t = data[1].ToDouble();
-    Debug(String("Vertex s: ") + s);
-    Debug(String("Vertex t: ") + t);
+    vector<string> data = Utils::Split(rElement.mData, ",");
+    double s = stod(data[0]);
+    double t = stod(data[1]);
+    Debug(string("Vertex s: ") + to_string(s));
+    Debug(string("Vertex t: ") + to_string(t));
     pVertex->SetTexCoords(s, t);
     Debug("SceneLoader::LoadTexCoords 2");
 }
 
 void SceneLoader::LoadUseTexture(XmlParser::XmlElement& rElement, Shape* pShape) {
-    Debug(String("Setting texture: ") + rElement.mName);
+    Debug(string("Setting texture: ") + rElement.mName);
     Texture* p_tex = GetTexture(rElement.mName);
     assert(p_tex);
     pShape->SetTexture(p_tex);
 }
 
 void SceneLoader::LoadUseShape(XmlParser::XmlElement& rElement, Node* pNode) {
-    Debug(String("Using shape: ") + rElement.mName);
+    Debug(string("Using shape: ") + rElement.mName);
     Shape* p_shape = dynamic_cast<Shape*>(mShapes.GetChild(rElement.mName));
     assert(p_shape);
     pNode->AddChild(p_shape->Clone());
 }
 
 void SceneLoader::LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatial) {
-    Debug(String("Rotation: ") + rElement.mData);
-    ArrayList<String> data = rElement.mData.Split(",");
-    double x = data[0].ToDouble();
-    double y = data[1].ToDouble();
-    double z = data[2].ToDouble();
-    double a = data[3].ToDouble();
-    Debug(String("RotVector x: ") + x);
-    Debug(String("RotVector y: ") + y);
-    Debug(String("RotVector z: ") + z);
-    Debug(String("RotVector a: ") + a);
+    Debug(string("Rotation: ") + rElement.mData);
+    vector<string> data = Utils::Split(rElement.mData, ",");
+    double x = stod(data[0]);
+    double y = stod(data[1]);
+    double z = stod(data[2]);
+    double a = stod(data[3]);
+    Debug(string("RotVector x: ") + to_string(x));
+    Debug(string("RotVector y: ") + to_string(y));
+    Debug(string("RotVector z: ") + to_string(z));
+    Debug(string("RotVector a: ") + to_string(a));
     Debug(pSpatial->Name());
     Transformation t = pSpatial->GetTransformation();
     t.SetRotation(Vector(x, y, z), a * M_PI / 180);
@@ -240,14 +241,14 @@ void SceneLoader::LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatia
 }
 
 void SceneLoader::LoadTranslation(XmlParser::XmlElement& rElement, Spatial* pSpatial) {
-    Debug(String("Translation: ") + rElement.mData);
-    ArrayList<String> data = rElement.mData.Split(",");
-    double x = data[0].ToDouble();
-    double y = data[1].ToDouble();
-    double z = data[2].ToDouble();
-    Debug(String("Translation x: ") + x);
-    Debug(String("Translation y: ") + y);
-    Debug(String("Translation z: ") + z);
+    Debug(string("Translation: ") + rElement.mData);
+    vector<string> data = Utils::Split(rElement.mData, ",");
+    double x = stod(data[0]);
+    double y = stod(data[1]);
+    double z = stod(data[2]);
+    Debug(string("Translation x: ") + to_string(x));
+    Debug(string("Translation y: ") + to_string(y));
+    Debug(string("Translation z: ") + to_string(z));
     Debug(pSpatial->Name());
     Transformation t = pSpatial->GetTransformation();
     t.SetTranslation(Vector(x, y, z));
@@ -255,24 +256,24 @@ void SceneLoader::LoadTranslation(XmlParser::XmlElement& rElement, Spatial* pSpa
 }
 
 Vector SceneLoader::LoadVector(XmlParser::XmlElement& rElement) {
-    Debug(String("Creating new vertex"));
-    Object::Dbg(String("Finding property x from : ") + rElement.mParams);
-    String sx = rElement.mParams.GetProperty("x");
-    Object::Dbg(String("Finding property y from : ") + rElement.mParams);
-    String sy = rElement.mParams.GetProperty("y");
-    Object::Dbg(String("Finding property z from : ") + rElement.mParams);
-    String sz = rElement.mParams.GetProperty("z");
+    Debug(string("Creating new vertex"));
+    Object::Dbg(string("Finding property x from : ") + rElement.mParams);
+    string sx = Utils::GetProperty(rElement.mParams, "x");
+    Object::Dbg(string("Finding property y from : ") + rElement.mParams);
+    string sy = Utils::GetProperty(rElement.mParams, "y");
+    Object::Dbg(string("Finding property z from : ") + rElement.mParams);
+    string sz = Utils::GetProperty(rElement.mParams, "z");
     double x = 0;
     double y = 0;
     double z = 0;
-    if (sx.Length() > 0) {
-        x = sx.ToDouble();
+    if (sx.length() > 0) {
+        x = stod(sx);
     }
-    if (sy.Length() > 0) {
-        y = sy.ToDouble();
+    if (sy.length() > 0) {
+        y = stod(sy);
     }
-    if (sz.Length() > 0) {
-        z = sz.ToDouble();
+    if (sz.length() > 0) {
+        z = stod(sz);
     }
     return Vector(x, y, z);
 }
@@ -280,14 +281,14 @@ Vector SceneLoader::LoadVector(XmlParser::XmlElement& rElement) {
 Vertex* SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject) {
 	Vector v = LoadVector(rElement);
     if (typeid(*pObject) == typeid(BoundingPolygon)) {
-        Debug(String("vertex for boundingpolygon"));
+        Debug(string("vertex for boundingpolygon"));
         BoundingPolygon* p_bound = dynamic_cast<BoundingPolygon*>(pObject);
         p_bound->AddVertex(v);
     }
     else {
         Mesh* p_mesh = dynamic_cast<Mesh*>(pObject);
         if (p_mesh) {
-            Debug(String("vertex for mesh"));
+            Debug(string("vertex for mesh"));
 			return &p_mesh->AddVertex(v);
         }
     }
@@ -295,27 +296,27 @@ Vertex* SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject
 }
 
 BoundingVolume* SceneLoader::LoadBound(XmlParser::XmlElement& rElement, Node* pNode) {
-    String type = rElement.mParams.GetProperty("type");
-    ArrayList<String> usages = rElement.mParams.GetProperty("usage").Split(",");
-    Debug(String("Creating new bound: ") + rElement.mName + "; " + type + "; " + rElement.mParams.GetProperty("usage"));
+    string type = Utils::GetProperty(rElement.mParams, "type");
+    vector<string> usages = Utils::Split(Utils::GetProperty(rElement.mParams, "usage"), ",");
+    Debug(string("Creating new bound: ") + rElement.mName + "; " + type + "; " + Utils::GetProperty(rElement.mParams, "usage"));
     BoundingVolume* p_bound;
-    if (type.Length() <= 0 || type == "polygon") {
+    if (type.length() <= 0 || type == "polygon") {
         p_bound = new BoundingPolygon();
     }
     else if (type == "sphere") {
-        double x = rElement.mParams.GetProperty("x").ToDouble();
-        double y = rElement.mParams.GetProperty("y").ToDouble();
-        double z = rElement.mParams.GetProperty("z").ToDouble();
-        double r = rElement.mParams.GetProperty("r").ToDouble();
+        double x = stod(Utils::GetProperty(rElement.mParams, (string) "x"));
+        double y = stod(Utils::GetProperty(rElement.mParams, (string) "y"));
+        double z = stod(Utils::GetProperty(rElement.mParams, (string) "z"));
+        double r = stod(Utils::GetProperty(rElement.mParams, (string) "r"));
         p_bound = new BoundingSphere(Vector(x, y, z), r);
     }
-    Debug(String("Creating bound for node"));
+    Debug(string("Creating bound for node"));
     //------------------------------------------
-    if (usages.Contains("culling")) {
+    if (Utils::Contains(usages, string("culling"))) {
         Object::Dbg("culling bound");
         pNode->SetBound(p_bound);
     }
-    if (usages.Contains("collision")) {
+    if (Utils::Contains(usages, string("collision"))) {
         Object::Dbg("collision bound");
         pNode->SetCollisionBound(p_bound);
     }
