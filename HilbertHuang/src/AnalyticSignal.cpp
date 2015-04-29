@@ -2,6 +2,7 @@
 #include <fftw3.h>
 #include <math.h>
 #include <cstring>
+#include <cassert>
 #include <fstream>
 
 AnalyticSignal::AnalyticSignal() {
@@ -17,6 +18,11 @@ void multComplex(double x[2], double y[2]) {
 }
 
 void shiftPhase(int n, fftw_complex* data, double phaseShift) {
+	assert(n % 2 == 0);
+	// Shift in time of real signal whose FFT is the input data.
+	// Shift in time domain corresponds to phase shift in frequency domain.
+	// For real signals the 2nd half of the FFT is complex conjugate of the first half,
+	// that's why phase shifts with opposite signs are applied.
 	int nDiv2 = n >> 1;
 	double c1[2] = {cos(-phaseShift), sin(-phaseShift)};
 	double c2[2] = {cos(phaseShift), sin(phaseShift)};
