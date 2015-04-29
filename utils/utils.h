@@ -75,6 +75,23 @@ public:
      **/
     static string GetProperty(const string& rStr, const string& rPropertyName);
 
+    /**
+     * @return the index of the given object or -1 if the object is
+     * not found. operator== must be defined for the type T.
+     **/
+    template<typename T> static int IndexOf(vector<T> const & rVector, T const & rElement) {
+        for (long i = 0; i < rVector.size(); i++) {
+            if (rVector[i] == rElement) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    template<typename T> static bool Contains(vector<T> const & rVector, T const & rElement) {
+        return IndexOf(rVector, rElement) >= 0;
+    }
+
 };
 
 } /* namespace utils */

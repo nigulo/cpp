@@ -171,4 +171,3 @@ string Utils::GetProperty(const string& rStr, const string& rPropertyName) {
     }
     return str.substr(0, index);
 }
-
