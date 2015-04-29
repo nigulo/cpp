@@ -1,43 +1,38 @@
-#include "xmlparser.h" // class's header file
+#include "xmlparser.h"
 
 using namespace utils;
 using namespace base;
 
-// class constructor
-XmlParser::XmlParser(const String& rFileName) 
-{
+XmlParser::XmlParser(const string& rFileName) {
 	mpData = nullptr;
-	if (rFileName.Length() > 0) {
+	if (rFileName.length() > 0) {
 		Load(rFileName);
 	}
 }
 
-// class destructor
-XmlParser::~XmlParser()
-{
+XmlParser::~XmlParser() {
 	if (mpData) {
 		delete mpData;
 	}
 }
 
-XmlParser::XmlElement* XmlParser::Load(const String& rFileName) 
-{
-	if (!mpData || rFileName.Length() > 0) {
-	    String data;
+XmlParser::XmlElement* XmlParser::Load(const string& rFileName) {
+	if (!mpData || rFileName.length() > 0) {
+	    string data;
 		char buf[256];
 	    //--------------------------------
 	    // Load scene data
 	    ifstream in;
-	    Debug(rFileName.GetChars());
-	    in.open(rFileName.GetChars());
+	    Debug(rFileName);
+	    in.open(rFileName);
 	    assert(in);
 		while (in.getline(buf, sizeof(buf))) {
 			data = data + buf + "\n";
 		}
 		in.close();
-		mpData = new XmlElement("root", "root", "", data, 0, data.Length());
+		mpData = new XmlElement("root", "root", "", data, 0, data.length());
 		mpData->Parse();
-	    data.Clear();
+	    data.clear();
 	}
     return mpData;
 }
@@ -45,7 +40,7 @@ XmlParser::XmlElement* XmlParser::Load(const String& rFileName)
 //----------------------------------------------
 // XmlElement
 
-XmlParser::XmlElement::XmlElement(const String& rType, const String& rName, const String& rParams, String& rData, int startIndex, int endIndex) :
+XmlParser::XmlElement::XmlElement(const string& rType, const string& rName, const string& rParams, string& rData, int startIndex, int endIndex) :
     mType(rType), 
     mName(rName), 
     mParams(rParams),
@@ -53,7 +48,7 @@ XmlParser::XmlElement::XmlElement(const String& rType, const String& rName, cons
     mEndIndex(endIndex)
 {
     mpData = &rData;
-    Object::Dbg(String("------ XmlElement: ") + mType + String(", ") + mName);// + String(", ") + mStartIndex + String(", ") + mEndIndex);
+    Object::Dbg(string("------ XmlElement: ") + mType + string(", ") + mName);// + string(", ") + mStartIndex + string(", ") + mEndIndex);
     
 }
 
@@ -69,15 +64,15 @@ void XmlParser::XmlElement::AddSubElement(XmlElement* pElement) {
 	mSubElements.push_back(pElement);
 }
 
-void XmlParser::XmlElement::SetData(const String& rData) {
+void XmlParser::XmlElement::SetData(const string& rData) {
 	mData = rData; 
 }
 
-void XmlParser::XmlElement::AddParameter(const String& rName, const String& rValue) {
-	if (mParams.Length() > 0) {
+void XmlParser::XmlElement::AddParameter(const string& rName, const string& rValue) {
+	if (mParams.length() > 0) {
 		mParams = mParams + " ";
 	}
-	mParams = mParams + rName + (rValue.Length() > 0 ? (String("=\"") + rValue + "\"") : ""); 
+	mParams = mParams + rName + (rValue.length() > 0 ? (string("=\"") + rValue + "\"") : "");
 }
 
 void XmlParser::XmlElement::Parse() 
@@ -85,7 +80,7 @@ void XmlParser::XmlElement::Parse()
     int startIndex = mStartIndex;
     bool leaf = true;
     while (startIndex < mEndIndex) {
-        Object::Dbg(String("Parse ") + (double) startIndex);
+        Object::Dbg(string("Parse ") + to_string(startIndex));
         
         XmlElement* pElement = FindNextSubElement(&startIndex);
         if (pElement) {
@@ -98,8 +93,8 @@ void XmlParser::XmlElement::Parse()
         }
     }
     if (leaf) {
-        mData = mpData->SubString(startIndex, mEndIndex);
-        Object::Dbg((String) "Leaf element data _" + mData + "_");
+        mData = mpData->substr(startIndex, mEndIndex - startIndex);
+        Object::Dbg((string) "Leaf element data _" + mData + "_");
     }
 }    
 
@@ -107,23 +102,23 @@ XmlParser::XmlElement* XmlParser::XmlElement::FindNextSubElement(int* pStartInde
 {
     int start;
     while (true) {
-        start = mpData->Find("<", *pStartIndex);
-        Object::Dbg(String("FindNextSubElement start: ") + start);
+        start = Utils::Find(*mpData, "<", *pStartIndex);
+        Object::Dbg(string("FindNextSubElement start: ") + to_string(start));
         
         if (start < 0 || start >= mEndIndex) {
             // No XML tags found, return 0
-            Object::Dbg((String) "FindNextSubElement substr: _" + mpData->SubString(*pStartIndex, mEndIndex) + "_");
+            Object::Dbg((string) "FindNextSubElement substr: _" + mpData->substr(*pStartIndex, mEndIndex - *pStartIndex) + "_");
             return 0;
         }
-        else if (mpData->SubString(start + 1, start + 4) == "!--") {
+        else if (mpData->substr(start + 1, 3) == "!--") {
             // Comment tag found
             int end = start;
             do {
-                start = mpData->Find("<!--", start + 1);
-                end = mpData->Find("-->", end + 1);
+                start = Utils::Find(*mpData, "<!--", start + 1);
+                end = Utils::Find(*mpData, "-->", end + 1);
             } while (start >= 0 && start < end);
             assert(end >= 0);
-            *pStartIndex = end + ((String) "-->").Length();
+            *pStartIndex = end + ((string) "-->").length();
             // This is a comment tag, return 0
             Object::Dbg("Comment found");
             continue;
@@ -131,46 +126,46 @@ XmlParser::XmlElement* XmlParser::XmlElement::FindNextSubElement(int* pStartInde
         break;
     }
 
-    int end = mpData->Find(">", start);
-    Object::Dbg((String) "FindNextSubElement end: " + end);
+    int end = Utils::Find(*mpData, ">", start);
+    Object::Dbg((string) "FindNextSubElement end: " + to_string(end));
     
     assert(end < mEndIndex);
-    String tag = mpData->SubString(start + 1, end);
-    tag.Trim();
+    string tag = mpData->substr(start + 1, end - start - 1);
+    Utils::Trim(tag);
     bool endTag = true;
-    if (tag[tag.Length() - 1] == '/') {
+    if (tag[tag.length() - 1] == '/') {
         Object::Dbg("Element with no end tag");
-        tag = tag.SubString(0, tag.Length() - 1);
+        tag = tag.substr(0, tag.length() - 1);
         // The tag is self-closing, no end tag is present
         endTag = false;
     }
-    Object::Dbg((String) "FindNextSubElement tag: _" + tag + "_");
+    Object::Dbg((string) "FindNextSubElement tag: _" + tag + "_");
     
-    tag.Trim();
-    Object::Dbg((String) "FindNextSubElement tag trimmed: _" + tag + "_");
+    Utils::Trim(tag);
+    Object::Dbg((string) "FindNextSubElement tag trimmed: _" + tag + "_");
     
-    int whiteIndex = tag.FindWhitespace();
-    Object::Dbg((String) "FindNextSubElement whiteIndex: " + whiteIndex);
+    int whiteIndex = Utils::FindWhitespace(tag);
+    Object::Dbg((string) "FindNextSubElement whiteIndex: " + to_string(whiteIndex));
     
-    String type = tag.SubString(0, whiteIndex);
-    Object::Dbg((String) "FindNextSubElement type: " + type);
+    string type = tag.substr(0, whiteIndex);
+    Object::Dbg((string) "FindNextSubElement type: " + type);
     
-    String name = tag.GetProperty("name");
-    Object::Dbg((String) "FindNextSubElement name: " + name);
+    string name = Utils::GetProperty(tag, "name");
+    Object::Dbg((string) "FindNextSubElement name: " + name);
     
     int elementEnd = end + 1;
     *pStartIndex = elementEnd;
     if (endTag) {
         // The end tag is present
-        ArrayList<int> start_indices(100);
-        mpData->FindAll(start_indices, (String) "<" + type, end);
-        Object::Dbg(String("siiin"));
-        ArrayList<int> end_indices(100);
-        mpData->FindAll(end_indices, (String) "</" + type, end);
-        ArrayList<int> comment_starts(100);
-        mpData->FindAll(comment_starts, (String) "<!--", end);
-        ArrayList<int> comment_ends(100);
-        mpData->FindAll(comment_ends, (String) "-->", end);
+        vector<int> start_indices(100);
+        Utils::FindAll(*mpData, start_indices, (string) "<" + type, end);
+        Object::Dbg(string("siiin"));
+        vector<int> end_indices(100);
+        Utils::FindAll(*mpData, end_indices, (string) "</" + type, end);
+        vector<int> comment_starts(100);
+        Utils::FindAll(*mpData, comment_starts, (string) "<!--", end);
+        vector<int> comment_ends(100);
+        Utils::FindAll(*mpData, comment_ends, (string) "-->", end);
         
         int num_tags = 1;
         int num_comments = 0;
@@ -178,27 +173,27 @@ XmlParser::XmlElement* XmlParser::XmlElement::FindNextSubElement(int* pStartInde
         int i_end = 0;
         int i_comm_start = 0;
         int i_comm_end = 0;
-        Object::Dbg(String("start size: ") + start_indices.Size());
-        Object::Dbg(String("end size: ") + end_indices.Size());
+        Object::Dbg(string("start size: ") + to_string(start_indices.size()));
+        Object::Dbg(string("end size: ") + to_string(end_indices.size()));
         do {
             bool start = false;
             bool comment = false;
             int index;
-            assert(i_end < end_indices.Size());
-            if (i_start < start_indices.Size() && start_indices[i_start] < end_indices[i_end]) {
+            assert(i_end < end_indices.size());
+            if (i_start < start_indices.size() && start_indices[i_start] < end_indices[i_end]) {
                 start = true;
                 index = start_indices[i_start];
             }
             else {
                 index = end_indices[i_end];
             }
-            if (i_comm_start < comment_starts.Size()) {
+            if (i_comm_start < comment_starts.size()) {
                 if (comment_starts[i_comm_start] < index) {
                     index = comment_starts[i_comm_start];
                     comment = true;
                 }
             }
-            if (i_comm_end < comment_ends.Size()) {
+            if (i_comm_end < comment_ends.size()) {
                 if (comment_ends[i_comm_end] < index) {
                     index = comment_ends[i_comm_end];
                     start = false;
@@ -240,31 +235,31 @@ XmlParser::XmlElement* XmlParser::XmlElement::FindNextSubElement(int* pStartInde
             //    num_tags--;
             //    i_end++;
             //}
-            Object::Dbg(String("num_tags: ") + num_tags);
-            Object::Dbg(String("i_start: ") + i_start);
-            Object::Dbg(String("i_end: ") + i_end);
+            Object::Dbg(string("num_tags: ") + to_string(num_tags));
+            Object::Dbg(string("i_start: ") + to_string(i_start));
+            Object::Dbg(string("i_end: ") + to_string(i_end));
         } while (num_tags > 0);
         elementEnd = end_indices[i_end - 1];
         
-        //elementEnd = mpData->Find((String) "</" + type, end);
-        *pStartIndex = elementEnd + ((String) "</" + type + ">").Length();
+        //elementEnd = mpData->Find((string) "</" + type, end);
+        *pStartIndex = elementEnd + ((string) "</" + type + ">").length();
     }
-    Object::Dbg((String) "FindNextSubElement elementEnd: " + elementEnd);
+    Object::Dbg((string) "FindNextSubElement elementEnd: " + to_string(elementEnd));
     
     assert(elementEnd < mEndIndex);
     return new XmlElement(type, name, tag, *mpData, end + 1, elementEnd);
 }
 
-String XmlParser::XmlElement::ToString() const
+string XmlParser::XmlElement::ToString() const
 {
 	return ToString("");
 }
 
-String XmlParser::XmlElement::ToString(const String& indent) const 
+string XmlParser::XmlElement::ToString(const string& indent) const
 {
 	
-	String output = indent + "<" + mParams;
-	if (mSubElements.size() == 0 && mData.Length() == 0) {
+	string output = indent + "<" + mParams;
+	if (mSubElements.size() == 0 && mData.length() == 0) {
 		output = output + "/>\n";
 	}
 	else {
@@ -272,7 +267,7 @@ String XmlParser::XmlElement::ToString(const String& indent) const
 	    for (auto i = mSubElements.begin(); i != mSubElements.end(); i++) {
 			output = output + (*i)->ToString(indent + "    ");
 		}
-		if (mData.Length() > 0) {
+		if (mData.length() > 0) {
 			output = output + indent + mData + "\n";
 		}
 		output = output + indent + "</" + mType + ">\n";
@@ -280,8 +275,8 @@ String XmlParser::XmlElement::ToString(const String& indent) const
 	return output;
 }
 
-void XmlParser::XmlElement::Save(const String& rFileName) const {
-	ofstream out(rFileName.GetChars());
+void XmlParser::XmlElement::Save(const string& rFileName) const {
+	ofstream out(rFileName);
 	out << ToString();
 	out.close();
 }
