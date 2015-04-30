@@ -1,10 +1,10 @@
 #include "mesh.h"
 #include "engine3d/scenegraph/scene.h"
+#include <cassert>
 #include <GL/gl.h>
 
 using namespace engine3d;
 
-// class constructor
 Mesh::Mesh(int mode) :
 		mMode(mode),
 		mpVertexBuffer(nullptr),
@@ -30,7 +30,6 @@ Mesh* Mesh::Clone()
     return p_m;
 }
 
-// class destructor
 Mesh::~Mesh()
 {
     for (auto i = mVertices.begin(); i != mVertices.end(); i++) {

@@ -21,7 +21,7 @@ namespace engine3d {
     		/**
     		 * Constructs a spatial object with the given name
     		 **/
-    		Spatial(const String& rName);
+    		Spatial(const string& rName);
     		
     		/**
     		 * Copy constructor
@@ -33,7 +33,6 @@ namespace engine3d {
     		 * object.
     		 **/
     		void Copy(const Spatial& rSpatial);
-    		// class destructor
     		virtual ~Spatial();
     		
     	public:	

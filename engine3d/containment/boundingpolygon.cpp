@@ -3,7 +3,6 @@
 
 using namespace engine3d;
 
-// class constructor
 BoundingPolygon::BoundingPolygon(Vector vertices[], int number)
 {
 	for (int i = 0; i < number; i++) {
@@ -35,29 +34,22 @@ BoundingPolygon::~BoundingPolygon()
 void BoundingPolygon::AddVertex(const Vector& rVertex) {
     mVertices.push_back(rVertex);
     mTransformedVertices.push_back(rVertex);
-    Debug(String("vertex added to bound: ") + rVertex[0] + ", " + rVertex[1] + ", " + rVertex[2]);
+    Debug(string("vertex added to bound: ") + to_string(rVertex[0]) + ", " + to_string(rVertex[1]) + ", " + to_string(rVertex[2]));
 }
 
 int BoundingPolygon::WhichSide(const Plane& rPlane) const
 {
-    //Debug("BoundingPolygon::WhichSide 1");
     if (mVertices.size() <= 0) {
         return Plane::PLACEMENT_UNKNOWN;
     }
-    //Debug("BoundingPolygon::WhichSide 2");
     Vector v = mTransformedVertices[0];//Spatial::mTransformation.Transform(mVertices[0]);
     int placement = rPlane.WhichSide(v);
-    //Debug(String("BoundingPolygon::WhichSide 3: ") + placement);
-    //Debug(String("v: ") + v[0] + ", " + v[1] + ", " + v[2]);
 	for (int i = 1; i < mVertices.size(); i++) {
         v = mTransformedVertices[i];//Spatial::mTransformation.Transform(mVertices[i]);
-        //Debug(String("v: ") + v[0] + ", " + v[1] + ", " + v[2]);
         if (placement != rPlane.WhichSide(v)) {
-            //Debug(String("BoundingPolygon::WhichSide 4: ") + placement);
             return Plane::PLACEMENT_COINCIDE;
         }
     }
-    //Debug(String("BoundingPolygon::WhichSide 5: ") + placement);
     return placement;
     
 }
@@ -80,9 +72,6 @@ bool BoundingPolygon::Intersects(const Line& rLine) const
                 const Vector& r_point1 = mTransformedVertices[i];//Spatial::mTransformation.Transform(mVertices[i]);
                 const Vector& r_point2 = mTransformedVertices[j];//Spatial::mTransformation.Transform(mVertices[j]);
                 const Vector& r_point3 = mTransformedVertices[k];//Spatial::mTransformation.Transform(mVertices[k]);
-                //Debug(String("r_point1: ") + r_point1.ToString());
-                //Debug(String("r_point2: ") + r_point2.ToString());
-                //Debug(String("r_point3: ") + r_point3.ToString());
                 Plane p(r_point1, r_point2, r_point3);
                 const Vector& r_normal = p.GetNormal();
                 double dot2 = r_normal.DotProduct(rLine.mDirection);
@@ -109,7 +98,7 @@ bool BoundingPolygon::Intersects(const Line& rLine) const
                         double dot1 = r_normal.DotProduct(rLine.mPoint1 - p.GetPoint());
                         
                         Vector intersectionPoint = rLine.mPoint1 - rLine.mDirection * (dot1 / dot2);
-                        Debug(String("intersection point: ") + intersectionPoint.ToString());
+                        Debug(string("intersection point: ") + intersectionPoint.ToString());
                         
                         //Vector normal1 = Line(r_point2, r_point1).GetDistanceVector(intersectionPoint);
                         //Vector normal2 = Line(r_point3, r_point2).GetDistanceVector(intersectionPoint);
@@ -121,21 +110,21 @@ bool BoundingPolygon::Intersects(const Line& rLine) const
                         Vector v2 = intersectionPoint - r_point2;
                         Vector v3 = intersectionPoint - r_point3;
 
-                        Debug(String("v1: ") + v1.ToString());
-                        Debug(String("v2: ") + v2.ToString());
-                        Debug(String("v3: ") + v3.ToString());
+                        Debug(string("v1: ") + v1.ToString());
+                        Debug(string("v2: ") + v2.ToString());
+                        Debug(string("v3: ") + v3.ToString());
 
-                        Debug(String("2 - 1: ") + (r_point2 - r_point1).ToString());
-                        Debug(String("3 - 2: ") + (r_point3 - r_point2).ToString());
-                        Debug(String("1 - 3: ") + (r_point1 - r_point3).ToString());
+                        Debug(string("2 - 1: ") + (r_point2 - r_point1).ToString());
+                        Debug(string("3 - 2: ") + (r_point3 - r_point2).ToString());
+                        Debug(string("1 - 3: ") + (r_point1 - r_point3).ToString());
                         
                         Vector cross1 = v1.CrossProduct(r_point2 - r_point1);
                         Vector cross2 = v2.CrossProduct(r_point3 - r_point2);
                         Vector cross3 = v3.CrossProduct(r_point1 - r_point3);
 
-                        Debug(String("cross1: ") + (cross1).ToString());
-                        Debug(String("cross2: ") + (cross2).ToString());
-                        Debug(String("cross3: ") + (cross3).ToString());
+                        Debug(string("cross1: ") + (cross1).ToString());
+                        Debug(string("cross2: ") + (cross2).ToString());
+                        Debug(string("cross3: ") + (cross3).ToString());
                         
                         double dott1 = cross1.DotProduct(cross2);
                         double dott2 = cross2.DotProduct(cross3);

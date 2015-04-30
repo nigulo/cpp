@@ -21,13 +21,11 @@ namespace engine3d {
 class Mesh : public Shape
 {
 	public:
-		// class constructor
 		Mesh(int type);
 	protected:
 		void Copy(const Mesh& rMesh);
 	public:
 		virtual Mesh* Clone();
-		// class destructor
 		virtual ~Mesh();
 		// Adds a vertex to the mesh
 		Vertex& AddVertex(const Vertex& vertex);

@@ -1,10 +1,10 @@
 #include "transformation.h"
 #include <GL/gl.h>
 #include <math.h>
+#include <cassert>
 
 using namespace engine3d;
 
-// class constructor
 Transformation::Transformation() : mMatrix(Matrix::GetUnit(4))
 {
 }
@@ -13,7 +13,6 @@ Transformation::Transformation(const Matrix& m) : mMatrix(m)
 {
 }
 
-// class constructor
 Transformation::Transformation(const Transformation& t) : mMatrix(t.mMatrix)
 {
 }
@@ -45,7 +44,6 @@ Transformation& Transformation::operator=(const Transformation& t)
     return *this;
 }
 
-// class destructor
 Transformation::~Transformation()
 {
 }

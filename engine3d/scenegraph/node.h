@@ -19,11 +19,9 @@ class Scene;
 class Node : public Spatial
 {
 	public:
-		// class constructor
 		Node();
-		Node(const String& name);
+		Node(const string& name);
 		virtual Node* Clone() const;
-		// class destructor
 		virtual ~Node();
 		/**
 		 * Called by Scene::SetNode
@@ -38,7 +36,7 @@ class Node : public Spatial
 		void AddChild(Node* n);
 		void RemoveChild(int i);
 		Node& GetChild(int i) const;
-		Node* GetChild(const String& name) const;
+		Node* GetChild(const string& name) const;
 		vector<Node*>& GetChildren() {
 			return mChildren;
 		}

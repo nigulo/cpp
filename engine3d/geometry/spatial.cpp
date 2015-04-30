@@ -10,7 +10,7 @@ Spatial::Spatial() :
 {
 }
 
-Spatial::Spatial(const String& rName) : 
+Spatial::Spatial(const string& rName) :
     mChanged(true), 
     Object(rName)
 {

@@ -1,5 +1,6 @@
 #include "beziercurve.h"
 #include <math.h>
+#include <cassert>
 
 using namespace engine3d;
 

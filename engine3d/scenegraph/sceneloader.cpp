@@ -1,8 +1,3 @@
-#include <math.h>
-#include <typeinfo>
-#include <list>
-#include <vector>
-
 #include "sceneloader.h"
 #include "engine3d/meshes/triangles.h"
 #include "engine3d/meshes/trianglestrip.h"
@@ -11,6 +6,13 @@
 #include "engine3d/containment/boundingpolygon.h"
 #include "engine3d/containment/boundingsphere.h"
 #include "utils/utils.h"
+
+#include <math.h>
+#include <typeinfo>
+#include <list>
+#include <vector>
+#include <cassert>
+
 
 using namespace engine3d;
 

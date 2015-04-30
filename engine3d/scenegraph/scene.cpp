@@ -1,5 +1,6 @@
 #include "camera.h"
 #include "scene.h"
+#include <cassert>
 #include <GL/gl.h>
 
 using namespace engine3d;
@@ -76,11 +77,11 @@ void Scene::Render()
 
         Debug("Scene::Render 2");
         mpNode->CheckCollisions();
-        Debug(String("Node::CheckCollisions took ") + (GetMillis() - millis));
+        Debug(string("Node::CheckCollisions took ") + to_string((GetMillis() - millis)));
         Debug("Scene::Render 3");
         mpCamera->Render();
         mpNode->Render();
-        Debug(String("Scene::Render took ") + (GetMillis() - millis));
+        Debug(string("Scene::Render took ") + to_string((GetMillis() - millis)));
     }
     Debug("Scene::Render 5");
 }

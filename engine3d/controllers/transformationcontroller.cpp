@@ -1,5 +1,6 @@
 #include "transformationcontroller.h"
 #include "engine3d/scenegraph/camera.h"
+#include <cassert>
 
 using namespace engine3d;
 

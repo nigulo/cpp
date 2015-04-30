@@ -24,7 +24,6 @@ namespace engine3d {
     		
     		BoundingPolygon* Clone() const;
     		
-    		// class destructor
     		~BoundingPolygon();
     		
     		void AddVertex(const Vector& rVertex);

@@ -1,10 +1,3 @@
-/*
- * shader.cpp
- *
- *  Created on: Mar 27, 2015
- *      Author: nigul
- */
-
 #include "shader.h"
 #include "utils.h"
 #include "base/object.h"
@@ -37,5 +30,4 @@ Shader::Shader(GLenum type, const string& rShaderScript) {
 }
 
 Shader::~Shader() {
-	// TODO Auto-generated destructor stub
 }

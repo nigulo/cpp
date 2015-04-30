@@ -1,9 +1,10 @@
-#include "camera.h" // class's header file
+#include "camera.h"
 #include <math.h>
+#include <cassert>
 #include <GL/glew.h>
 
 using namespace engine3d;
-// class constructor
+
 Camera::Camera(Program& rProgram, Projection* pProjection) : Node("Camera"),
 		mpProjection(pProjection),
 		mrAttribute(rProgram.GetAttribute("mv_matrix")),
@@ -16,16 +17,15 @@ Camera::Camera(Program& rProgram, Projection* pProjection) : Node("Camera"),
 	Update();
 }
 
-// class destructor
 Camera::~Camera()
 {
 }
 
 void Camera::Render()
 {
-	Debug(String("Camera::Render eye ") + mEye.ToString());
-	Debug(String("Camera::Render center ") + mCenter.ToString());
-	Debug(String("Camera::Render up ") + mUp.ToString());
+	Debug(string("Camera::Render eye ") + mEye.ToString());
+	Debug(string("Camera::Render center ") + mCenter.ToString());
+	Debug(string("Camera::Render up ") + mUp.ToString());
 	mpProjection->Project();
     glUniformMatrix4fv(
         mrAttribute.GetId(),

@@ -1,8 +1,9 @@
-#include <math.h>
-
 #include "sphere.h"
 #include "engine3d/scenegraph/camera.h"
 #include "engine3d/scenegraph/scene.h"
+
+#include <math.h>
+#include <cassert>
 
 using namespace engine3d;
 

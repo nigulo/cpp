@@ -1,10 +1,3 @@
-/*
- * shader.h
- *
- *  Created on: Mar 27, 2015
- *      Author: nigul
- */
-
 #ifndef SHADER_H_
 #define SHADER_H_
 

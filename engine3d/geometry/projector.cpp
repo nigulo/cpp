@@ -1,4 +1,6 @@
 #include "projector.h"
+#include <cassert>
+
 using namespace engine3d;
 
 Projector::Projector() :

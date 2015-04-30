@@ -24,7 +24,7 @@ class Transformation
 		Transformation(const Vector& rotAxis, float rotAngle);
 		Transformation(const Vector& rotAxis, float rotAngle, const Vector& translation);
         Transformation& operator=(const Transformation& t);
-        // class destructor
+
 		~Transformation();
 
 		void SetTranslation(const Vector& shift);

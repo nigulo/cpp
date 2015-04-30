@@ -2,6 +2,7 @@
 #include "scene.h"
 #include "camera.h"
 
+#include <cassert>
 #include <GL/gl.h>
 
 using namespace engine3d;
@@ -14,7 +15,7 @@ Node::Node() :
 {
 }
 
-Node::Node(const String& name) :
+Node::Node(const string& name) :
     Spatial(name),
     mpParent(nullptr),
     mpScene(nullptr),
@@ -50,7 +51,6 @@ Node* Node::Clone() const
     return p_node;
 }
 
-// class destructor
 Node::~Node()
 {
 	for (int i = 0; i < mChildren.size(); i++) {
@@ -124,7 +124,6 @@ void Node::CheckCollisions()
         else {
         }
     }
-    //Debug(String("Node::CheckCollisions took ") + (GetMillis() - millis));
 }
 
 void Node::Render()
@@ -147,7 +146,6 @@ void Node::Render()
 		}
     }
     mChanged = false;
-    //Debug(String("Node::Render took ") + (GetMillis() - millis));
 }
 
 void Node::SetScene(Scene* pScene)
@@ -175,11 +173,6 @@ Scene& Node::GetScene() const
 void Node::AddChild(Node* n) 
 {
     assert(n);
-    //---------------------
-    //char str[17];
-    //itoa(mChildren.Size(), str, 10);
-    //n->SetName(n->GetName());// + String(str));
-    //---------------------
     mChildren.push_back(n);
     n->mpParent = this;
 }
@@ -194,10 +187,10 @@ Node& Node::GetChild(int i) const
  * @return the child node with the given name or NULL
  * if no such child element exists
  **/
-Node* Node::GetChild(const String& name) const
+Node* Node::GetChild(const string& name) const
 {
     for (int i = 0; i < mChildren.size(); i++) {
-        Debug(String("children[") + i + "] = " + mChildren[i]->Name());
+        Debug(string("children[") + to_string(i) + "] = " + mChildren[i]->Name());
         if (mChildren[i]->Name() == name) {
             return mChildren[i];
         }

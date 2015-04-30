@@ -1,9 +1,9 @@
-#include "shape.h" // class's header file
+#include "shape.h"
 #include <GL/gl.h>
 
 using namespace engine3d;
-// class constructor
-Shape::Shape(const String& name) : Node(name),
+
+Shape::Shape(const string& name) : Node(name),
 	    mpTexture(nullptr),
 	    mpColor(nullptr)
 {
@@ -30,7 +30,6 @@ Shape* Shape::Clone() const
     return p_shape;
 }
 
-// class destructor
 Shape::~Shape()
 {
 }

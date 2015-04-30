@@ -1,4 +1,5 @@
 #include "matrix.h"
+#include <cassert>
 
 using namespace engine3d;
 
@@ -10,7 +11,6 @@ Matrix::Matrix(int dim)
 	elements = new float[dim * dim];
 }
 
-// class constructor
 Matrix::Matrix(int rows, int columns)
 {
     assert(rows > 0 && columns > 0);
@@ -44,7 +44,6 @@ void Matrix::operator=(const Matrix& m) {
     }
 }
 
-// class destructor
 Matrix::~Matrix()
 {
     if (elements) {

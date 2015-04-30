@@ -1,4 +1,5 @@
 #include "vertex.h"
+#include <cassert>
 
 using namespace engine3d;
 
