@@ -4,9 +4,10 @@
 #include "base/object.h"
 #include "engine3d/program/program.h"
 #include "viewport.h"
-#include "base/linkedlist.h"
 #include "engine3d/controllers/controller.h"
+#include <vector>
 
+using namespace std;
 using namespace base;
 
 namespace engine3d {
@@ -14,15 +15,10 @@ namespace engine3d {
 class Node;
 class Camera;
 
-/*
- * No description
- */
 class Scene : public Object
 {
 	public:
-		// class constructor
 		Scene();
-		// class destructor
 		~Scene();
         
         /**
@@ -104,7 +100,7 @@ class Scene : public Object
         /**
          * Scene object controllers
          **/
-        LinkedList<Controller*> mControllers;
+        vector<Controller*> mControllers;
         /**
          * Current time in seconds
          **/

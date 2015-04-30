@@ -44,7 +44,7 @@ const Viewport& Scene::GetViewport() const
 }
 
 void Scene::AddController(Controller* pController) {
-    mControllers.Add(pController);
+    mControllers.push_back(pController);
 }
 
 void Scene::Render()
@@ -54,8 +54,8 @@ void Scene::Render()
     mTimeChange = ((double) GetMillis()) / 1000 - mTime;
     // Execute all controllers
     Debug("Scene::Render 0");
-    for (LinkedList<Controller*>::Iterator i = mControllers.Begin(); !i.Done(); i++) {
-        (*i)->Execute();
+    for (auto&& c : mControllers) {
+        c->Execute();
     }
     Debug("Scene::Render 01");
     Debug("Scene::Render 011");
