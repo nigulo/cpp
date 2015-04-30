@@ -1,10 +1,12 @@
 #ifndef THREAD_H
 #define THREAD_H
 
-#include <thread>
 #include "object.h"
-#include "arraylist.h"
 #include "mutex.h"
+#include <thread>
+#include <list>
+
+using namespace std;
 
 namespace base {
     /**
@@ -47,7 +49,7 @@ namespace base {
             /**
              * All thread instances of the application
              **/
-            static LinkedList<Thread*> msInstances;
+            static list<Thread*> msInstances;
              
              /**
               * All methods accessing msInstances are
