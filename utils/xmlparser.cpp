@@ -1,4 +1,5 @@
 #include "xmlparser.h"
+#include <cassert>
 
 using namespace utils;
 using namespace base;
