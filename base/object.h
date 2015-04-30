@@ -2,14 +2,7 @@
 #define OBJECT_H
 
 #include <fstream>
-
-#include "string.h"
-
-//#ifdef DEBUG
-//#define D(text) out << GetName() << " " << text << "\n"
-//#else
-//#define D(text) 
-//#endif
+#include <string>
 
 using namespace std;
 
@@ -33,7 +26,7 @@ namespace base {
     		/**
     		 * Constructs an object with the given name
     		 **/
-    		Object(const String& rName);
+    		Object(const string& rName);
 
             /**
              * Class destructor
@@ -62,7 +55,7 @@ namespace base {
             /**
              * @return the name of this object
              **/
-    		const String& Name() const {
+    		const string& Name() const {
             	return mName;
             }
 
@@ -71,13 +64,13 @@ namespace base {
              * object's name to output stream if the debugging
              * is enabled.
              **/            
-    		virtual void Debug(const String& rText) const;
+    		virtual void Debug(const string& rText) const;
 
             /**
              * Prints the given text to output stream if 
              * the debugging is enabled.
              **/            
-            static void Dbg(const String& rText);
+            static void Dbg(const string& rText);
             
             /**
              * Flushes the output stream
@@ -93,9 +86,9 @@ namespace base {
              * Override this method to get special results
              * @return the string representation of this object
              **/
-            virtual String ToString() const;
+            virtual string ToString() const;
             
-            friend String operator+(const String& rStr, const Object& rObj) {
+            friend string operator+(const string& rStr, const Object& rObj) {
                 return rStr + rObj.ToString();
             }
             
@@ -113,7 +106,7 @@ namespace base {
             /**
              * Name describing the object
              **/
-            String mName;
+            string mName;
     };
 
 }

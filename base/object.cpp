@@ -1,5 +1,5 @@
 #include <time.h>
-#include "object.h" // class's header file
+#include "object.h"
 using namespace std;
 using namespace base;
 
@@ -17,12 +17,11 @@ void Object::Flush()
 	msOut.flush();
 }
 
-// class constructor
 Object::Object() : mName("")
 {
 }
 
-Object::Object(const String& rName) : mName(rName)
+Object::Object(const string& rName) : mName(rName)
 {
 }
 
@@ -46,7 +45,7 @@ Object::~Object()
 {
 }
 
-void Object::Debug(const String& rText) const
+void Object::Debug(const string& rText) const
 {
     if (msDebug) {
         msOut << GetMillis() << " " << mName << " " << rText << "\n";
@@ -54,7 +53,7 @@ void Object::Debug(const String& rText) const
     }
 }
 
-void Object::Dbg(const String& rText)
+void Object::Dbg(const string& rText)
 {
     if (msDebug && msOut) {
         msOut << GetMillis() << " " << rText << "\n";
@@ -67,7 +66,7 @@ long Object::GetMillis()
     return clock();
 }
 
-String Object::ToString() const
+string Object::ToString() const
 {
     return mName;
 }

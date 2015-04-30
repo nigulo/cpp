@@ -22,7 +22,6 @@ namespace base {
     {
         friend class Mutex;
     	public:
-    		// class destructor
     		~SynchBlock();
     		
     		/**

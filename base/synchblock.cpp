@@ -1,9 +1,9 @@
-#include "synchblock.h" // class's header file
+#include "synchblock.h"
 #include "mutex.h"
+#include <cassert>
 
 using namespace base;
 
-// class constructor
 SynchBlock::SynchBlock(const Mutex* pMutex) : 
     started(false),
     ended(false)
@@ -11,7 +11,6 @@ SynchBlock::SynchBlock(const Mutex* pMutex) :
     mpMutex = pMutex;
 }
 
-// class destructor
 SynchBlock::~SynchBlock()
 {
     assert((!started && !ended) || (started && ended));

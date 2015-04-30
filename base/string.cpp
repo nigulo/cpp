@@ -40,10 +40,10 @@ void String::FindAll(List<int>& rIndices, const String& rStr, int startIndex) co
 {
     int index = startIndex - 1;
     while ((index = Find(rStr, index + 1)) >= 0) {
-        Object::Dbg(index);
+        Object::Dbg(to_string(index));
         rIndices.Add(index);
         //p_indices->Add(index);
-        Object::Dbg(-1);
+        Object::Dbg(to_string(-1));
     }
     //return p_indices;
 }
