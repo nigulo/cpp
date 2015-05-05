@@ -39,11 +39,20 @@ pair<double, double> getLatR(const string& fileName) {
 	return {lat, r};
 }
 
+#define DELTA_R 10
+#define BOT 	10
+#define MID 	64
+#define SURF 	120
+
+
 void collect() {
 	vector<vector<tuple<double, double, double, double>>> allModes;
 	directory_iterator end_itr; // default construction yields past-the-end
 	path currentDir(".");
 	double totalEnergy = 0;
+	double totalEnergyBot = 0;
+	double totalEnergyMid = 0;
+	double totalEnergySurf = 0;
 	for (directory_iterator itr(currentDir); itr != end_itr; ++itr) {
 		if (is_regular_file(itr->status())) {
 			const string& fileName = itr->path().generic_string();
@@ -85,14 +94,27 @@ void collect() {
 				double freq = stod(words[1]);
 				double en = stod(words[2]);
 				totalEnergy += en;
+				if (abs(r - BOT) < DELTA_R) {
+					totalEnergyBot += en;
+				}
+				if (abs(r - MID) < DELTA_R) {
+					totalEnergyMid += en;
+				}
+				if (abs(r - SURF) < DELTA_R) {
+					totalEnergySurf += en;
+				}
 				mode.insert(i, make_tuple(lat, r, freq, en));
 				modeNo++;
 		    }
 			input.close();
 		}
 	}
+	cout << "Mode energies (total bot mid surf)" << endl;
 	for (unsigned i = 0; i < allModes.size(); i++) {
 		double modeEnergy = 0;
+		double modeEnergyBot = 0;
+		double modeEnergyMid = 0;
+		double modeEnergySurf = 0;
 		string modeNo = to_string(i + 1);
 		ofstream enStream(string("ens") + modeNo + ".csv");
 		ofstream freqStream(string("freqs") + modeNo + ".csv");
@@ -103,6 +125,15 @@ void collect() {
 			double freq = get<2>(dat);
 			double en = get<3>(dat);
 			modeEnergy += en;
+			if (abs(r - BOT) < DELTA_R) {
+				modeEnergyBot += en;
+			}
+			if (abs(r - MID) < DELTA_R) {
+				modeEnergyMid += en;
+			}
+			if (abs(r - SURF) < DELTA_R) {
+				modeEnergySurf += en;
+			}
 			if (j > 0 && lat != get<0>(allModes[i][j - 1])) {
 				enStream << endl;
 				freqStream << endl;
@@ -112,7 +143,8 @@ void collect() {
 		}
 		enStream.close();
 		freqStream.close();
-		cout << "Mode " << modeNo << " energy: " << (modeEnergy / totalEnergy) << endl;
+		cout << modeNo << ": " << (modeEnergy / totalEnergy) << " "
+				<< (modeEnergyBot / totalEnergyBot)  << " " << (modeEnergyMid / totalEnergyMid) << " " << (modeEnergySurf / totalEnergySurf) << endl;
 	}
 }
 

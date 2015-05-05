@@ -24,7 +24,7 @@ bool HilbertHuang::imf() {
 	unsigned modeNo = imfs.size() + 1;
 	auto stepExtrema = ts->findExtrema();
 	int numExtrema = min(stepExtrema.first->size(), stepExtrema.second->size());
-	if (numExtrema <= 2) {
+	if (numExtrema <= 3) {
 		return false;
 	}
 	cout << "Extracting mode " << modeNo << " (" << numExtrema << ") ...";
