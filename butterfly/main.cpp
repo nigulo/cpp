@@ -32,7 +32,7 @@ pair<double, double> getLatR(const string& fileName) {
 	return {lat, r};
 }
 
-void collect(double depth, const string& fileNamePattern) {
+void collect(double depth, const string& fileNamePattern, unsigned sampling) {
 	vector<tuple<double, double, double>> xyzs;
 	directory_iterator end_itr; // default construction yields past-the-end
 	path currentDir(".");
@@ -56,7 +56,7 @@ void collect(double depth, const string& fileNamePattern) {
 			ifstream input(fileName);
 			int i = 0;
 			for (string line; getline(input, line);) {
-				if (i++ % 100 != 0) {
+				if (i++ % sampling != 0) {
 					continue;
 				}
 				//cout << line << endl;
@@ -93,8 +93,12 @@ void collect(double depth, const string& fileNamePattern) {
 }
 
 int main(int argc, char** argv) {
-	if (argc == 3) {
-		collect(stod(argv[1]), string(argv[2]));
+	if (argc >= 3) {
+		unsigned sampling = 100;
+		if (argc >= 4) {
+			sampling = stoi(argv[3]);
+		}
+		collect(stod(argv[1]), string(argv[2]), sampling);
 		return EXIT_SUCCESS;
 	}
 	cout << "Depth and file name prefix not defined" << endl;
