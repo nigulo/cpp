@@ -182,9 +182,12 @@ int main(int argc, char** argv) {
 		//cout << line << endl;
 		std::vector<std::string> words;
 		boost::split(words, line, boost::is_any_of("\t "), boost::token_compress_on);
-		for (vector<string>::iterator it = words.begin() ; it != words.end(); ++it) {
+		for (vector<string>::iterator it = words.begin(); it != words.end();) {
+			//cout << "<" << (*it) << ">" << endl;
 			if ((*it).length() == 0) {
-				words.erase(it);
+				it = words.erase(it);
+			} else {
+				it++;
 			}
 		}
 		if (words.size() > 0 && words[0][0] == '#') {
@@ -202,7 +205,6 @@ int main(int argc, char** argv) {
 		}
     }
 	input.close();
-
 	auto noiseStdDev = sqrt(ts.meanVariance().second) * noisePercent;
 	vector<TimeSeries> ensemble;
     random_device rd;
