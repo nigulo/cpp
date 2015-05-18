@@ -53,6 +53,7 @@ void collect() {
 	double totalEnergyBot = 0;
 	double totalEnergyMid = 0;
 	double totalEnergySurf = 0;
+	double maxEnergy = 0;
 	for (directory_iterator itr(currentDir); itr != end_itr; ++itr) {
 		if (is_regular_file(itr->status())) {
 			const string& fileName = itr->path().generic_string();
@@ -94,6 +95,9 @@ void collect() {
 				double freq = stod(words[1]);
 				double en = stod(words[2]);
 				totalEnergy += en;
+				if (en > maxEnergy) {
+					maxEnergy = en;
+				}
 				if (abs(r - BOT) < DELTA_R) {
 					totalEnergyBot += en;
 				}
@@ -115,6 +119,8 @@ void collect() {
 		double modeEnergyBot = 0;
 		double modeEnergyMid = 0;
 		double modeEnergySurf = 0;
+		double modeFreqSum = 0;
+		double modeWeightSum = 0;
 		string modeNo = to_string(i + 1);
 		ofstream enStream(string("ens") + modeNo + ".csv");
 		ofstream freqStream(string("freqs") + modeNo + ".csv");
@@ -125,6 +131,8 @@ void collect() {
 			double freq = get<2>(dat);
 			double en = get<3>(dat);
 			modeEnergy += en;
+			modeFreqSum += en * freq;
+			modeWeightSum += en;
 			if (abs(r - BOT) < DELTA_R) {
 				modeEnergyBot += en;
 			}
@@ -143,7 +151,16 @@ void collect() {
 		}
 		enStream.close();
 		freqStream.close();
-		cout << modeNo << ": " << (modeEnergy / totalEnergy) << " "
+		double modeFreqMean = modeFreqSum / modeWeightSum;
+		double modeFreqVar = 0;
+		for (unsigned j = 0; j < allModes[i].size(); j++) {
+			auto dat = allModes[i][j];
+			double freq = get<2>(dat);
+			double en = get<3>(dat);
+			modeFreqVar += en * (freq - modeFreqMean) * (freq - modeFreqMean);
+		}
+		modeFreqVar /= modeWeightSum;
+		cout << modeNo << ": " << modeFreqMean << " " << sqrt(modeFreqVar) << " " << (modeEnergy / totalEnergy) << " "
 				<< (modeEnergyBot / totalEnergyBot)  << " " << (modeEnergyMid / totalEnergyMid) << " " << (modeEnergySurf / totalEnergySurf) << endl;
 	}
 }
