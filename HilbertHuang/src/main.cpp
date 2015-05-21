@@ -44,6 +44,7 @@ pair<double, double> getLatR(const string& fileName) {
 #define MID 	64
 #define SURF 	120
 
+#define EQUATOR 127.5
 
 void collect() {
 	vector<vector<tuple<double, double, double, double>>> allModes;
@@ -53,7 +54,6 @@ void collect() {
 	double totalEnergyBot = 0;
 	double totalEnergyMid = 0;
 	double totalEnergySurf = 0;
-	double maxEnergy = 0;
 	for (directory_iterator itr(currentDir); itr != end_itr; ++itr) {
 		if (is_regular_file(itr->status())) {
 			const string& fileName = itr->path().generic_string();
@@ -95,9 +95,6 @@ void collect() {
 				double freq = stod(words[1]);
 				double en = stod(words[2]);
 				totalEnergy += en;
-				if (en > maxEnergy) {
-					maxEnergy = en;
-				}
 				if (abs(r - BOT) < DELTA_R) {
 					totalEnergyBot += en;
 				}
@@ -121,6 +118,12 @@ void collect() {
 		double modeEnergySurf = 0;
 		double modeFreqSum = 0;
 		double modeWeightSum = 0;
+		double maxEnergyLatN = EQUATOR;
+		double maxEnergyLatS = EQUATOR;
+		double maxEnergyRN = 120;
+		double maxEnergyRS = 120;
+		double maxEnergyN = 0;
+		double maxEnergyS = 0;
 		string modeNo = to_string(i + 1);
 		ofstream enStream(string("ens") + modeNo + ".csv");
 		ofstream freqStream(string("freqs") + modeNo + ".csv");
@@ -146,6 +149,15 @@ void collect() {
 				enStream << endl;
 				freqStream << endl;
 			}
+			if (lat > EQUATOR && en > maxEnergyN) {
+				maxEnergyN = en;
+				maxEnergyLatN = lat;
+				maxEnergyRN = r;
+			} else if (lat < EQUATOR && en > maxEnergyS) {
+				maxEnergyS = en;
+				maxEnergyLatS = lat;
+				maxEnergyRS = r;
+			}
 			enStream << lat << " " << r << " " << (en / totalEnergy) << endl;
 			freqStream << lat << " " << r << " " << freq << endl;
 		}
@@ -161,7 +173,8 @@ void collect() {
 		}
 		modeFreqVar /= modeWeightSum;
 		cout << modeNo << ": " << modeFreqMean << " " << sqrt(modeFreqVar) << " " << (modeEnergy / totalEnergy) << " "
-				<< (modeEnergyBot / totalEnergyBot)  << " " << (modeEnergyMid / totalEnergyMid) << " " << (modeEnergySurf / totalEnergySurf) << endl;
+				<< (modeEnergyBot / totalEnergyBot)  << " " << (modeEnergyMid / totalEnergyMid) << " " << (modeEnergySurf / totalEnergySurf)
+				<< " (" << maxEnergyLatN << ", " << maxEnergyRN  << " - " << maxEnergyLatS << ", " << maxEnergyRS << ")" << endl;
 	}
 }
 
