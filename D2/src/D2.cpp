@@ -39,13 +39,15 @@ int main(int argc, char *argv[]) {
 				words.erase(it);
 			}
 		}
-		if (words.size() > col) {
+		if (words.size() > 0 && words[0][0] == '#') {
+			//cout << "Skipping comment line: " << line << endl;
+		} else if (words.size() > col) {
 			try {
 				double xVal = stod(words[0]);
 				double yVal = stod(words[col]);
 				x.push_back(xVal);
 				y.push_back(yVal);
-			} catch (std::invalid_argument ex) {
+			} catch (std::invalid_argument& ex) {
 				cout << "Skipping line, invalid number: " << line << endl;
 			}
 		} else {
