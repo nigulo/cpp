@@ -126,6 +126,9 @@ void wings(bool nOrS) {
 			if (nOrS && lat < 127.5) {
 				continue;
 			}
+			if (!nOrS && lat > 127.5) {
+				continue;
+			}
 			if (lat < 15 || lat > 240) {
 				continue;
 			}
@@ -178,7 +181,7 @@ void wings(bool nOrS) {
 	}
 	ofstream output(string("wings.csv"));
 	for (unsigned i = 0; i < ts.size(); i++) {
-		if (get<0>(wings[i]) < 90 && get<1>(wings[i]) > 0) {
+		if (abs(get<0>(wings[i])) < 90 && abs(get<1>(wings[i])) > 0) {
 			output << ts[i] << " " << get<0>(wings[i]) << " " << get<1>(wings[i]) << " " << (get<1>(wings[i]) - get<0>(wings[i])) << endl;
 		}
 	}
