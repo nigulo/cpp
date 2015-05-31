@@ -11,7 +11,7 @@
 using namespace engine3d;
 
 Texture::Texture(Program& rProgram, const string& rName, const string& rTextureFile) :
-	mrAttribute(rProgram.GetAttribute(rName))
+	mrUniform(rProgram.GetUniform(rName))
 {
 	// Only png support currenlty
     vector<unsigned char> image;
@@ -32,7 +32,7 @@ Texture::Texture(Program& rProgram, const string& rName, const string& rTextureF
 	}
 
     glGenTextures(1, &mId);
-    glBindTexture(GL_TEXTURE_2D, mrAttribute.GetId());
+    glBindTexture(GL_TEXTURE_2D, mId);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
@@ -56,6 +56,8 @@ Texture::~Texture() {
 }
 
 void Texture::Use() const {
-    glUniform1i(mrAttribute.GetId(), 0);
-    glBindTexture(GL_TEXTURE_2D, mrAttribute.GetId());
+    glActiveTexture(GL_TEXTURE0); // These 2 are not per texture, need to be moved out from this class
+    glUniform1i(mrUniform.GetId(), 0);
+
+    glBindTexture(GL_TEXTURE_2D, mId);
 }

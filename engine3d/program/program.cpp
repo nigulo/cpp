@@ -46,6 +46,11 @@ Program::~Program() {
 		delete p_attribute;
 	}
 	mAttributes.clear();
+	for (auto i = mUniforms.begin(); i != mUniforms.end(); i++) {
+		Uniform* p_uniform = i->second;
+		delete p_uniform;
+	}
+	mUniforms.clear();
 }
 
 const Attribute& Program::GetAttribute(const string& rName) {
@@ -63,3 +68,16 @@ const Attribute& Program::CreateAttribute(const string& rName) {
 }
 
 
+const Uniform& Program::GetUniform(const string& rName) {
+	auto i = mUniforms.find(rName);
+	if (i != mUniforms.end()) {
+		return *(i->second);
+	}
+	return CreateUniform(rName);
+}
+
+const Uniform& Program::CreateUniform(const string& rName) {
+	Uniform* p_uniform = new Uniform(*this, rName);
+	mUniforms.insert({rName, p_uniform});
+	return *p_uniform;
+}

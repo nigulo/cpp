@@ -7,7 +7,7 @@ using namespace engine3d;
 
 Camera::Camera(Program& rProgram, Projection* pProjection) : Node("Camera"),
 		mpProjection(pProjection),
-		mrAttribute(rProgram.GetAttribute("mv_matrix")),
+		mrUniform(rProgram.GetUniform("mv_matrix")),
 		mEye(0, 0, 0),
 		mCenter(0, 0, 1),
 		mUp(0, 1, 0), // must be normalized
@@ -28,7 +28,7 @@ void Camera::Render()
 	Debug(string("Camera::Render up ") + mUp.ToString());
 	mpProjection->Project();
     glUniformMatrix4fv(
-        mrAttribute.GetId(),
+        mrUniform.GetId(),
         1, GL_FALSE,
         mMatrix.GetElements()
     );

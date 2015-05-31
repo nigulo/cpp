@@ -10,7 +10,7 @@
 
 #include <GL/glew.h>
 #include <string>
-#include "attribute.h"
+#include "uniform.h"
 #include "program.h"
 
 using namespace std;
@@ -22,7 +22,7 @@ namespace engine3d {
 		virtual ~Texture();
 		void Use() const;
 	private:
-		const Attribute& mrAttribute;
+		const Uniform& mrUniform;
 		GLuint mId;
 	};
 

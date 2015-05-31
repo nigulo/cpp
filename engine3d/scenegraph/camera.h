@@ -109,7 +109,7 @@ class Camera : public Node
          */
         unique_ptr<Projection> mpProjection;
         
-        const Attribute& mrAttribute;
+        const Uniform& mrUniform;
         Matrix mMatrix;
         
 };

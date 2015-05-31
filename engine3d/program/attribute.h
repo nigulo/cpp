@@ -1,10 +1,3 @@
-/*
- * globject.h
- *
- *  Created on: Mar 27, 2015
- *      Author: nigul
- */
-
 #ifndef PROGRAM_ATTRIBUTE_H_
 #define PROGRAM_ATTRIBUTE_H_
 

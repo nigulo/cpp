@@ -145,11 +145,11 @@ Program* SceneLoader::LoadProgram(XmlParser::XmlElement& rElement) {
 	assert(r_sub_elements.size() == 2);
 	string vertex_shader;
 	string fragment_shader;
-	for (auto i = r_sub_elements.begin(); i != r_sub_elements.end(); i++) {
-		if ((*i)->mType == VERTEXSHADER) {
-			vertex_shader = Utils::ReadTextFile((*i)->GetParameter("script"));
-		} else if ((*i)->mType == FRAGMENTSHADER) {
-			fragment_shader = Utils::ReadTextFile((*i)->GetParameter("script"));
+	for (auto&& shader : r_sub_elements) {
+		if (shader->mType == VERTEXSHADER) {
+			vertex_shader = Utils::ReadTextFile(shader->GetParameter("script"));
+		} else if (shader->mType == FRAGMENTSHADER) {
+			fragment_shader = Utils::ReadTextFile(shader->GetParameter("script"));
 		}
 	}
 	assert(vertex_shader.length() > 0);
@@ -176,7 +176,7 @@ void SceneLoader::LoadTriangle(XmlParser::XmlElement& rElement, Mesh* pMesh) {
 void SceneLoader::LoadCoords(XmlParser::XmlElement& rElement, Object* pObject) {
     Debug("SceneLoader::Load 9");
     vector<string> data = Utils::Split(rElement.mData, ",");
-    Debug("SceneLoader::Load 10");
+    Debug("SceneLoader::Load 10 " + to_string(data.size()));
     double x = stod(data[0]);
     double y = stod(data[1]);
     double z = stod(data[2]);

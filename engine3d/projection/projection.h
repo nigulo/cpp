@@ -12,7 +12,7 @@
 #include "engine3d/geometry/plane.h"
 #include "engine3d/geometry/matrix.h"
 #include "engine3d/program/program.h"
-#include "engine3d/program/attribute.h"
+#include "engine3d/program/uniform.h"
 
 using namespace base;
 
@@ -65,7 +65,7 @@ protected:
     Matrix mMatrix;
 
     Program& mrProgram;
-    const Attribute& mrAttribute;
+    const Uniform& mrUniform;
 };
 
 }

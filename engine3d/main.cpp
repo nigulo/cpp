@@ -8,7 +8,6 @@
 #include <GL/glut.h>
 #include <fstream>
 
-#include "base/string.h"
 #include "engine3d/geometry/vector.h"
 #include "engine3d/meshes/vertex.h"
 #include "engine3d/geometry/triangle.h"
@@ -215,7 +214,7 @@ static void reshape(int w, int h) {
 
 int main (int argc, char* argv[]) {
     glutInit(&argc, argv);
-    glutInitDisplayMode(doubleBuffer ? GLUT_DOUBLE : GLUT_SINGLE);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | doubleBuffer ? GLUT_DOUBLE : GLUT_SINGLE);
     glutInitWindowSize(800, 600);
     glutInitWindowPosition(100,100);
     glutCreateWindow("OpenGL - First window demo");

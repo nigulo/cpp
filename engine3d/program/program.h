@@ -11,6 +11,7 @@
 #include "vertexshader.h"
 #include "fragmentshader.h"
 #include "attribute.h"
+#include "uniform.h"
 #include "texture.h"
 #include <string>
 #include <map>
@@ -29,15 +30,18 @@ public:
 	}
 
 	const Attribute& GetAttribute(const string& rName);
+	const Uniform& GetUniform(const string& rName);
 
 protected:
 	const Attribute& CreateAttribute(const string& rName);
+	const Uniform& CreateUniform(const string& rName);
 
 private:
 	VertexShader mVertexShader;
 	FragmentShader mFragmentShader;
 	GLuint mId;
 	map<string, Attribute*> mAttributes;
+	map<string, Uniform*> mUniforms;
 };
 
 } /* namespace engine3d */

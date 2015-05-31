@@ -11,7 +11,7 @@
 using namespace engine3d;
 
 Attribute::Attribute(Program& rProgram, const std::string& rName) {
-	mId = glGetUniformLocation(rProgram.GetId(), rName.data());
+	mId = glGetAttribLocation(rProgram.GetId(), rName.data());
 }
 
 Attribute::~Attribute() {
