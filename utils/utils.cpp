@@ -99,7 +99,7 @@ vector<string> Utils::Split(const string& rStr, const string& rSeparator, bool t
         }
         count++;
     }
-    vector<string> ret_val(count);
+    vector<string> ret_val;
     //string* ret_val = new string[count];
     index = 0;
     //Object::Dbg(string("Split 2"));
