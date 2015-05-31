@@ -150,6 +150,7 @@ bool Camera::Cull(const BoundingVolume& rVolume)
 
 void Camera::Transform()
 {
+	Debug("Camera.Transform");
     Spatial::Transform();
     // Re-calculate eye, center and up vectors
     mEye = mTransformation.Transform(Vector(0, 0, 0));

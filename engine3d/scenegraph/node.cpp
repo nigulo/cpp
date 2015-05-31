@@ -85,37 +85,38 @@ bool Node::CheckCollisions(Node& rNode1, Node& rNode2) {
 void Node::CheckCollisions()
 {
     long millis = GetMillis();
-    //Debug("Node::Debug 1");
+    Debug("Node::CheckCollisions 1");
     if (mpCollisionBound) {
         mpCollisionBound->SetTransformation(GetNewWorldTransformation());
     }
-    //Debug("Node::Debug 5");
+    Debug("Node::CheckCollisions 5");
     for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
-        //Debug("Node::Debug 6");
+        Debug("Node::CheckCollisions 6");
         (*i)->CheckCollisions();
-        //Debug("Node::Debug 7");
+        Debug("Node::CheckCollisions 7");
     }
     for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
-        //Debug("Node::Debug 8");
+        Debug("Node::CheckCollisions 8");
         bool collides = false;
         Node* p_child = *i;
-        //Debug("Node::Debug 9");
+        Debug("Node::CheckCollisions 9");
         for (auto j = mChildren.begin(); j != mChildren.end(); j++) {
-            //Debug("Node::Debug 10");
+            Debug("Node::CheckCollisions 10");
             if ((*j) == p_child) {
-                //Debug("Node::Debug 11");
+                Debug("Node::CheckCollisions 11");
                 continue;
             }
-            //Debug("Node::Debug 12");
+            Debug("Node::CheckCollisions 12");
             //if (p_child->mpCollisionBound && (*j)->mpCollisionBound && p_child->mpCollisionBound->Collides(*(*j)->mpCollisionBound)) {
             if (CheckCollisions(*p_child, **j)) {
-                //Debug("Node::Debug 13");
+                Debug("Node::CheckCollisions 13");
                 collides = true;
                 break;
             }
-            //Debug("Node::Debug 14");
+            Debug("Node::CheckCollisions 14");
         }
         if (!collides) {
+            Debug("Node::CheckCollisions 15");
             p_child->Transform();
             if (p_child->mpCollisionBound) {
                 p_child->mpCollisionBound->Transform();
