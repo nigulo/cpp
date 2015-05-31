@@ -158,14 +158,14 @@ XmlParser::XmlElement* XmlParser::XmlElement::FindNextSubElement(int* pStartInde
     *pStartIndex = elementEnd;
     if (endTag) {
         // The end tag is present
-        vector<int> start_indices(100);
+        vector<int> start_indices;
         Utils::FindAll(*mpData, start_indices, (string) "<" + type, end);
         Object::Dbg(string("siiin"));
-        vector<int> end_indices(100);
+        vector<int> end_indices;
         Utils::FindAll(*mpData, end_indices, (string) "</" + type, end);
-        vector<int> comment_starts(100);
+        vector<int> comment_starts;
         Utils::FindAll(*mpData, comment_starts, (string) "<!--", end);
-        vector<int> comment_ends(100);
+        vector<int> comment_ends;
         Utils::FindAll(*mpData, comment_ends, (string) "-->", end);
         
         int num_tags = 1;
