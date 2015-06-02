@@ -8,13 +8,14 @@ using namespace std;
 
 enum Mode {
 	Box,
-	Gauss
+	Gauss,
+	GaussWithCosine
 };
 
 class D2 {
 	private:
 
-	const Mode mode = Gauss;
+	const Mode mode = GaussWithCosine;
 	const bool relative = true;
 	const int coherenceGrid = 200;
 	const double minCoherence;

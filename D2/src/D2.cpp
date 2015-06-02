@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <string>
+#include <cmath>
 #include <math.h>
 #include <sstream>
 #include <boost/algorithm/string.hpp>
@@ -128,6 +129,7 @@ double D2::Criterion(double d, double w) {
 	  }
 	  break;
    case Gauss: //This is important, in td[] are precomputed sums of squares and counts.
+   case GaussWithCosine:
 	  for (j = 0; j < td.size(); j++) {// to jj-1 do begin
 		 dd=td[j];
 		 if (d>0.0) {
@@ -139,11 +141,27 @@ double D2::Criterion(double d, double w) {
 		 if (ph<0.0) {
 			ph=ph+1;
 		 }
-		 if (ph>epslim) {
+		 if (ph>0.5) {
 			ph=1.0-ph;
 		 }
-		 wp=exp(-square(lnp*ph));
-		 if (ph<eps || ph>epslim) {
+		 bool closeInPhase = true;
+		 if (mode == Gauss) {
+			 closeInPhase = ph<eps || ph>epslim;
+			 wp=exp(-square(lnp*ph));
+		 } else {
+			 if (ph == 0.5) {
+				 wp = 0;
+			 } else if (ph == 0) {
+				 wp = 1;
+			 } else {
+				 wp = 0.5 * (cos (0.5 * M_PI / ph) + 1);
+			 }
+			 if (std::isnan(wp)) {
+				 wp = 0;
+				 cout << "wp is still nan" << endl;
+			 }
+		 }
+		 if (closeInPhase) {
 			 tyv=tyv + ww * wp * ty[j];
 			 tav=tav + ww * wp * ta[j];
 		 }
@@ -289,7 +307,7 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 		// Spectrum in cum can be normalized
 
 		if (true) {
-			MapTo01D(cum);
+			//MapTo01D(cum);
 		}
 
 		vector<int> minima(0);
