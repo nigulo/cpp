@@ -4,6 +4,12 @@
 #include "base/object.h"
 #include "utils.h"
 #include <list>
+#include <map>
+
+#include <libxml++/libxml++.h>
+#include <libxml++/parsers/textreader.h>
+
+using namespace xmlpp;
 
 using namespace base;
 using namespace std;
@@ -19,49 +25,54 @@ class XmlParser : public Object
     public:
     class XmlElement
     {
+    	friend class XmlParser;
         public:
-            XmlElement(const string& rType, const string& rName, const string& rParams, string& data, int startIndex, int endIndex);
+            XmlElement(const string& rName, XmlElement* pParent = nullptr);
             
-            void AddParameter(const string& rName, const string& rValue = "");
-            void AddSubElement(XmlElement* pElement);
-            void SetData(const string& rData);
-            
-            string GetParameter(const string& rParamName) const {
-            	return Utils::GetProperty(mParams, rParamName);
+            const string* GetAttribute(const string& rName) const {
+            	auto i = mAttributes.find(rName);
+            	if (i != mAttributes.end()) {
+            		return &(i->second);
+            	}
+            	return nullptr;
             }
-            
+
+            const string& GetInnerText() const {
+            	return mInnerText;
+            }
+
             list<XmlElement*>& GetSubElements() {
             	return mSubElements;
             }
             
             virtual ~XmlElement();
-            void Parse();
             string ToString() const;
 
     		void Save(const string& rFileName) const;
         private:
-            XmlElement* FindNextSubElement(int* pStartIndex);
-            string ToString(const string& indent) const;
-        public:
-            string mType;
-            string mName;
-            string mParams;
-            list<XmlElement*> mSubElements;
-            string mData;
+            void Parse(TextReader& rReader);
+            void SetInnerText(const string& rInnerText) {
+            	mInnerText = rInnerText;
+            }
+            void AddAttribute(const string& name, const string& value) {
+            	mAttributes.insert({name, value});
+            }
+            void AddSubElement(XmlElement* pElement) {
+            	mSubElements.push_back(pElement);
+            }
         private:
-            int mStartIndex;
-            int mEndIndex;
-            string* mpData;
+            string mName;
+            XmlElement* mpParent;
+            int mDepth;
+            map<string, string> mAttributes;
+            string mInnerText;
+            list<XmlElement*> mSubElements;
     };
     
 	public:
-		// class constructor
 		XmlParser(const string& rFileName = "");
 		XmlElement* Load(const string& rFileName = "");
-		// class destructor
 		virtual ~XmlParser();
-	private:
-        XmlElement* mpData;
 };
 }
 #endif // XMLPARSER_H
