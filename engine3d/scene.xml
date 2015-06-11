@@ -1,3 +1,4 @@
+<scene>
 <node name = "room">
 
 	<useshape name = "tube">
@@ -18,5 +19,6 @@
 			</node>
 		</node>>
 	</node>
-
 </node>
+</scene>
+

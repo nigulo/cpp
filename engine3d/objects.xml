@@ -1,5 +1,6 @@
-<texture name = "brickwall", file = "ConcreteWall.png"/>
-<texture name = "paintwall", file = "ConcreteWall.png"/>
+<objects>
+<texture name = "brickwall" file = "ConcreteWall.png"/>
+<texture name = "paintwall" file = "ConcreteWall.png"/>
 <shape name = "wall">
 	<triangles>
 		<vertex>
@@ -175,3 +176,4 @@
 
 	</node>
 </shape>
+</objects>
