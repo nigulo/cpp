@@ -13,16 +13,17 @@ XmlParser::~XmlParser() {
 
 XmlParser::XmlElement* XmlParser::Load() {
 	if (mFileName.length() > 0) {
-		XmlElement* p_element = new XmlElement("root");
+		XmlElement* p_element = nullptr;
 		try {
 			TextReader reader(mFileName);
+			reader.read();
+			p_element = new XmlElement(reader.get_name());
 			reader.read();
 			p_element->Parse(reader);
 		}
 		catch(const std::exception& e) {
 			cout << "Exception caught: " << e.what() << endl;
 		}
-
 	    return p_element;
 	}
     return nullptr;
@@ -33,15 +34,9 @@ XmlParser::XmlElement* XmlParser::Load() {
 
 XmlParser::XmlElement::XmlElement(const string& rName, XmlElement* pParent) :
     mName(rName),
-	mpParent(pParent)
+	mpParent(pParent),
+	mDepth(pParent ? mpParent->mDepth + 1 : 0)
 {
-	if (mpParent) {
-		mDepth = mpParent->mDepth + 1;
-	} else {
-		mDepth = 0;
-	}
-    Object::Dbg(string("------ XmlElement: ") + mName);
-    
 }
 
 XmlParser::XmlElement::~XmlElement()
@@ -55,9 +50,9 @@ XmlParser::XmlElement::~XmlElement()
 void XmlParser::XmlElement::Parse(TextReader& rReader)
 {
 	try {
-		while (rReader.get_depth() >= mDepth) {
+		while (rReader.get_depth() > mDepth) {
 			//cout << string(4 * rReader.get_depth(), ' ') << rReader.get_name() << endl;
-			if (rReader.get_depth() > mDepth) {
+			if (rReader.get_depth() > mDepth + 1) {
 				mSubElements.back()->Parse(rReader);
 			}
 			switch (rReader.get_node_type()) {
@@ -79,6 +74,7 @@ void XmlParser::XmlElement::Parse(TextReader& rReader)
 					break;
 			}
 			if (!rReader.read()) {
+				cout << "Premature end of xml " << endl;
 				break;
 			}
 		}
