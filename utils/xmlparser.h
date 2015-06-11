@@ -6,7 +6,6 @@
 #include <list>
 #include <map>
 
-#include <libxml++/libxml++.h>
 #include <libxml++/parsers/textreader.h>
 
 using namespace xmlpp;
@@ -28,6 +27,10 @@ class XmlParser : public Object
     	friend class XmlParser;
         public:
             XmlElement(const string& rName, XmlElement* pParent = nullptr);
+
+            const string& GetName() const {
+            	return mName;
+            }
             
             const string* GetAttribute(const string& rName) const {
             	auto i = mAttributes.find(rName);
@@ -70,9 +73,11 @@ class XmlParser : public Object
     };
     
 	public:
-		XmlParser(const string& rFileName = "");
-		XmlElement* Load(const string& rFileName = "");
+		XmlParser(const string& rFileName);
+		XmlElement* Load();
 		virtual ~XmlParser();
+	private:
+		const string mFileName;
 };
 }
 #endif // XMLPARSER_H

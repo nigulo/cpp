@@ -5,20 +5,18 @@
 
 using namespace utils;
 
-XmlParser::XmlParser(const string& rFileName) {
-	if (rFileName.length() > 0) {
-		Load(rFileName);
-	}
+XmlParser::XmlParser(const string& rFileName) : mFileName(rFileName) {
 }
 
 XmlParser::~XmlParser() {
 }
 
-XmlParser::XmlElement* XmlParser::Load(const string& rFileName) {
-	if (rFileName.length() > 0) {
+XmlParser::XmlElement* XmlParser::Load() {
+	if (mFileName.length() > 0) {
 		XmlElement* p_element = new XmlElement("root");
 		try {
-			TextReader reader(rFileName);
+			TextReader reader(mFileName);
+			reader.read();
 			p_element->Parse(reader);
 		}
 		catch(const std::exception& e) {
@@ -57,11 +55,14 @@ XmlParser::XmlElement::~XmlElement()
 void XmlParser::XmlElement::Parse(TextReader& rReader)
 {
 	try {
-		while (rReader.get_depth() == mDepth + 1) {
-			rReader.read();
+		while (rReader.get_depth() >= mDepth) {
+			//cout << string(4 * rReader.get_depth(), ' ') << rReader.get_name() << endl;
+			if (rReader.get_depth() > mDepth) {
+				mSubElements.back()->Parse(rReader);
+			}
 			switch (rReader.get_node_type()) {
 				case TextReader::Element: {
-					AddSubElement(new XmlElement(rReader.get_name()));
+					AddSubElement(new XmlElement(rReader.get_name(), this));
 					if (rReader.has_attributes()) {
 						rReader.move_to_first_attribute();
 						do {
@@ -77,9 +78,9 @@ void XmlParser::XmlElement::Parse(TextReader& rReader)
 				default:
 					break;
 			}
-		}
-		if (rReader.get_depth() > mDepth + 1) {
-			mSubElements.back()->Parse(rReader);
+			if (!rReader.read()) {
+				break;
+			}
 		}
 	} catch(const std::exception& e) {
 		cout << "Exception caught: " << e.what() << endl;
@@ -88,16 +89,20 @@ void XmlParser::XmlElement::Parse(TextReader& rReader)
 
 string XmlParser::XmlElement::ToString() const
 {
-	string output = string("    ", mDepth) + "<" + mName;
-	if (mSubElements.size() == 0) {
+	string output = string(4 * mDepth, ' ') + "<" + mName;
+	for (auto&& attr : mAttributes) {
+		output = output + " " + attr.first + "=\"" + attr.second + "\"";
+	}
+	if (mInnerText.length() == 0 && mSubElements.size() == 0) {
 		output = output + "/>\n";
 	}
 	else {
 		output = output + ">\n";
 	    for (auto i = mSubElements.begin(); i != mSubElements.end(); i++) {
-			output = output + string("    ", (*i)->mDepth) + (*i)->ToString();
+			output = output + (*i)->ToString();
 		}
-		output = output + string("    ", mDepth) + "</" + mName + ">\n";
+		output = output + mInnerText + "\n";
+		output = output + string(4 * mDepth, ' ') + "</" + mName + ">\n";
 	}
 	return output;
 }
