@@ -283,7 +283,8 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 		d=d+delta;
 	}
 	ofstream output("phasedisp.csv");
-	ofstream output1("phasedisp_min.csv");
+	ofstream output_min("phasedisp_min.csv");
+	ofstream output_max("phasedisp_max.csv");
 
 	// Basic cycle with printing for GnuPlot
 
@@ -307,16 +308,18 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 		// Spectrum in cum can be normalized
 
 		if (true) {
-			//MapTo01D(cum);
+			MapTo01D(cum);
 		}
 
 		vector<int> minima(0);
 		int dk = lp / 20;
 		for (j=0; j < lp; j++) {
 			if (!bootstrap) {
-				output << d << " " << (wmin + j * step) << " " << cum[j] << "\n";
+				output << d << " " << (wmin + j * step) << " " << cum[j] << endl;
 				if (d == minCoherence) {
-					output1 << (wmin + j * step) << " " << cum[j] << "\n";
+					output_min << (wmin + j * step) << " " << cum[j] << endl;
+				} else if (d == maxCoherence) {
+					output_max << (wmin + j * step) << " " << cum[j] << endl;
 				}
 			}
 			if (j > dk - 1 && j < lp - dk - 1) {
@@ -347,6 +350,7 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 		//cout << endl;
 	}
 	output.close();
-	output1.close();
+	output_min.close();
+	output_max.close();
 }
 
