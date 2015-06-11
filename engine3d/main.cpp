@@ -36,6 +36,13 @@ Scene* pScene = nullptr;
 bool doubleBuffer = true;
 long tickCount = 0;
 
+// This is needed only to overcome some unknown bug
+#include <pthread.h>
+void junk() {
+  int i;
+  i=pthread_getconcurrency();
+};
+
 ////////////////////////////
 //Vertex v1(-0.1, -0.1, 2);
 //Vertex v2(-0.1, 0.1, 2);
