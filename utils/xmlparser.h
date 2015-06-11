@@ -32,12 +32,12 @@ class XmlParser : public Object
             	return mName;
             }
             
-            const string* GetAttribute(const string& rName) const {
+            const string GetAttribute(const string& rName) const {
             	auto i = mAttributes.find(rName);
             	if (i != mAttributes.end()) {
-            		return &(i->second);
+            		return i->second;
             	}
-            	return nullptr;
+            	return "";
             }
 
             const string& GetInnerText() const {
