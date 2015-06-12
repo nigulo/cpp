@@ -54,12 +54,12 @@ namespace engine3d {
             void LoadCoords(XmlParser::XmlElement& rElement, Object* pObject);
             void LoadTexCoords(XmlParser::XmlElement& rElement, Vertex* pVertex);
             void LoadUseTexture(XmlParser::XmlElement& rElement, Shape* pShape);
-            void LoadUseShape(XmlParser::XmlElement& rElement, Node* pNode);
             void LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatial);
             void LoadTranslation(XmlParser::XmlElement& rElement, Spatial* pSpatial);
             Vector LoadVector(XmlParser::XmlElement& rElement);
             Vertex* LoadVertex(XmlParser::XmlElement& rElement, Object* pObject);
             BoundingVolume* LoadBound(XmlParser::XmlElement& rElement, Node* pNode);
+            Shape* LoadUseShape(XmlParser::XmlElement& rElement);
 
             Texture* GetTexture(const string& rName);
     	private:

@@ -63,10 +63,6 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         Shape* p_shape = dynamic_cast<Shape*>(pObject);
         assert(p_shape);
         LoadUseTexture(rElement, p_shape);
-    } else if (rElement.GetName() == USESHAPE) {
-        Node* p_node = dynamic_cast<Node*>(pObject);
-        assert(p_node);
-    	LoadUseShape(rElement, p_node);
     } else if (rElement.GetName() == ROTATION) {
         Spatial* p_spatial = dynamic_cast<Spatial*>(pObject);
         assert(p_spatial);
@@ -112,6 +108,8 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
 			Node* p_parent_node = dynamic_cast<Node*>(pObject);
 			assert(p_parent_node);
 			p_object = LoadBound(rElement, p_parent_node);
+		} else if (rElement.GetName() == USESHAPE) {
+			p_object = LoadUseShape(rElement);
 		} else {
 			Debug(string("Unknown element type: ") + rElement.GetName());
 		}
@@ -219,11 +217,12 @@ void SceneLoader::LoadUseTexture(XmlParser::XmlElement& rElement, Shape* pShape)
     pShape->SetTexture(p_tex);
 }
 
-void SceneLoader::LoadUseShape(XmlParser::XmlElement& rElement, Node* pNode) {
+Shape* SceneLoader::LoadUseShape(XmlParser::XmlElement& rElement) {
     Debug(string("Using shape: ") + rElement.GetAttribute("name"));
     Shape* p_shape = dynamic_cast<Shape*>(mShapes.GetChild(rElement.GetAttribute("name")));
     assert(p_shape);
-    pNode->AddChild(p_shape->Clone());
+    Shape* p_shape_clone = p_shape->Clone();
+    return p_shape_clone;
 }
 
 void SceneLoader::LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatial) {

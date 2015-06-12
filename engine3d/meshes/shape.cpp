@@ -36,6 +36,7 @@ Shape::~Shape()
 
 void Shape::Render()
 {
+	Debug("Shape::Render");
     if (mpTexture) {
     	mpTexture->Use();
     }

@@ -166,10 +166,15 @@ void Camera::Update() {
 	Vector sNorm = s;
 	sNorm.Normalize();
 	Vector u = sNorm.CrossProduct(f);
-	mMatrix.Set(0, 0, s[0]);  mMatrix.Set(0, 1, s[1]);  mMatrix.Set(0, 2, s[2]);  mMatrix.Set(0, 3, -s.DotProduct(mEye));
-	mMatrix.Set(1, 0, u[0]);  mMatrix.Set(1, 1, u[1]);  mMatrix.Set(1, 2, u[2]);  mMatrix.Set(1, 3, -u.DotProduct(mEye));
-	mMatrix.Set(2, 0, -f[0]); mMatrix.Set(2, 1, -f[1]); mMatrix.Set(2, 2, -f[2]); mMatrix.Set(2, 3, f.DotProduct(mEye));
-	mMatrix.Set(3, 0, 0);     mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);     mMatrix.Set(3, 3, 1);
+	//mMatrix.Set(0, 0, s[0]);  mMatrix.Set(0, 1, s[1]);  mMatrix.Set(0, 2, s[2]);  mMatrix.Set(0, 3, -s.DotProduct(mEye));
+	//mMatrix.Set(1, 0, u[0]);  mMatrix.Set(1, 1, u[1]);  mMatrix.Set(1, 2, u[2]);  mMatrix.Set(1, 3, -u.DotProduct(mEye));
+	//mMatrix.Set(2, 0, -f[0]); mMatrix.Set(2, 1, -f[1]); mMatrix.Set(2, 2, -f[2]); mMatrix.Set(2, 3, f.DotProduct(mEye));
+	//mMatrix.Set(3, 0, 0);     mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);     mMatrix.Set(3, 3, 1);
+
+	mMatrix.Set(0, 0, 1);  mMatrix.Set(0, 1, 0);  mMatrix.Set(0, 2, 0);  mMatrix.Set(0, 3, 0);
+	mMatrix.Set(1, 0, 0);  mMatrix.Set(1, 1, 1);  mMatrix.Set(1, 2, 0);  mMatrix.Set(1, 3, 0);
+	mMatrix.Set(2, 0, 0);  mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, 1); mMatrix.Set(2, 3, 0);
+	mMatrix.Set(3, 0, 0);  mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);     mMatrix.Set(3, 3, 1);
 	//Matrix m(4);
 	//m.Set(0, 0, 1); m.Set(0, 1, 0); m.Set(0, 2, 0); m.Set(0, 3, -mEye[0]);
 	//m.Set(1, 0, 0); m.Set(1, 1, 1); m.Set(1, 2, 0); m.Set(1, 3, -mEye[1]);

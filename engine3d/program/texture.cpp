@@ -6,6 +6,7 @@
  */
 
 #include "texture.h"
+#include "base/object.h"
 #include "lodepng/lodepng.h"
 
 using namespace engine3d;
@@ -58,6 +59,6 @@ Texture::~Texture() {
 void Texture::Use() const {
     glActiveTexture(GL_TEXTURE0); // These 2 are not per texture, need to be moved out from this class
     glUniform1i(mrUniform.GetId(), 0);
-
+    base::Object::Dbg("Using texture");
     glBindTexture(GL_TEXTURE_2D, mId);
 }

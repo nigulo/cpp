@@ -17,11 +17,17 @@ Perspective::Perspective(Program& rProgram,
 	    mViewAngle(viewAngle),
 	    mAspect(aspect) {
 	float f = 1 / tan(M_PI * viewAngle / 180 / 2);
-	float md = near - far;
+	//float md = near - far;
+	//mMatrix.Set(0, 0, f / aspect); mMatrix.Set(0, 1, 0); mMatrix.Set(0, 2, 0);                 mMatrix.Set(0, 3, 0);
+	//mMatrix.Set(1, 0, 0);          mMatrix.Set(1, 1, f); mMatrix.Set(1, 2, 0);                 mMatrix.Set(1, 3, 0);
+	//mMatrix.Set(2, 0, 0);          mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, (far + near) / md); mMatrix.Set(2, 3, 2 * far * near / md);
+	//mMatrix.Set(3, 0, 0);          mMatrix.Set(3, 1, 0); mMatrix.Set(3, 2, -1);                mMatrix.Set(3, 3, 0);
+
+	float md = far - near;
 	mMatrix.Set(0, 0, f / aspect); mMatrix.Set(0, 1, 0); mMatrix.Set(0, 2, 0);                 mMatrix.Set(0, 3, 0);
 	mMatrix.Set(1, 0, 0);          mMatrix.Set(1, 1, f); mMatrix.Set(1, 2, 0);                 mMatrix.Set(1, 3, 0);
-	mMatrix.Set(2, 0, 0);          mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, (far + near) / md); mMatrix.Set(2, 3, 2 * far * near / md);
-	mMatrix.Set(3, 0, 0);          mMatrix.Set(3, 1, 0); mMatrix.Set(3, 2, -1);                mMatrix.Set(3, 3, 0);
+	mMatrix.Set(2, 0, 0);          mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, (far + near) / md); mMatrix.Set(2, 3, -2 * far * near / md);
+	mMatrix.Set(3, 0, 0);          mMatrix.Set(3, 1, 0); mMatrix.Set(3, 2, 1);                mMatrix.Set(3, 3, 0);
 }
 
 Perspective::~Perspective() {

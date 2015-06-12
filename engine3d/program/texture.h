@@ -16,7 +16,7 @@
 using namespace std;
 namespace engine3d {
 
-	class Texture {
+class Texture {
 	public:
 		Texture(Program& rProgram, const string& rName, const string& rTextureFile);
 		virtual ~Texture();

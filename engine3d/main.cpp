@@ -109,7 +109,7 @@ void init() {
     //Object::Dbg("main -2");
     //Object::Dbg("main -1");
 
-    //String textureFile("ConcreteWall.png");
+    //string textureFile("ConcreteWall.png");
     //Texture* p_tex = new Texture(textureFile);
     //Object::Dbg("main -0.5");
     //Sphere* p_s = new Sphere(0.5, 10, 10);

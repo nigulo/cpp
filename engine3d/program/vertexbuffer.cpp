@@ -38,7 +38,7 @@ void VertexBuffer::Render() const {
     Buffer::Render();
     base::Object::Dbg("VertexBuffer::Render 2");
 
-	GLsizei stride = mDim * sizeof(GLdouble) + (mpTexCoord ? 2 * sizeof(GLdouble) : 0);
+	GLsizei stride = mDim * sizeof(GLfloat) + (mpTexCoord ? 2 * sizeof(GLfloat) : 0);
     glVertexAttribPointer(
         mrPosition.GetId(),
         3, GL_DOUBLE, GL_FALSE, stride,
@@ -54,7 +54,7 @@ void VertexBuffer::Render() const {
 		glVertexAttribPointer(
 			mpTexCoord->GetId(),
 			2, GL_DOUBLE, GL_FALSE, stride,
-			(GLvoid*) (mDim * sizeof(GLdouble)) // offset
+			(GLvoid*) (mDim * sizeof(GLfloat)) // offset
 		);
     }
     //glVertexAttribPointer(
