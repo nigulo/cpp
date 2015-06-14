@@ -33,7 +33,7 @@ void Scene::SetCamera(Camera* pCamera)
 {
     mpCamera = pCamera;
     if (mpNode) {
-        mpNode->AddChild(mpCamera);
+        //mpNode->AddChild(mpCamera);
     }
 }
 
@@ -70,11 +70,11 @@ void Scene::Render()
         Debug("Scene::Render 1");
         //glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
-        glEnable(GL_TEXTURE_2D);
+        //glEnable(GL_TEXTURE_2D);
         //glEnable(GL_BLEND);
         //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glPolygonMode(mPolygonMode[0], mPolygonMode[1]);
+        //glPolygonMode(mPolygonMode[0], mPolygonMode[1]);
         glUseProgram(mpProgram->GetId());
 
         Debug("Scene::Render 2");

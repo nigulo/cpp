@@ -26,22 +26,23 @@ VertexBuffer::~VertexBuffer() {
 }
 
 void VertexBuffer::Render() const {
+	base::Object::Dbg("VertexBuffer::Render 1");
     glEnableVertexAttribArray(mrPosition.GetId());
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.normal);
     if (mpTexCoord) {
+    	base::Object::Dbg("VertexBuffer::Render 2");
     	glEnableVertexAttribArray(mpTexCoord->GetId());
     }
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.shininess);
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.specular);
 
-	base::Object::Dbg("VertexBuffer::Render 1");
     Buffer::Render();
-    base::Object::Dbg("VertexBuffer::Render 2");
+    base::Object::Dbg("VertexBuffer::Render 3");
 
 	GLsizei stride = mDim * sizeof(GLfloat) + (mpTexCoord ? 2 * sizeof(GLfloat) : 0);
     glVertexAttribPointer(
         mrPosition.GetId(),
-        3, GL_DOUBLE, GL_FALSE, stride,
+        3, GL_FLOAT, GL_FALSE, stride,
         (GLvoid*) 0
     );
     //glVertexAttribPointer(
@@ -50,10 +51,10 @@ void VertexBuffer::Render() const {
     //    (void*)offsetof(struct flag_vertex, normal)
     //);
     if (mpTexCoord) {
-    	base::Object::Dbg("VertexBuffer::Render 3");
+    	base::Object::Dbg("VertexBuffer::Render 4");
 		glVertexAttribPointer(
 			mpTexCoord->GetId(),
-			2, GL_DOUBLE, GL_FALSE, stride,
+			2, GL_FLOAT, GL_FALSE, stride,
 			(GLvoid*) (mDim * sizeof(GLfloat)) // offset
 		);
     }

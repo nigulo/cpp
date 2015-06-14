@@ -143,6 +143,7 @@ void Node::Render()
 			Update();
 		}
 		for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
+	        Debug("Rendering child");
 			(*i)->Render();
 		}
     }
