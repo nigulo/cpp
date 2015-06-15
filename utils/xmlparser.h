@@ -6,10 +6,6 @@
 #include <list>
 #include <map>
 
-#include <libxml++/parsers/textreader.h>
-
-using namespace xmlpp;
-
 using namespace base;
 using namespace std;
 
@@ -52,8 +48,6 @@ class XmlParser : public Object
             string ToString() const;
 
     		void Save(const string& rFileName) const;
-        private:
-            void Parse(TextReader& rReader);
             void SetInnerText(const string& rInnerText) {
             	mInnerText = rInnerText;
             }

@@ -2,6 +2,9 @@
 #include <cassert>
 
 #include <iostream>
+#include <libxml++/parsers/textreader.h>
+
+using namespace xmlpp;
 
 using namespace utils;
 
@@ -9,6 +12,42 @@ XmlParser::XmlParser(const string& rFileName) : mFileName(rFileName) {
 }
 
 XmlParser::~XmlParser() {
+}
+
+void Parse(TextReader& rReader, XmlParser::XmlElement* p_elem, int depth)
+{
+	try {
+		while (rReader.get_depth() > depth) {
+			//cout << string(4 * rReader.get_depth(), ' ') << rReader.get_name() << endl;
+			if (rReader.get_depth() > depth + 1) {
+				Parse(rReader, p_elem->GetSubElements().back(), depth + 1);
+			}
+			switch (rReader.get_node_type()) {
+				case TextReader::Element: {
+					p_elem->AddSubElement(new XmlParser::XmlElement(rReader.get_name(), p_elem));
+					if (rReader.has_attributes()) {
+						rReader.move_to_first_attribute();
+						do {
+							p_elem->GetSubElements().back()->AddAttribute(rReader.get_name(), rReader.get_value());
+						} while (rReader.move_to_next_attribute());
+						rReader.move_to_element();
+					}
+					break;
+				}
+				case TextReader::Text:
+					p_elem->SetInnerText(rReader.read_string());
+					break;
+				default:
+					break;
+			}
+			if (!rReader.read()) {
+				cout << "Premature end of xml " << endl;
+				break;
+			}
+		}
+	} catch(const std::exception& e) {
+		cout << "Exception caught: " << e.what() << endl;
+	}
 }
 
 XmlParser::XmlElement* XmlParser::Load() {
@@ -19,7 +58,7 @@ XmlParser::XmlElement* XmlParser::Load() {
 			reader.read();
 			p_element = new XmlElement(reader.get_name());
 			reader.read();
-			p_element->Parse(reader);
+			Parse(reader, p_element, 0);
 		}
 		catch(const std::exception& e) {
 			cout << "Exception caught: " << e.what() << endl;
@@ -46,7 +85,7 @@ XmlParser::XmlElement::~XmlElement()
     }
     mSubElements.clear();
 }
-
+/*
 void XmlParser::XmlElement::Parse(TextReader& rReader)
 {
 	try {
@@ -82,6 +121,7 @@ void XmlParser::XmlElement::Parse(TextReader& rReader)
 		cout << "Exception caught: " << e.what() << endl;
 	}
 }    
+*/
 
 string XmlParser::XmlElement::ToString() const
 {
