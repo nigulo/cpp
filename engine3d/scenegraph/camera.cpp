@@ -27,6 +27,11 @@ void Camera::Render()
 	Debug(string("Camera::Render center ") + mCenter.ToString());
 	Debug(string("Camera::Render up ") + mUp.ToString());
 	mpProjection->Project();
+	string log = "Model view matrix: ";
+	for (unsigned i = 0; i < mMatrix.GetNumRows() * mMatrix.GetNumColumns(); i++) {
+		log += " " + to_string(mMatrix.GetElements()[i]);
+	}
+	Debug(log);
     glUniformMatrix4fv(
         mrUniform.GetId(),
         1, GL_FALSE,
@@ -175,11 +180,5 @@ void Camera::Update() {
 	mMatrix.Set(1, 0, 0);  mMatrix.Set(1, 1, 1);  mMatrix.Set(1, 2, 0);  mMatrix.Set(1, 3, 0);
 	mMatrix.Set(2, 0, 0);  mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, 1); mMatrix.Set(2, 3, 0);
 	mMatrix.Set(3, 0, 0);  mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);     mMatrix.Set(3, 3, 1);
-	//Matrix m(4);
-	//m.Set(0, 0, 1); m.Set(0, 1, 0); m.Set(0, 2, 0); m.Set(0, 3, -mEye[0]);
-	//m.Set(1, 0, 0); m.Set(1, 1, 1); m.Set(1, 2, 0); m.Set(1, 3, -mEye[1]);
-	//m.Set(2, 0, 0); m.Set(2, 1, 0); m.Set(2, 2, 1); m.Set(2, 3, -mEye[2]);
-	//m.Set(3, 0, 0); m.Set(3, 1, 0); m.Set(3, 2, 0); m.Set(3, 3, 1);
-	//mMatrix = mMatrix * m;
     mChanged = true;
 }

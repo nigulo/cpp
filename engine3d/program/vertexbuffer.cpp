@@ -100,6 +100,6 @@ void VertexBuffer::SetData(const vector<Vertex*>& rVertices) {
         	}
         }
 	}
-	base::Object::Dbg(string("VertexBuffer::SetData ") + std::to_string(rVertices.size()));
+	base::Object::Dbg(string("VertexBuffer::SetData ") + std::to_string(rVertices.size() * (mDim + texDim) * sizeof(GLfloat)));
 	Buffer::SetData(rVertices.size() * (mDim + texDim) * sizeof(GLfloat), &vertex_coords, GL_STATIC_DRAW);
 }

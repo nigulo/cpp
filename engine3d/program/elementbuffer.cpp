@@ -19,6 +19,7 @@ ElementBuffer::~ElementBuffer() {
 }
 
 void ElementBuffer::Render() const {
+	base::Object::Dbg(string("ElementBuffer::Render ") + std::to_string(mElementCount));
 	Buffer::Render();
     glDrawElements(
         mMode,
@@ -32,8 +33,8 @@ void ElementBuffer::SetData(const vector<GLushort>& rIndices) {
 	if (rIndices.empty()) {
 		return;
 	}
-	base::Object::Dbg(string("Buffer::SetData ") + std::to_string(rIndices.size()));
-	mElementCount = rIndices.size() * sizeof(GLushort);
-	Buffer::SetData(mElementCount, rIndices.data(), GL_STATIC_DRAW);
+	base::Object::Dbg(string("ElementBuffer::SetData ") + std::to_string(rIndices.size() * sizeof(GLushort)));
+	mElementCount = rIndices.size();
+	Buffer::SetData(mElementCount * sizeof(GLushort), rIndices.data(), GL_STATIC_DRAW);
 }
 

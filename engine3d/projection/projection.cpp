@@ -23,6 +23,11 @@ Projection::~Projection() {
 }
 
 void Projection::Project() const {
+	string log = "Projection matrix: ";
+	for (unsigned i = 0; i < mMatrix.GetNumRows() * mMatrix.GetNumColumns(); i++) {
+		log += " " + to_string(mMatrix.GetElements()[i]);
+	}
+	Debug(log);
     glUniformMatrix4fv(
         mrUniform.GetId(),
         1, GL_FALSE,

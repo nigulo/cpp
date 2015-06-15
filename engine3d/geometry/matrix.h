@@ -33,6 +33,13 @@ class Matrix
 		Matrix Transpose() const;
 		const float* GetElements() const;
 		static Matrix GetUnit(int dim = 3);
+		int GetNumRows() const {
+			return numRows;
+		}
+
+		int GetNumColumns() const {
+			return numColumns;
+		}
 	protected:
         int numRows;
         int numColumns;
