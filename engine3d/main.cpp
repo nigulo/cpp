@@ -77,6 +77,7 @@ void renderFunc() {
     Object::Dbg("renderFunc 1");
 	pScene->Render();
 	if (doubleBuffer) {
+	    Object::Dbg("renderFunc 1.5");
 		glutSwapBuffers();
 	} else {
 		glFlush();
@@ -200,6 +201,12 @@ void init() {
 //    t.SetCollisionBound(bp);
 //    scene->GetNode()->AddChild(&t);
 
+    glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_CULL_FACE);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    //glEnable(GL_TEXTURE_2D);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     Object::Dbg("main 6");
 }
 
