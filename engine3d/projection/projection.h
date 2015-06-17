@@ -52,6 +52,9 @@ public:
 
 protected:
 
+    Program& mrProgram;
+    const Uniform& mrUniform;
+
     /**
      * Disctance of the near clipping plane measured from eye point
      **/
@@ -64,8 +67,6 @@ protected:
 
     Matrix mMatrix;
 
-    Program& mrProgram;
-    const Uniform& mrUniform;
 };
 
 }

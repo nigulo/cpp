@@ -27,8 +27,8 @@ void Camera::Render()
 	Debug(string("Camera::Render center ") + mCenter.ToString());
 	Debug(string("Camera::Render up ") + mUp.ToString());
 	mpProjection->Project();
-	string log = "Model view matrix: ";
-	for (unsigned i = 0; i < mMatrix.GetNumRows() * mMatrix.GetNumColumns(); i++) {
+	string log = "glModel view matrix: ";
+	for (int i = 0; i < mMatrix.GetNumRows() * mMatrix.GetNumColumns(); i++) {
 		log += " " + to_string(mMatrix.GetElements()[i]);
 	}
 	Debug(log);
@@ -37,6 +37,7 @@ void Camera::Render()
         1, GL_FALSE,
         mMatrix.GetElements()
     );
+    base::Object::Dbg(string("glUniformMatrix4fv(") + to_string(mrUniform.GetId()) + ", 1, GL_FALSE, _)");
 }
 
 /**

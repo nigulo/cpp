@@ -33,7 +33,9 @@ Texture::Texture(Program& rProgram, const string& rName, const string& rTextureF
 	}
 
     glGenTextures(1, &mId);
+	base::Object::Dbg(to_string(mId) + string(" = glGenTextures(1)"));
     glBindTexture(GL_TEXTURE_2D, mId);
+	base::Object::Dbg(string("glBindTexture(GL_TEXTURE_2D, ") + to_string(mId) + ")");
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
@@ -59,6 +61,7 @@ Texture::~Texture() {
 void Texture::Use() const {
     glActiveTexture(GL_TEXTURE0); // These 2 are not per texture, need to be moved out from this class
     glUniform1i(mrUniform.GetId(), 0);
-    base::Object::Dbg("Using texture");
+    base::Object::Dbg(string("glUniform1i(") + to_string(mrUniform.GetId()) + ", 0)");
     glBindTexture(GL_TEXTURE_2D, mId);
+    base::Object::Dbg(string("glBindTexture(GL_TEXTURE_2D, ") + to_string(mId) + ")");
 }

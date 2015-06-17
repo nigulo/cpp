@@ -29,7 +29,7 @@ class Node : public Spatial
 		 */
 		void SetScene(Scene* parent);
 		
-		virtual void Update() {}
+		virtual void Update();
 		virtual void Render();
 		Scene& GetScene() const;
 		Node* GetParent() const;

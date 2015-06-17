@@ -9,7 +9,7 @@
 #include "utils.h"
 #include <GL/glew.h>
 #include <GL/gl.h>
-
+#include "base/object.h"
 
 using namespace engine3d;
 using namespace std;
@@ -20,6 +20,7 @@ Program::Program(const string& rVertexShaderScript,
 		mFragmentShader(rFragmentShaderScript) {
 
     mId = glCreateProgram();
+	base::Object::Dbg(to_string(mId) + " = glCreateProgram()");
 
     glAttachShader(mId, mVertexShader.GetId());
     glAttachShader(mId, mFragmentShader.GetId());

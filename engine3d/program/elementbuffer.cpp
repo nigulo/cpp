@@ -12,15 +12,17 @@ using namespace engine3d;
 
 ElementBuffer::ElementBuffer(GLenum mode) :
 		Buffer(GL_ELEMENT_ARRAY_BUFFER),
-		mMode(mode) {
+		mMode(mode),
+		mElementCount(0) {
 }
 
 ElementBuffer::~ElementBuffer() {
 }
 
 void ElementBuffer::Render() const {
-	base::Object::Dbg(string("ElementBuffer::Render ") + std::to_string(mElementCount));
+	base::Object::Dbg("ElementBuffer::Render");
 	Buffer::Render();
+	base::Object::Dbg(string("glDrawElements(") + to_string(mMode) + ", " + to_string(mElementCount) + ", GL_UNSIGNED_SHORT, 0)");
     glDrawElements(
         mMode,
 		mElementCount,
@@ -33,7 +35,11 @@ void ElementBuffer::SetData(const vector<GLushort>& rIndices) {
 	if (rIndices.empty()) {
 		return;
 	}
-	base::Object::Dbg(string("ElementBuffer::SetData ") + std::to_string(rIndices.size() * sizeof(GLushort)));
+	string log = "glElementBuffer::SetData";
+	for (auto&& index : rIndices) {
+		log = log + " " + to_string(index);
+	}
+	base::Object::Dbg(log);
 	mElementCount = rIndices.size();
 	Buffer::SetData(mElementCount * sizeof(GLushort), rIndices.data(), GL_STATIC_DRAW);
 }

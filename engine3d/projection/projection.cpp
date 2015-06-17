@@ -23,8 +23,8 @@ Projection::~Projection() {
 }
 
 void Projection::Project() const {
-	string log = "Projection matrix: ";
-	for (unsigned i = 0; i < mMatrix.GetNumRows() * mMatrix.GetNumColumns(); i++) {
+	string log = "glProjection matrix: ";
+	for (int i = 0; i < mMatrix.GetNumRows() * mMatrix.GetNumColumns(); i++) {
 		log += " " + to_string(mMatrix.GetElements()[i]);
 	}
 	Debug(log);
@@ -33,4 +33,5 @@ void Projection::Project() const {
         1, GL_FALSE,
         mMatrix.GetElements()
     );
+    base::Object::Dbg(string("glUniformMatrix4fv(") + to_string(mrUniform.GetId()) + ", 1, GL_FALSE, _)");
 }

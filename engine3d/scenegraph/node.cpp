@@ -127,6 +127,13 @@ void Node::CheckCollisions()
     }
 }
 
+void Node::Update() {
+	for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
+        Debug("Updating child");
+		(*i)->Update();
+	}
+}
+
 void Node::Render()
 {
     if (mpBound) {
@@ -138,10 +145,10 @@ void Node::Render()
     }
     else {
 		Debug("transforming");
-		mTransformation.Transform();
-		if (mChanged) {
-			Update();
-		}
+		//mTransformation.Transform();
+		//if (mChanged) {
+		//	Update();
+		//}
 		for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
 	        Debug("Rendering child");
 			(*i)->Render();

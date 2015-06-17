@@ -4,13 +4,14 @@
 #include <GL/glew.h>
 #include <string>
 
+using namespace std;
 namespace engine3d {
 
 class Program;
 class Attribute {
 	friend class Program;
 private:
-	Attribute(Program& rProgram, const std::string& rName);
+	Attribute(Program& rProgram, const string& rName);
 	virtual ~Attribute();
 public:
 	GLint GetId() const {

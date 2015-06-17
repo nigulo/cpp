@@ -57,13 +57,16 @@ void Scene::Render()
     assert(mpCamera);
     mTimeChange = ((double) GetMillis()) / 1000 - mTime;
     // Execute all controllers
-    Debug("Scene::Render 0");
+    Debug("Scene::Render gl------------------------------------");
     for (auto&& c : mControllers) {
         c->Execute();
     }
     Debug("Scene::Render 01");
     Debug("Scene::Render 011");
     if (mpNode && (mpNode->IsChanged() || mpCamera->IsChanged())) {
+    	if (mpNode->IsChanged()) {
+    		mpNode->Update();
+    	}
         Debug("Scene::Render 0111");
         mTime += mTimeChange;
         long millis = GetMillis();

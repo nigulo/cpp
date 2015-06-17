@@ -26,20 +26,21 @@ VertexBuffer::~VertexBuffer() {
 }
 
 void VertexBuffer::Render() const {
-	base::Object::Dbg("VertexBuffer::Render 1");
+	base::Object::Dbg("VertexBuffer::Render");
+	base::Object::Dbg(string("glEnableVertexAttribArray(") + to_string(mrPosition.GetId()) + ")");
     glEnableVertexAttribArray(mrPosition.GetId());
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.normal);
     if (mpTexCoord) {
-    	base::Object::Dbg("VertexBuffer::Render 2");
+    	base::Object::Dbg(string("glEnableVertexAttribArray(") + to_string(mpTexCoord->GetId()) + ")");
     	glEnableVertexAttribArray(mpTexCoord->GetId());
     }
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.shininess);
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.specular);
 
     Buffer::Render();
-    base::Object::Dbg("VertexBuffer::Render 3");
 
 	GLsizei stride = mDim * sizeof(GLfloat) + (mpTexCoord ? 2 * sizeof(GLfloat) : 0);
+	base::Object::Dbg(string("glVertexAttribPointer(") + to_string(mrPosition.GetId()) + ", 3, GL_FLOAT, GL_FALSE, " + to_string(stride) + ", 0)");
     glVertexAttribPointer(
         mrPosition.GetId(),
         3, GL_FLOAT, GL_FALSE, stride,
@@ -51,7 +52,7 @@ void VertexBuffer::Render() const {
     //    (void*)offsetof(struct flag_vertex, normal)
     //);
     if (mpTexCoord) {
-    	base::Object::Dbg("VertexBuffer::Render 4");
+    	base::Object::Dbg(string("glVertexAttribPointer(") + to_string(mpTexCoord->GetId()) + ", 2, GL_FLOAT, GL_FALSE, " + to_string(stride) + ", " + to_string(mDim * sizeof(GLfloat)) + ")");
 		glVertexAttribPointer(
 			mpTexCoord->GetId(),
 			2, GL_FLOAT, GL_FALSE, stride,
@@ -86,20 +87,21 @@ void VertexBuffer::SetData(const vector<Vertex*>& rVertices) {
 	int texDim = mpTexCoord ? 2 : 0;
 	GLfloat vertex_coords[rVertices.size()][mDim + texDim];
 	//double vertex_tex_coords[mChildren.size()];
+	string log = "glVertexBuffer::SetData";
 	int j = 0;
 	for (auto i = rVertices.begin(); i != rVertices.end(); i++) {
         Vertex* p_vertex = *i;
         for (int k = 0; k < mDim; k++) {
         	vertex_coords[j][k] = p_vertex->GetCoord(k);
-        	base::Object::Dbg(string("VertexBuffer::SetData coord ") + std::to_string(k) + ": " + std::to_string(vertex_coords[j][k]));
+        	log = log + " " + to_string(vertex_coords[j][k]);
         }
         if (mpTexCoord) {
         	for (int k = 0; k < texDim; k++) {
     			vertex_coords[j][mDim + k] = (*(p_vertex->GetTexCoords()))[k];
-            	base::Object::Dbg(string("VertexBuffer::SetData texcoord ") + std::to_string(k) + ": " + std::to_string(vertex_coords[j][mDim + k]));
+            	log = log + " " + to_string(vertex_coords[j][mDim + k]);
         	}
         }
 	}
-	base::Object::Dbg(string("VertexBuffer::SetData ") + std::to_string(rVertices.size() * (mDim + texDim) * sizeof(GLfloat)));
+	base::Object::Dbg(log);
 	Buffer::SetData(rVertices.size() * (mDim + texDim) * sizeof(GLfloat), &vertex_coords, GL_STATIC_DRAW);
 }
