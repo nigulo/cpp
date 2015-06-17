@@ -7,6 +7,7 @@
 
 #include "elementbuffer.h"
 #include "base/object.h"
+#include <iostream>
 
 using namespace engine3d;
 
@@ -41,6 +42,7 @@ void ElementBuffer::SetData(const vector<GLushort>& rIndices) {
 	}
 	base::Object::Dbg(log);
 	mElementCount = rIndices.size();
+	//std::cout << "glElementBuffer vertex_coords: " << (void*)rIndices.data() << " " << (void*)&(rIndices[0]) << std::endl;
 	Buffer::SetData(mElementCount * sizeof(GLushort), rIndices.data(), GL_STATIC_DRAW);
 }
 

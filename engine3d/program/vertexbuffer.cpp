@@ -8,6 +8,7 @@
 #include "vertexbuffer.h"
 #include "engine3d/meshes/vertex.h"
 #include "base/object.h"
+#include <iostream>
 
 using namespace engine3d;
 
@@ -103,5 +104,6 @@ void VertexBuffer::SetData(const vector<Vertex*>& rVertices) {
         }
 	}
 	base::Object::Dbg(log);
-	Buffer::SetData(rVertices.size() * (mDim + texDim) * sizeof(GLfloat), &vertex_coords, GL_STATIC_DRAW);
+	//std::cout << "glVertexBuffer vertex_coords: " << (void*)&vertex_coords << " " << (void*)vertex_coords << std::endl;
+	Buffer::SetData(rVertices.size() * (mDim + texDim) * sizeof(GLfloat), vertex_coords, GL_STATIC_DRAW);
 }
