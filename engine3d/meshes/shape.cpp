@@ -1,5 +1,5 @@
 #include "shape.h"
-#include <GL/gl.h>
+#include <GL/glew.h>
 
 using namespace engine3d;
 
@@ -41,7 +41,7 @@ void Shape::Render()
     	mpTexture->Use();
     }
     else if (mpColor) {
-		glColor4d(mpColor->red, mpColor->green, mpColor->blue, mpColor->alpha);
+		//glColor4d(mpColor->red, mpColor->green, mpColor->blue, mpColor->alpha);
     }
     Node::Render();
 }

@@ -1,7 +1,7 @@
 #include "camera.h"
 #include "scene.h"
 #include <cassert>
-#include <GL/gl.h>
+#include <GL/glew.h>
 
 using namespace engine3d;
 

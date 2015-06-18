@@ -24,6 +24,8 @@ public:
 	virtual ~VertexBuffer();
 
 	void SetData(const vector<Vertex*>& rVertices);
+	void Enable() const;
+	void Disable() const;
 	virtual void Render() const;
 
 private:

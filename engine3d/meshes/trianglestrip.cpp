@@ -3,7 +3,7 @@
 #include "engine3d/geometry/triangle.h"
 #include "engine3d/scenegraph/scene.h"
 #include "engine3d/scenegraph/camera.h"
-#include <GL/gl.h>
+#include <GL/glew.h>
 
 using namespace engine3d;
 // class constructor

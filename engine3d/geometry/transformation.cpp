@@ -1,5 +1,5 @@
 #include "transformation.h"
-#include <GL/gl.h>
+#include <GL/glew.h>
 #include <math.h>
 #include <cassert>
 
@@ -93,7 +93,7 @@ void Transformation::Transform() const
 {
     
     const float* trMatrix = mMatrix.GetElements();
-    glMultMatrixf(trMatrix);
+    //glMultMatrixf(trMatrix);
 }
 
 Transformation Transformation::operator*(const Transformation& t) const

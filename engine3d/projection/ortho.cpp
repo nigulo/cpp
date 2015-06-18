@@ -7,7 +7,7 @@
 
 #include "ortho.h"
 #include "engine3d/scenegraph/camera.h"
-#include <GL/gl.h>
+#include <GL/glew.h>
 
 using namespace engine3d;
 

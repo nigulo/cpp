@@ -26,8 +26,7 @@ VertexBuffer::VertexBuffer(Program& rProgram, int dim, bool textureOrColor) :
 VertexBuffer::~VertexBuffer() {
 }
 
-void VertexBuffer::Render() const {
-	base::Object::Dbg("VertexBuffer::Render");
+void VertexBuffer::Enable() const {
 	base::Object::Dbg(string("glEnableVertexAttribArray(") + to_string(mrPosition.GetId()) + ")");
     glEnableVertexAttribArray(mrPosition.GetId());
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.normal);
@@ -37,6 +36,20 @@ void VertexBuffer::Render() const {
     }
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.shininess);
     //glEnableVertexAttribArray(g_resources.flag_program.attributes.specular);
+}
+
+void VertexBuffer::Disable() const {
+    glDisableVertexAttribArray(mrPosition.GetId());
+    //glDisableVertexAttribArray(g_resources.flag_program.attributes.normal);
+    if (mpTexCoord) {
+    	glDisableVertexAttribArray(mpTexCoord->GetId());
+    }
+    //glDisableVertexAttribArray(g_resources.flag_program.attributes.shininess);
+    //glDisableVertexAttribArray(g_resources.flag_program.attributes.specular);
+}
+
+void VertexBuffer::Render() const {
+	base::Object::Dbg("VertexBuffer::Render");
 
     Buffer::Render();
 
@@ -45,7 +58,7 @@ void VertexBuffer::Render() const {
     glVertexAttribPointer(
         mrPosition.GetId(),
         3, GL_FLOAT, GL_FALSE, stride,
-        (GLvoid*) 0
+        (void*) 0
     );
     //glVertexAttribPointer(
     //    g_resources.flag_program.attributes.normal,
@@ -57,7 +70,7 @@ void VertexBuffer::Render() const {
 		glVertexAttribPointer(
 			mpTexCoord->GetId(),
 			2, GL_FLOAT, GL_FALSE, stride,
-			(GLvoid*) (mDim * sizeof(GLfloat)) // offset
+			(void*) (mDim * sizeof(GLfloat)) // offset
 		);
     }
     //glVertexAttribPointer(
@@ -71,15 +84,7 @@ void VertexBuffer::Render() const {
     //    (void*)offsetof(struct flag_vertex, specular)
     //);
     //----------------------------------------------
-    glDisableVertexAttribArray(mrPosition.GetId());
-    //glDisableVertexAttribArray(g_resources.flag_program.attributes.normal);
-    if (mpTexCoord) {
-    	glDisableVertexAttribArray(mpTexCoord->GetId());
-    }
-    //glDisableVertexAttribArray(g_resources.flag_program.attributes.shininess);
-    //glDisableVertexAttribArray(g_resources.flag_program.attributes.specular);
-
-	}
+}
 
 void VertexBuffer::SetData(const vector<Vertex*>& rVertices) {
 	if (rVertices.empty()) {

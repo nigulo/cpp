@@ -2,7 +2,6 @@
 #include "utils.h"
 #include "base/object.h"
 #include <GL/glew.h>
-#include <GL/gl.h>
 
 using namespace engine3d;
 using namespace std;

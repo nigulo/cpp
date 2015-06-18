@@ -8,7 +8,6 @@
 #include "program.h"
 #include "utils.h"
 #include <GL/glew.h>
-#include <GL/gl.h>
 #include "base/object.h"
 
 using namespace engine3d;

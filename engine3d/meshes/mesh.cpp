@@ -1,7 +1,7 @@
 #include "mesh.h"
 #include "engine3d/scenegraph/scene.h"
 #include <cassert>
-#include <GL/gl.h>
+#include <GL/glew.h>
 
 using namespace engine3d;
 
@@ -112,8 +112,10 @@ void Mesh::Render() {
 	Debug("Mesh::Render 1");
 	Shape::Render();
 	Debug("Mesh::Render 2");
+	mpVertexBuffer->Enable();
 	mpVertexBuffer->Render();
 	mpElementBuffer->Render();
+	mpVertexBuffer->Disable();
 }
 
 // Sets texture coordinates for all vertices
