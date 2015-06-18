@@ -74,6 +74,7 @@ void Scene::Render()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         //glPolygonMode(mPolygonMode[0], mPolygonMode[1]);
         glUseProgram(mpProgram->GetId());
+        Debug(string("glUseProgram(") + to_string(mpProgram->GetId()) + ")");
 
         Debug("Scene::Render 2");
         mpNode->CheckCollisions();

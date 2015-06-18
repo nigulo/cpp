@@ -7,6 +7,7 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <fstream>
+#include <iostream>
 
 #include "engine3d/geometry/vector.h"
 #include "engine3d/meshes/vertex.h"
@@ -26,6 +27,8 @@
 #include "engine3d/containment/boundingsphere.h"
 #include "engine3d/containment/boundingpolygon.h"
 #include "engine3d/projection/perspective.h"
+
+using namespace std;
 
 using namespace engine3d;
 using namespace base;
@@ -96,9 +99,9 @@ void init() {
 		exit(1);
 	}
     Object::Dbg("main -4");
-    BoundingPolygon* p_bp = new BoundingPolygon();
-    p_bp->AddVertex(Vector(0, 0, 0.5));
-    p_bp->AddVertex(Vector(0, 0, 0));
+    //BoundingPolygon* p_bp = new BoundingPolygon();
+    //p_bp->AddVertex(Vector(0, 0, 0.5));
+    //p_bp->AddVertex(Vector(0, 0, 0));
     //camera.SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
 
 
@@ -163,7 +166,7 @@ void init() {
     Object::Dbg("main 3");
 
     pMouseController = new MouseController(*pScene);
-    pMouseController->AddTarget(&pScene->GetCamera());
+    //pMouseController->AddTarget(&pScene->GetCamera());
     
     Object::Dbg("main 4");
     /*
@@ -202,7 +205,7 @@ void init() {
 //    scene->GetNode()->AddChild(&t);
 
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     //glEnable(GL_TEXTURE_2D);
     //glEnable(GL_BLEND);
@@ -228,11 +231,10 @@ static void reshape(int w, int h) {
 
 int main (int argc, char* argv[]) {
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | doubleBuffer ? GLUT_DOUBLE : GLUT_SINGLE);
-    glutInitWindowSize(800, 600);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | (doubleBuffer ? GLUT_DOUBLE : GLUT_SINGLE));
+    glutInitWindowSize(640, 480);
     glutInitWindowPosition(100,100);
     glutCreateWindow("OpenGL - First window demo");
-    init();
     glutDisplayFunc(renderFunc);
     glutIdleFunc(update);
     glutMouseFunc(mouseFunc);
@@ -240,6 +242,8 @@ int main (int argc, char* argv[]) {
     //glutPassiveMotionFunc(motionFunc);
     glutKeyboardFunc(keyboardFunc);
     glutReshapeFunc(reshape);
+
+    init();
 
     /*
     glewInit();

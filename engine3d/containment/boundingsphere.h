@@ -12,7 +12,7 @@ class BoundingSphere : public BoundingVolume
 {
 	public:
 
-		BoundingSphere(const Vector& rPos, double radius);
+		BoundingSphere(const Vector& rPos, float radius);
 		~BoundingSphere();
 
 		BoundingSphere* Clone() const;
@@ -26,7 +26,7 @@ class BoundingSphere : public BoundingVolume
         void Transform();
 	private:
         Vector mPosition;
-        double mRadius;
+        float mRadius;
         Vector mTransformedPosition;
 };
 }

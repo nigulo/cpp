@@ -87,7 +87,6 @@ void VertexBuffer::SetData(const vector<Vertex*>& rVertices) {
 	}
 	int texDim = mpTexCoord ? 2 : 0;
 	GLfloat vertex_coords[rVertices.size()][mDim + texDim];
-	//double vertex_tex_coords[mChildren.size()];
 	string log = "glVertexBuffer::SetData";
 	int j = 0;
 	for (auto i = rVertices.begin(); i != rVertices.end(); i++) {

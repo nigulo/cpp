@@ -14,7 +14,7 @@ using namespace engine3d;
 Texture::Texture(Program& rProgram, const string& rName, const string& rTextureFile) :
 	mrUniform(rProgram.GetUniform(rName))
 {
-	// Only png support currenlty
+	// Only png support currently
     vector<unsigned char> image;
     unsigned width, height;
 	unsigned error = lodepng::decode(image, width, height, rTextureFile.c_str());
@@ -45,9 +45,13 @@ Texture::Texture(Program& rProgram, const string& rName, const string& rTextureF
         GL_RGBA,                    /* internal format */
         width, height, 0,           /* width, height, border */
 		GL_RGBA, GL_UNSIGNED_BYTE,  /* external format, type */
-		&((*p_image)[0])            /* pixels */
+		p_image->data()             /* pixels */
     );
-
+    //string log("Texture data ");
+    //for (unsigned i = 0; i < p_image->size(); i++) {
+    //	log += " " + to_string(p_image->data()[i]);
+    //}
+    //base::Object::Dbg(log);
 	if (p_image) {
 		p_image->clear();
 		delete p_image;

@@ -4,7 +4,7 @@
 
 using namespace engine3d;
 
-BoundingSphere::BoundingSphere(const Vector& rPos, double radius) : 
+BoundingSphere::BoundingSphere(const Vector& rPos, float radius) :
     mPosition(rPos),
     mTransformedPosition(rPos)
 {

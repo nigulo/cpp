@@ -176,9 +176,9 @@ void SceneLoader::LoadCoords(XmlParser::XmlElement& rElement, Object* pObject) {
     Debug("SceneLoader::Load 9");
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
     Debug("SceneLoader::Load 10 " + to_string(data.size()));
-    double x = stod(data[0]);
-    double y = stod(data[1]);
-    double z = stod(data[2]);
+    float x = stof(data[0]);
+    float y = stof(data[1]);
+    float z = stof(data[2]);
     Debug(string("Vertex x: ") + to_string(x));
     Debug(string("Vertex y: ") + to_string(y));
     Debug(string("Vertex z: ") + to_string(z));
@@ -202,8 +202,8 @@ void SceneLoader::LoadCoords(XmlParser::XmlElement& rElement, Object* pObject) {
 void SceneLoader::LoadTexCoords(XmlParser::XmlElement& rElement, Vertex* pVertex) {
     Debug("SceneLoader::LoadTexCoords 1");
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
-    double s = stod(data[0]);
-    double t = stod(data[1]);
+    float s = stof(data[0]);
+    float t = stof(data[1]);
     Debug(string("Vertex s: ") + to_string(s));
     Debug(string("Vertex t: ") + to_string(t));
     pVertex->SetTexCoords(s, t);
@@ -228,10 +228,10 @@ Shape* SceneLoader::LoadUseShape(XmlParser::XmlElement& rElement) {
 void SceneLoader::LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatial) {
     Debug(string("Rotation: ") + rElement.GetInnerText());
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
-    double x = stod(data[0]);
-    double y = stod(data[1]);
-    double z = stod(data[2]);
-    double a = stod(data[3]);
+    float x = stof(data[0]);
+    float y = stof(data[1]);
+    float z = stof(data[2]);
+    float a = stof(data[3]);
     Debug(string("RotVector x: ") + to_string(x));
     Debug(string("RotVector y: ") + to_string(y));
     Debug(string("RotVector z: ") + to_string(z));
@@ -245,9 +245,9 @@ void SceneLoader::LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatia
 void SceneLoader::LoadTranslation(XmlParser::XmlElement& rElement, Spatial* pSpatial) {
     Debug(string("Translation: ") + rElement.GetInnerText());
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
-    double x = stod(data[0]);
-    double y = stod(data[1]);
-    double z = stod(data[2]);
+    float x = stof(data[0]);
+    float y = stof(data[1]);
+    float z = stof(data[2]);
     Debug(string("Translation x: ") + to_string(x));
     Debug(string("Translation y: ") + to_string(y));
     Debug(string("Translation z: ") + to_string(z));
@@ -265,18 +265,18 @@ Vector SceneLoader::LoadVector(XmlParser::XmlElement& rElement) {
     const string sy = rElement.GetAttribute("y");
     Object::Dbg(string("Finding property z"));
     const string sz = rElement.GetAttribute("z");
-    double x = 0;
-    double y = 0;
-    double z = 0;
+    float x = 0;
+    float y = 0;
+    float z = 0;
     Object::Dbg(string("Finding property done"));
     if (sx.length() > 0) {
-        x = stod(sx);
+        x = stof(sx);
     }
     if (sy.length() > 0) {
-        y = stod(sy);
+        y = stof(sy);
     }
     if (sz.length() > 0) {
-        z = stod(sz);
+        z = stof(sz);
     }
     return Vector(x, y, z);
 }
@@ -307,10 +307,10 @@ BoundingVolume* SceneLoader::LoadBound(XmlParser::XmlElement& rElement, Node* pN
         p_bound = new BoundingPolygon();
     }
     else if (type == "sphere") {
-        double x = stod(rElement.GetAttribute("x"));
-        double y = stod(rElement.GetAttribute("y"));
-        double z = stod(rElement.GetAttribute("z"));
-        double r = stod(rElement.GetAttribute("r"));
+        float x = stof(rElement.GetAttribute("x"));
+        float y = stof(rElement.GetAttribute("y"));
+        float z = stof(rElement.GetAttribute("z"));
+        float r = stof(rElement.GetAttribute("r"));
         p_bound = new BoundingSphere(Vector(x, y, z), r);
     }
     Debug(string("Creating bound for node"));
