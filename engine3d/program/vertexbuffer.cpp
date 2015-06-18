@@ -106,6 +106,7 @@ void VertexBuffer::SetData(const vector<Vertex*>& rVertices) {
             	log = log + " " + to_string(vertex_coords[j][mDim + k]);
         	}
         }
+    	j++;
 	}
 	base::Object::Dbg(log);
 	//std::cout << "glVertexBuffer vertex_coords: " << (void*)&vertex_coords << " " << (void*)vertex_coords << std::endl;
