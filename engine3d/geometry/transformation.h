@@ -28,6 +28,7 @@ class Transformation
 		~Transformation();
 
 		void SetTranslation(const Vector& shift);
+		void SetTranslation(const Transformation& rTranslation);
 
 		/**
 		 * Rotates around the given axes

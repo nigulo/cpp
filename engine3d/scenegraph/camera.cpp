@@ -21,11 +21,11 @@ Camera::~Camera()
 {
 }
 
-void Camera::Render()
+void Camera::Look()
 {
-	Debug(string("Camera::Render eye ") + mEye.ToString());
-	Debug(string("Camera::Render center ") + mCenter.ToString());
-	Debug(string("Camera::Render up ") + mUp.ToString());
+	Debug(string("Camera::Look eye ") + mEye.ToString());
+	Debug(string("Camera::Look center ") + mCenter.ToString());
+	Debug(string("Camera::Look up ") + mUp.ToString());
 	mpProjection->Project();
 	string log = "glModel view matrix: ";
 	for (int i = 0; i < mMatrix.GetNumRows() * mMatrix.GetNumColumns(); i++) {
@@ -172,14 +172,19 @@ void Camera::Update() {
 	Vector sNorm = s;
 	sNorm.Normalize();
 	Vector u = sNorm.CrossProduct(f);
+	mMatrix.Set(0, 0, -s[0]);  mMatrix.Set(0, 1, -s[1]);  mMatrix.Set(0, 2, -s[2]);  mMatrix.Set(0, 3, s.DotProduct(mEye));
+	mMatrix.Set(1, 0, u[0]);  mMatrix.Set(1, 1, u[1]);  mMatrix.Set(1, 2, u[2]);  mMatrix.Set(1, 3, -u.DotProduct(mEye));
+	mMatrix.Set(2, 0, f[0]); mMatrix.Set(2, 1, f[1]); mMatrix.Set(2, 2, f[2]); mMatrix.Set(2, 3, -f.DotProduct(mEye));
+	mMatrix.Set(3, 0, 0);     mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);     mMatrix.Set(3, 3, 1);
+
 	//mMatrix.Set(0, 0, s[0]);  mMatrix.Set(0, 1, s[1]);  mMatrix.Set(0, 2, s[2]);  mMatrix.Set(0, 3, -s.DotProduct(mEye));
 	//mMatrix.Set(1, 0, u[0]);  mMatrix.Set(1, 1, u[1]);  mMatrix.Set(1, 2, u[2]);  mMatrix.Set(1, 3, -u.DotProduct(mEye));
 	//mMatrix.Set(2, 0, -f[0]); mMatrix.Set(2, 1, -f[1]); mMatrix.Set(2, 2, -f[2]); mMatrix.Set(2, 3, f.DotProduct(mEye));
 	//mMatrix.Set(3, 0, 0);     mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);     mMatrix.Set(3, 3, 1);
 
-	mMatrix.Set(0, 0, 1);  mMatrix.Set(0, 1, 0);  mMatrix.Set(0, 2, 0);  mMatrix.Set(0, 3, 0);
-	mMatrix.Set(1, 0, 0);  mMatrix.Set(1, 1, 1);  mMatrix.Set(1, 2, 0);  mMatrix.Set(1, 3, 0);
-	mMatrix.Set(2, 0, 0);  mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, 1); mMatrix.Set(2, 3, 0);
-	mMatrix.Set(3, 0, 0);  mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);     mMatrix.Set(3, 3, 1);
+	//mMatrix.Set(0, 0, 1);  mMatrix.Set(0, 1, 0);  mMatrix.Set(0, 2, 0);  mMatrix.Set(0, 3, 0);
+	//mMatrix.Set(1, 0, 0);  mMatrix.Set(1, 1, 1);  mMatrix.Set(1, 2, 0);  mMatrix.Set(1, 3, 0);
+	//mMatrix.Set(2, 0, 0);  mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, 1); mMatrix.Set(2, 3, 0);
+	//mMatrix.Set(3, 0, 0);  mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);     mMatrix.Set(3, 3, 1);
     mChanged = true;
 }

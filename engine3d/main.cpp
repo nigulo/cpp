@@ -166,7 +166,7 @@ void init() {
     Object::Dbg("main 3");
 
     pMouseController = new MouseController(*pScene);
-    //pMouseController->AddTarget(&pScene->GetCamera());
+    pMouseController->AddTarget(&pScene->GetCamera());
     
     Object::Dbg("main 4");
     /*

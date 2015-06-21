@@ -33,7 +33,7 @@ void Scene::SetCamera(Camera* pCamera)
 {
     mpCamera = pCamera;
     if (mpNode) {
-        //mpNode->AddChild(mpCamera);
+        mpNode->AddChild(mpCamera);
     }
 }
 
@@ -80,7 +80,7 @@ void Scene::Render()
         mpNode->CheckCollisions();
         Debug(string("Node::CheckCollisions took ") + to_string((GetMillis() - millis)));
         Debug("Scene::Render 3");
-        mpCamera->Render();
+        mpCamera->Look();
         mpNode->Render();
         Debug(string("Scene::Render took ") + to_string((GetMillis() - millis)));
     }

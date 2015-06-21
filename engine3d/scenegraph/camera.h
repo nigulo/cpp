@@ -19,7 +19,8 @@ class Camera : public Node
 		
 		virtual ~Camera();
 		
-		virtual void Render();
+		virtual void Render() {}
+		void Look();
 		
 		/**
 		 * @return the eye position

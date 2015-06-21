@@ -78,6 +78,14 @@ void Transformation::SetTranslation(const Vector& shift)
     mMatrix.Set(2, 3, shift[2]);
 }
 
+void Transformation::SetTranslation(const Transformation& rTranslation)
+{
+    Matrix m = Matrix::GetUnit(4);
+    mMatrix.Set(0, 3, rTranslation.GetMatrix().Get(0, 3));
+    mMatrix.Set(1, 3, rTranslation.GetMatrix().Get(1, 3));
+    mMatrix.Set(2, 3, rTranslation.GetMatrix().Get(2, 3));
+}
+
 void Transformation::SetMatrix(const Matrix& m) {
     mMatrix = m;
 }
