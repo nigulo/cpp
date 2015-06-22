@@ -64,9 +64,6 @@ void Scene::Render()
     Debug("Scene::Render 01");
     Debug("Scene::Render 011");
     if (mpNode && (mpNode->IsChanged() || mpCamera->IsChanged())) {
-    	if (mpNode->IsChanged()) {
-    		mpNode->Update();
-    	}
         Debug("Scene::Render 0111");
         mTime += mTimeChange;
         long millis = GetMillis();
@@ -77,8 +74,12 @@ void Scene::Render()
         Debug(string("glUseProgram(") + to_string(mpProgram->GetId()) + ")");
 
         Debug("Scene::Render 2");
+		mpNode->Init();
         mpNode->CheckCollisions();
         Debug(string("Node::CheckCollisions took ") + to_string((GetMillis() - millis)));
+    	if (mpNode->IsChanged()) {
+    		mpNode->Update();
+    	}
         Debug("Scene::Render 3");
         mpCamera->Look();
         mpNode->Render();

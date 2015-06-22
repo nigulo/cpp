@@ -104,8 +104,16 @@ void Mesh::Update() {
 	if (!mpElementBuffer) {
 		mpElementBuffer.reset(new ElementBuffer(mMode));
 	}
+	UpdateVertices();
 	mpVertexBuffer->SetData(mVertices);
 	mpElementBuffer->SetData(mIndices);
+}
+
+void Mesh::UpdateVertices() {
+	Transformation wt = GetWorldTransformation();
+	for (auto&& p_vertex : mVertices) {
+		p_vertex->SetCoords(wt.Transform(p_vertex->GetCoords()));
+	}
 }
 
 void Mesh::Render() {

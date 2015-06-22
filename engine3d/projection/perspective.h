@@ -37,7 +37,10 @@ public:
     virtual const Plane GetBottomPlane(const Camera& r_camera) const;
     virtual const Plane GetLeftPlane(const Camera& r_camera) const;
     virtual const Plane GetRightPlane(const Camera& r_camera) const;
+    virtual void Update(int width, int height);
 
+private:
+    void Update();
 private:
 	/**
 	 * View angle in y-direction in degrees

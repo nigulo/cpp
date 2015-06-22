@@ -279,12 +279,10 @@ Vector Vector::GetProjection(const Vector& axis) const {
 }
 
 string Vector::ToString() const {
-    string s;
-    for (int i = 0; i < mDim; i++) {
-        if (i != 0) {
-            s = s + ",";
-        }
-        s = s + to_string(mpCoords[i]);
-    }
-    return s;
+	string ret_val = "[";
+	for (int i = 0; i < mDim; i++) {
+		ret_val += (i > 0 ? " " : "") + to_string(mpCoords[i]);
+	}
+	ret_val += "]";
+	return ret_val;
 }

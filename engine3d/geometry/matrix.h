@@ -40,6 +40,19 @@ class Matrix
 		int GetNumColumns() const {
 			return numColumns;
 		}
+
+		string ToString() const {
+			string ret_val = "[";
+			for (int i = 0; i < numRows; i++) {
+				ret_val += string((i > 0 ? " " : "")) + "[";
+				for (int j = 0; j < numColumns; j++) {
+					ret_val += (j > 0 ? " " : "") + to_string(Get(i, j));
+				}
+				ret_val += "]";
+			}
+			ret_val += "]";
+			return ret_val;
+		}
 	protected:
         int numRows;
         int numColumns;

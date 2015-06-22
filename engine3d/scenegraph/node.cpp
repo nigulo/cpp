@@ -7,14 +7,6 @@
 
 using namespace engine3d;
 
-Node::Node() :
-    mpParent(nullptr),
-    mpScene(nullptr),
-    mpBound(nullptr), // no bounding volume by default
-    mpCollisionBound(nullptr) // no collision bound by default
-{
-}
-
 Node::Node(const string& name) :
     Spatial(name),
     mpParent(nullptr),
@@ -29,8 +21,8 @@ void Node::Copy(const Node& n)
 
     Spatial::Copy(n);
     
-    for (auto i = n.mChildren.begin(); i != n.mChildren.end(); i++) {
-        AddChild((*i)->Clone());
+    for (auto p_child : n.mChildren) {
+        AddChild(p_child->Clone());
     }
 
     if (n.mpBound) {
@@ -53,28 +45,28 @@ Node* Node::Clone() const
 
 Node::~Node()
 {
-	for (int i = 0; i < mChildren.size(); i++) {
+	for (unsigned i = 0; i < mChildren.size(); i++) {
 		assert(mChildren[i]);
         delete mChildren[i];
     }
     mChildren.clear();
 }
 
-bool Node::CheckCollisions(Node& rNode1, Node& rNode2) {
+bool Node::CheckCollisions(const Node& rNode1, const Node& rNode2) {
     if (!rNode1.mpCollisionBound) {
         return false;
     }
     if (rNode2.mpCollisionBound && rNode1.mpCollisionBound->Collides(*(rNode2.mpCollisionBound))) {
         return true;
     }
-    for (auto j = rNode2.mChildren.begin(); j != rNode2.mChildren.end(); j++) {
-        if ((*j) == &rNode1) {
+    for (auto&& p_node2_child : rNode2.mChildren) {
+        if (&rNode1 == p_node2_child) {
             continue;
         }
-        if ((*j)->mpCollisionBound && rNode1.mpCollisionBound->Collides(*(*j)->mpCollisionBound)) {
+        if (p_node2_child->mpCollisionBound && rNode1.mpCollisionBound->Collides(*p_node2_child->mpCollisionBound)) {
             return true;
         }
-        if (CheckCollisions(rNode1, **j)) {
+        if (CheckCollisions(rNode1, *p_node2_child)) {
             return true;
         }
     }
@@ -87,28 +79,27 @@ void Node::CheckCollisions()
     long millis = GetMillis();
     Debug("Node::CheckCollisions 1");
     if (mpCollisionBound) {
-        mpCollisionBound->SetTransformation(GetNewWorldTransformation());
+        mpCollisionBound->SetTransformation(GetWorldTransformation());
     }
     Debug("Node::CheckCollisions 5");
-    for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
+    for (auto&& p_child : mChildren) {
         Debug("Node::CheckCollisions 6");
-        (*i)->CheckCollisions();
+        p_child->CheckCollisions();
         Debug("Node::CheckCollisions 7");
     }
-    for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
+    for (auto&& p_child : mChildren) {
         Debug("Node::CheckCollisions 8");
         bool collides = false;
-        Node* p_child = *i;
         Debug("Node::CheckCollisions 9");
-        for (auto j = mChildren.begin(); j != mChildren.end(); j++) {
+        for (auto&& p_other_child : mChildren) {
             Debug("Node::CheckCollisions 10");
-            if ((*j) == p_child) {
+            if (p_child == p_other_child) {
                 Debug("Node::CheckCollisions 11");
                 continue;
             }
             Debug("Node::CheckCollisions 12");
             //if (p_child->mpCollisionBound && (*j)->mpCollisionBound && p_child->mpCollisionBound->Collides(*(*j)->mpCollisionBound)) {
-            if (CheckCollisions(*p_child, **j)) {
+            if (CheckCollisions(*p_child, *p_other_child)) {
                 Debug("Node::CheckCollisions 13");
                 collides = true;
                 break;
@@ -127,10 +118,23 @@ void Node::CheckCollisions()
     }
 }
 
+void Node::Init() {
+    if (IsChanged()) {
+    	Spatial::SetWorldTransformation(mpParent ? mpParent->GetWorldTransformation() * GetTransformation() : GetTransformation());
+    }
+	for (auto&& p_child : mChildren) {
+        if (p_child->IsChanged()) {
+			p_child->Init();
+        }
+	}
+}
+
 void Node::Update() {
-	for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
+	for (auto&& p_child : mChildren) {
         Debug("Updating child");
-		(*i)->Update();
+        if (p_child->IsChanged()) {
+        	p_child->Update();
+        }
 	}
 }
 
@@ -145,16 +149,12 @@ void Node::Render()
     }
     else {
 		Debug("transforming");
-		//mTransformation.Transform();
-		//if (mChanged) {
-		//	Update();
-		//}
-		for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
+		for (auto&& p_child : mChildren) {
 	        Debug("Rendering child");
-			(*i)->Render();
+			p_child->Render();
 		}
     }
-    mChanged = false;
+    Spatial::Reset();
 }
 
 void Node::SetScene(Scene* pScene)
@@ -217,26 +217,19 @@ void Node::RemoveChild(int i)
 
 bool Node::IsChanged()
 {
-    for (auto i = mChildren.begin(); i != mChildren.end(); i++) {
-        if ((*i)->IsChanged()) {
+	if (Spatial::IsChanged()) {
+		return true;
+	}
+    for (auto&& p_child : mChildren) {
+        if (p_child->IsChanged()) {
             return true;
         }
     }
-    return Spatial::IsChanged();
+    return false;
 }
 
 
 bool Node::IsLeaf() const
 {
     return mChildren.size() == 0;
-}
-
-Transformation Node::GetWorldTransformation() const {
-	// TODO:
-	return Transformation();
-}
-
-Transformation Node::GetNewWorldTransformation() const {
-	// TODO:
-	return Transformation();
 }

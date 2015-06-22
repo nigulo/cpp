@@ -24,6 +24,9 @@ public:
     virtual const Plane GetLeftPlane(const Camera& r_camera) const;
     virtual const Plane GetRightPlane(const Camera& r_camera) const;
 
+    virtual void Update(int width, int height);
+private:
+    void Update();
 private:
     float mLeft;
     float mRight;

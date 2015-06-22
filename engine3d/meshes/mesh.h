@@ -44,6 +44,7 @@ class Mesh : public Shape
 		virtual void GenTexCoords();
 		void SetTexCoords(vector<Vector*>& texCoords);
 	protected:
+		void UpdateVertices();
 	protected:
 		int mMode;
 		unique_ptr<VertexBuffer> mpVertexBuffer;

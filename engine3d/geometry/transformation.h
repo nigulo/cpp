@@ -73,6 +73,11 @@ class Transformation
 		 **/
 		Vector Rotate(const Vector& v) const;
 		
+		string ToString() const {
+			return "T" + mMatrix.ToString();
+		}
+
+
 	private:
         
         /**

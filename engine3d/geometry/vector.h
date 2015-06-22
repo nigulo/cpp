@@ -82,6 +82,7 @@ class Vector
 		float* GetCoords() {
 			return mpCoords;
 		}
+
 	protected:
         int mDim;
         float* mpCoords;

@@ -159,9 +159,9 @@ void Camera::Transform()
 	Debug("Camera.Transform");
     Spatial::Transform();
     // Re-calculate eye, center and up vectors
-    mEye = mTransformation.Transform(Vector(0, 0, 0));
-    mCenter = mTransformation.Transform(Vector(0, 0, 1));
-    mUp = (mTransformation.Rotate(Vector(0, 1, 0))).Normalize();
+    mEye = GetTransformation().Transform(Vector(0, 0, 0));
+    mCenter = GetTransformation().Transform(Vector(0, 0, 1));
+    mUp = (GetTransformation().Rotate(Vector(0, 1, 0))).Normalize();
     Update();
 }
 
@@ -186,5 +186,4 @@ void Camera::Update() {
 	//mMatrix.Set(1, 0, 0);  mMatrix.Set(1, 1, 1);  mMatrix.Set(1, 2, 0);  mMatrix.Set(1, 3, 0);
 	//mMatrix.Set(2, 0, 0);  mMatrix.Set(2, 1, 0); mMatrix.Set(2, 2, 1); mMatrix.Set(2, 3, 0);
 	//mMatrix.Set(3, 0, 0);  mMatrix.Set(3, 1, 0);     mMatrix.Set(3, 2, 0);     mMatrix.Set(3, 3, 1);
-    mChanged = true;
 }

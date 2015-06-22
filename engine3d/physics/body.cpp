@@ -26,7 +26,7 @@ void Body::SetForce(const Vector& rForce)
 void Body::Move(double dt) {
     mVelocity += mForce / mMass * dt;
     Vector dr = mVelocity * dt;
-   	mTransformation = Transformation(dr) * mTransformation;
+   	SetTransformation(Transformation(dr) * GetTransformation());
 }
 
 void Body::Render() {

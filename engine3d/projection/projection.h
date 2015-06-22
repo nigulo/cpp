@@ -49,6 +49,11 @@ public:
     virtual const Plane GetBottomPlane(const Camera& r_camera) const = 0;
     virtual const Plane GetLeftPlane(const Camera& r_camera) const = 0;
     virtual const Plane GetRightPlane(const Camera& r_camera) const = 0;
+    virtual void Update(int width, int height) = 0;
+
+    static float GetFOVRatio() {
+    	return 0.75f;
+    }
 
 protected:
 

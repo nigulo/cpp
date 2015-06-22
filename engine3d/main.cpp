@@ -33,7 +33,8 @@ using namespace std;
 using namespace engine3d;
 using namespace base;
 
-MouseController* pMouseController;
+Camera* pCamera = nullptr;
+MouseController* pMouseController = nullptr;
 double theta = 0;
 Scene* pScene = nullptr;
 bool doubleBuffer = true;
@@ -108,8 +109,8 @@ void init() {
     SceneLoader sl;
     pScene = sl.Load();
     Perspective* p_projection = new Perspective(pScene->GetProgram());
-    Camera* p_camera = new Camera(pScene->GetProgram(), p_projection);
-    pScene->SetCamera(p_camera);
+    pCamera = new Camera(pScene->GetProgram(), p_projection);
+    pScene->SetCamera(pCamera);
     //Object::Dbg("main -2");
     //Object::Dbg("main -1");
 
@@ -221,10 +222,7 @@ void update() {
 }
 
 static void reshape(int w, int h) {
-    //g_resources.window_size[0] = w;
-    //g_resources.window_size[1] = h;
-    //update_p_matrix(g_resources.p_matrix, w, h);
-    //projection.Update(w, h);
+	pCamera->GetProjection().Update(w, h);
     glViewport(0, 0, w, h);
 }
 
@@ -232,7 +230,7 @@ static void reshape(int w, int h) {
 int main (int argc, char* argv[]) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | (doubleBuffer ? GLUT_DOUBLE : GLUT_SINGLE));
-    glutInitWindowSize(640, 480);
+    glutInitWindowSize(64, 48);
     glutInitWindowPosition(100,100);
     glutCreateWindow("OpenGL - First window demo");
     glutDisplayFunc(renderFunc);

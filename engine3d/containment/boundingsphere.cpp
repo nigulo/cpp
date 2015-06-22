@@ -62,7 +62,7 @@ bool BoundingSphere::Collides(const BoundingVolume& rOtherBound) const
 {
     Debug("Sphere.Collide 1");
     const Vector& old_pos = mTransformedPosition;//mTransformation.Transform(mPosition);
-    Vector new_pos = mNewTransformation.Transform(mPosition);
+    Vector new_pos = GetTransformation().Transform(mPosition);
     Debug(string("Sphere old pos: ") + old_pos.ToString());
     Debug(string("Sphere new pos: ") + new_pos.ToString());
     Vector v = (new_pos - old_pos).Normalize() * mRadius;
@@ -152,5 +152,5 @@ bool BoundingSphere::Collides(const BoundingVolume& rOtherBound) const
 void BoundingSphere::Transform()
 {
     Spatial::Transform();
-    mTransformedPosition = mTransformation.Transform(mPosition);
+    mTransformedPosition = GetOldTransformation().Transform(mPosition);
 }

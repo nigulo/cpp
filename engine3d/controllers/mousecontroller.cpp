@@ -9,10 +9,10 @@ using namespace engine3d;
 
 MouseController::MouseController(const Scene& rScene) : 
                                         TransformationController(rScene, true),
-                                        x(-1),
-                                        y(-1),
                                         mpButton(nullptr),
-										mpModifier(nullptr)
+										mpModifier(nullptr),
+                                        x(-1),
+                                        y(-1)
 {
 }
 

@@ -84,7 +84,7 @@ class Camera : public Node
         void Transform();
         void Update();
         
-        const Projection& GetProjection() const {
+        Projection& GetProjection() {
         	return *mpProjection;
         }
 

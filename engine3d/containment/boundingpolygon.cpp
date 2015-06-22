@@ -154,9 +154,9 @@ bool BoundingPolygon::Intersects(const Line& rLine) const
 bool BoundingPolygon::Collides(const BoundingVolume& rOtherBound) const 
 {
     Vector center;
-    for (int i = 0; i < mVertices.size(); i++) {
+    for (unsigned i = 0; i < mVertices.size(); i++) {
         const Vector& old_pos = mTransformedVertices[i];//mTransformation.Transform(mVertices[i]);
-        Vector new_pos = mNewTransformation.Transform(mVertices[i]);
+        Vector new_pos = GetTransformation().Transform(mVertices[i]);
         //Debug(String("Polygon old pos: ") + old_pos.ToString());
         //Debug(String("Polygon new pos: ") + new_pos.ToString());
         Segment movement_line(old_pos, new_pos);
@@ -168,8 +168,8 @@ bool BoundingPolygon::Collides(const BoundingVolume& rOtherBound) const
     }
     if (mVertices.size() > 1) {
         center /= mVertices.size();
-        Vector old_center = mTransformation.Transform(center);
-        Vector new_center = mNewTransformation.Transform(center);
+        Vector old_center = GetOldTransformation().Transform(center);
+        Vector new_center = GetTransformation().Transform(center);
         Segment movement_line(old_center, new_center);
         if (rOtherBound.Intersects(movement_line)) {
             // movement line of the center of polygon intersects
@@ -183,7 +183,7 @@ void BoundingPolygon::Transform()
 {
     Spatial::Transform();
 	for (int i = 0; i < mVertices.size(); i++) {
-        mTransformedVertices[i] = mTransformation.Transform(mVertices[i]);
+        mTransformedVertices[i] = GetOldTransformation().Transform(mVertices[i]);
     }
     
 }

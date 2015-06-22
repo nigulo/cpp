@@ -19,8 +19,7 @@ class Scene;
 class Node : public Spatial
 {
 	public:
-		Node();
-		Node(const string& name);
+		Node(const string& name = "");
 		virtual Node* Clone() const;
 		virtual ~Node();
 		/**
@@ -29,6 +28,9 @@ class Node : public Spatial
 		 */
 		void SetScene(Scene* parent);
 		
+		// Pre-collision/culling check (updating world transformation)
+		virtual void Init();
+		// Post-transformation stuff (updating vertex buffers etc.)
 		virtual void Update();
 		virtual void Render();
 		Scene& GetScene() const;
@@ -53,15 +55,15 @@ class Node : public Spatial
         void SetCollisionBound(BoundingVolume* pCollisionBound) {
             mpCollisionBound = pCollisionBound;
         }
-        
+
 	protected:
         void Copy(const Node& node);
-        static bool CheckCollisions(Node& rNode1, Node& rNode2);
+        static bool CheckCollisions(const Node& rNode1, const Node& rNode2);
 
         // gets current world transformation for given node
-        Transformation GetWorldTransformation() const;
+        //Transformation GetWorldTransformation() const;
         // gets new world transformation for given node
-        Transformation GetNewWorldTransformation() const;
+        //Transformation GetNewWorldTransformation() const;
 
 	protected:
         /**
