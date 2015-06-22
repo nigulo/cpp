@@ -114,6 +114,10 @@ void Node::CheckCollisions()
             }
         }
         else {
+            p_child->Revert();
+            if (p_child->mpCollisionBound) {
+                p_child->mpCollisionBound->Revert();
+            }
         }
     }
 }
