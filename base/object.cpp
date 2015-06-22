@@ -17,10 +17,6 @@ void Object::Flush()
 	msOut.flush();
 }
 
-Object::Object() : mName("")
-{
-}
-
 Object::Object(const string& rName) : mName(rName)
 {
 }

@@ -13,20 +13,15 @@ namespace base {
     class Object
     {
     	public:
-            /**
-    		 * Default constructor. Creates an object with an empty name.
-    		 **/
-    		Object();
-    		
-    		/**
+			/**
+			 * Constructs an object with the given name
+			 **/
+			Object(const string& rName = "");
+
+			/**
     		 * Copy constructor
     		 **/
     		Object(const Object& rObj);
-    		
-    		/**
-    		 * Constructs an object with the given name
-    		 **/
-    		Object(const string& rName);
 
             /**
              * Class destructor
