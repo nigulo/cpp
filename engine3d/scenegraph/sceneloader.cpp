@@ -24,6 +24,7 @@ SceneLoader::SceneLoader(
 	mProgramParser(rProgramFileName),
     mSceneParser(rSceneFileName),
     mObjParser(rObjFileName),
+	mpScene(nullptr),
     mShapes("Predefined shapes")
 {
 }

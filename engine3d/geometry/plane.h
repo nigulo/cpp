@@ -59,6 +59,9 @@ class Plane
 		 * @return the distance vector from the plane to the point
 		 **/
 		Vector GetDistanceVector(const Vector& rPoint) const;
+
+		string ToString() const;
+
 	protected:
         Vector mPoint;
         Vector mNormal;

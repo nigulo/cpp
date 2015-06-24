@@ -100,10 +100,6 @@ void init() {
 		exit(1);
 	}
     Object::Dbg("main -4");
-    //BoundingPolygon* p_bp = new BoundingPolygon();
-    //p_bp->AddVertex(Vector(0, 0, 0.5));
-    //p_bp->AddVertex(Vector(0, 0, 0));
-    //camera.SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
 
 
     SceneLoader sl;
@@ -111,8 +107,10 @@ void init() {
     Perspective* p_projection = new Perspective(pScene->GetProgram());
     pCamera = new Camera(pScene->GetProgram(), p_projection);
     pScene->SetCamera(pCamera);
-    //Object::Dbg("main -2");
-    //Object::Dbg("main -1");
+    BoundingPolygon* p_bp = new BoundingPolygon();
+    p_bp->AddVertex(Vector(0, 0, 0.5));
+    p_bp->AddVertex(Vector(0, 0, 0));
+    pCamera->SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
 
     //string textureFile("ConcreteWall.png");
     //Texture* p_tex = new Texture(textureFile);

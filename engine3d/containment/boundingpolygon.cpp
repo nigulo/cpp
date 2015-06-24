@@ -64,9 +64,9 @@ int BoundingPolygon::WhichSide(const Plane& rPlane) const
 bool BoundingPolygon::Intersects(const Line& rLine) const
 {
     //Debug("polygon intersect 1");
-    for (int i = 0; i < mVertices.size(); i++) {
-        for (int j = i + 1; j < mVertices.size(); j++) {
-            for (int k = j + 1; k < mVertices.size(); k++) {
+    for (unsigned i = 0; i < mVertices.size(); i++) {
+        for (unsigned j = i + 1; j < mVertices.size(); j++) {
+            for (unsigned k = j + 1; k < mVertices.size(); k++) {
         
                 //Debug("polygon intersect 2");
                 const Vector& r_point1 = mTransformedVertices[i];//Spatial::mTransformation.Transform(mVertices[i]);
@@ -92,6 +92,7 @@ bool BoundingPolygon::Intersects(const Line& rLine) const
                     }
                 }
                 else {
+                    Debug(string("polygon intersect 3: ") + rLine.ToString() + " "  + p.ToString());
                     // line intersects with plane
                     if (!rLine.IsSegment() || p.WhichSide(rLine.mPoint1) != p.WhichSide(rLine.mPoint2)) {
                         // line or segment intersects with plane
@@ -130,8 +131,8 @@ bool BoundingPolygon::Intersects(const Line& rLine) const
                         double dott2 = cross2.DotProduct(cross3);
                         double dott3 = cross3.DotProduct(cross1);
                         
-                        if (dott1 >= 0 && dott2 >= 0 && dott3 >= 0 ||
-                            dott1 < 0 && dott2 < 0 && dott3 < 0) {
+                        if ((dott1 >= 0 && dott2 >= 0 && dott3 >= 0) ||
+                            (dott1 < 0 && dott2 < 0 && dott3 < 0)) {
                                 // intersection point is inside the triangle
                                 return true;
                         }
@@ -171,6 +172,7 @@ bool BoundingPolygon::Collides(const BoundingVolume& rOtherBound) const
         Vector old_center = GetOldTransformation().Transform(center);
         Vector new_center = GetTransformation().Transform(center);
         Segment movement_line(old_center, new_center);
+        Debug(string("BoundingPolygon::Collides old_center=") + old_center.ToString() + ", new_center=" + new_center.ToString());
         if (rOtherBound.Intersects(movement_line)) {
             // movement line of the center of polygon intersects
             return true;
@@ -182,7 +184,7 @@ bool BoundingPolygon::Collides(const BoundingVolume& rOtherBound) const
 void BoundingPolygon::Transform() 
 {
     Spatial::Transform();
-	for (int i = 0; i < mVertices.size(); i++) {
+	for (unsigned i = 0; i < mVertices.size(); i++) {
         mTransformedVertices[i] = GetOldTransformation().Transform(mVertices[i]);
     }
     

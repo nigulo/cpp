@@ -78,9 +78,6 @@ void Node::CheckCollisions()
 {
     long millis = GetMillis();
     Debug("Node::CheckCollisions 1");
-    if (mpCollisionBound) {
-        mpCollisionBound->SetTransformation(GetWorldTransformation());
-    }
     Debug("Node::CheckCollisions 5");
     for (auto&& p_child : mChildren) {
         Debug("Node::CheckCollisions 6");
@@ -125,6 +122,9 @@ void Node::CheckCollisions()
 void Node::Init() {
     if (IsChanged()) {
     	Spatial::SetWorldTransformation(mpParent ? mpParent->GetWorldTransformation() * GetTransformation() : GetTransformation());
+    }
+    if (mpCollisionBound) {
+        mpCollisionBound->SetTransformation(GetWorldTransformation());
     }
 	for (auto&& p_child : mChildren) {
         if (p_child->IsChanged()) {

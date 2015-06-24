@@ -19,7 +19,10 @@ class Triangle
          * the direction point 1 -> point 2 -> point 3
 		 **/
 		Vector GetNormal() const;
-    private:
+
+		string ToString() const;
+
+	private:
         Vector v1;
         Vector v2;
         Vector v3;

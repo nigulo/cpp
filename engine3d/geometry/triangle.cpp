@@ -31,3 +31,8 @@ Vector Triangle::GetNormal() const
     Vector v13 = v3 - v1;
     return (v12.CrossProduct(v13)).Normalize();
 }
+
+string Triangle::ToString() const {
+	string ret_val = "Triangle " + v1.ToString() + ", " + v2.ToString() + ", " + v3.ToString();
+	return ret_val;
+}

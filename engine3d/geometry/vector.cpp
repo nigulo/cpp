@@ -246,7 +246,7 @@ Vector Vector::CrossProduct(const Vector& v) const
 	return Vector(vx, vy, vz);
 }
 
-// Returns the dimention of this vector
+// Returns the dimension of this vector
 int Vector::GetDim() const
 {
 	return mDim;

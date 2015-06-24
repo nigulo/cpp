@@ -62,3 +62,8 @@ Vector Plane::GetDistanceVector(const Vector& rPoint) const
 {
     return mNormal * (rPoint - mPoint).DotProduct(mNormal);
 }
+
+string Plane::ToString() const {
+	string ret_val = "Plane " + mPoint.ToString() + ", " + mNormal.ToString();
+	return ret_val;
+}
