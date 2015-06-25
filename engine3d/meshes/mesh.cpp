@@ -97,16 +97,20 @@ int Mesh::GetSize() const
 
 void Mesh::Update() {
 	Shape::Update();
-	Debug("Mesh::UpdateBuffers");
+	Debug("Mesh::Update 1");
 	if (!mpVertexBuffer) {
 		mpVertexBuffer.reset(new VertexBuffer(GetScene().GetProgram()));
 	}
 	if (!mpElementBuffer) {
 		mpElementBuffer.reset(new ElementBuffer(mMode));
 	}
+	Debug("Mesh::Update 2");
 	UpdateVertices();
+	Debug("Mesh::Update 3");
 	mpVertexBuffer->SetData(mVertices);
+	Debug("Mesh::Update 3.5");
 	mpElementBuffer->SetData(mIndices);
+	Debug("Mesh::Update 4");
 }
 
 void Mesh::UpdateVertices() {

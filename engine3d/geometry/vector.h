@@ -10,7 +10,7 @@ namespace engine3d {
 /**
  * Represents geometrical vector
  **/
-class Vector
+class Vector : public Object
 {
 	public:
 		explicit Vector(int dim = 3, bool zeroCoords = true);

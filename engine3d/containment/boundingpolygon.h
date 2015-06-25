@@ -26,7 +26,7 @@ namespace engine3d {
     		
     		~BoundingPolygon();
     		
-    		void AddVertex(const Vector& rVertex);
+    		Vector& AddVertex(const Vector& rVertex);
 
 		    int WhichSide(const Plane& rPlane) const;
 

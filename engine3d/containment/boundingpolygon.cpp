@@ -31,10 +31,11 @@ BoundingPolygon::~BoundingPolygon()
     //mVertices.Clear();
 }
 
-void BoundingPolygon::AddVertex(const Vector& rVertex) {
+Vector&  BoundingPolygon::AddVertex(const Vector& rVertex) {
     mVertices.push_back(rVertex);
     mTransformedVertices.push_back(rVertex);
-    Debug(string("vertex added to bound: ") + to_string(rVertex[0]) + ", " + to_string(rVertex[1]) + ", " + to_string(rVertex[2]));
+    //Debug(string("vertex added to bound: ") + to_string(rVertex[0]) + ", " + to_string(rVertex[1]) + ", " + to_string(rVertex[2]));
+    return mVertices.back();
 }
 
 int BoundingPolygon::WhichSide(const Plane& rPlane) const
@@ -64,9 +65,9 @@ int BoundingPolygon::WhichSide(const Plane& rPlane) const
 bool BoundingPolygon::Intersects(const Line& rLine) const
 {
     //Debug("polygon intersect 1");
-    for (unsigned i = 0; i < mVertices.size(); i++) {
-        for (unsigned j = i + 1; j < mVertices.size(); j++) {
-            for (unsigned k = j + 1; k < mVertices.size(); k++) {
+    for (unsigned i = 0; i < mTransformedVertices.size(); i++) {
+        for (unsigned j = i + 1; j < mTransformedVertices.size(); j++) {
+            for (unsigned k = j + 1; k < mTransformedVertices.size(); k++) {
         
                 //Debug("polygon intersect 2");
                 const Vector& r_point1 = mTransformedVertices[i];//Spatial::mTransformation.Transform(mVertices[i]);
@@ -186,6 +187,7 @@ void BoundingPolygon::Transform()
     Spatial::Transform();
 	for (unsigned i = 0; i < mVertices.size(); i++) {
         mTransformedVertices[i] = GetOldTransformation().Transform(mVertices[i]);
+        //Object::Dbg("BoundingPolygon::Transform " + to_string(i) + ": " + mTransformedVertices[i].ToString());
     }
     
 }

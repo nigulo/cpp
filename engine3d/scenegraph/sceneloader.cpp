@@ -282,12 +282,12 @@ Vector SceneLoader::LoadVector(XmlParser::XmlElement& rElement) {
     return Vector(x, y, z);
 }
 
-Vertex* SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject) {
+Object* SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject) {
 	Vector v = LoadVector(rElement);
     if (typeid(*pObject) == typeid(BoundingPolygon)) {
         Debug(string("vertex for boundingpolygon"));
         BoundingPolygon* p_bound = dynamic_cast<BoundingPolygon*>(pObject);
-        p_bound->AddVertex(v);
+        return &p_bound->AddVertex(v);
     }
     else {
         Mesh* p_mesh = dynamic_cast<Mesh*>(pObject);
@@ -296,7 +296,6 @@ Vertex* SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject
 			return &p_mesh->AddVertex(v);
         }
     }
-    return nullptr;
 }
 
 BoundingVolume* SceneLoader::LoadBound(XmlParser::XmlElement& rElement, Node* pNode) {
