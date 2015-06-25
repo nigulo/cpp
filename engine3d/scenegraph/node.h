@@ -47,6 +47,7 @@ class Node : public Spatial
 		bool IsLeaf() const;
         
         void CheckCollisions();
+        virtual void CollisionWith(const Node& rNode);
         
         void SetBound(BoundingVolume* pBound) {
             mpBound = pBound;

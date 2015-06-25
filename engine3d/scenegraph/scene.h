@@ -5,6 +5,8 @@
 #include "engine3d/program/program.h"
 #include "viewport.h"
 #include "engine3d/controllers/controller.h"
+#include "engine3d/physics/body.h"
+#include "engine3d/physics/field.h"
 #include <vector>
 
 using namespace std;
@@ -80,6 +82,9 @@ class Scene : public Object
          * Adds new controller to the scene
          **/
         void AddController(Controller* pController);
+
+        void AddBody(Body* pBody);
+        void AddField(Field* pField);
         
         void SetProgram(Program* pProgram) {
         	mpProgram = pProgram;
@@ -101,6 +106,11 @@ class Scene : public Object
          * Scene object controllers
          **/
         vector<Controller*> mControllers;
+
+        // Physics (later maybe needed to be moved to separate class)
+        vector<Body*> mBodies;
+        vector<Field*> mFields;
+
         /**
          * Current time in seconds
          **/

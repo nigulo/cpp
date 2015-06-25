@@ -67,6 +67,10 @@ namespace engine3d {
     			mChanged = false;
     		}
     		
+    		const Vector& GetPosition() const {
+    			return mPosition;
+    		}
+
     	protected:
     		/**
     		 * @return the new local transformation for this object.
@@ -107,6 +111,11 @@ namespace engine3d {
              * after the scene was rendered last time
              **/
             bool mChanged;
+
+            /**
+             * Position of point-like object with given transformation.
+             */
+            Vector mPosition;
             
     };
 }

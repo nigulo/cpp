@@ -51,21 +51,38 @@ void Scene::AddController(Controller* pController) {
     mControllers.push_back(pController);
 }
 
+void Scene::AddBody(Body* pBody) {
+    mBodies.push_back(pBody);
+}
+
+void Scene::AddField(Field* pField) {
+    mFields.push_back(pField);
+}
+
 void Scene::Render()
 {
     assert(mpNode);
     assert(mpCamera);
-    mTimeChange = ((double) GetMillis()) / 1000 - mTime;
+    double newTime = ((double) GetMillis()) / 1000;
+    mTimeChange = newTime - mTime;
     // Execute all controllers
     Debug("Scene::Render gl------------------------------------");
-    for (auto&& c : mControllers) {
-        c->Execute();
+    for (auto&& p_controller : mControllers) {
+    	p_controller->Execute();
+    }
+    for (auto&& p_body : mBodies) {
+    	Vector force;
+        for (auto&& p_field : mFields) {
+        	force += p_field->GetForce(*p_body);
+        }
+        p_body->SetForce(force);
+        p_body->Move(mTimeChange);
     }
     Debug("Scene::Render 01");
     Debug("Scene::Render 011");
     if (mpNode && (mpNode->IsChanged() || mpCamera->IsChanged())) {
         Debug("Scene::Render 0111");
-        mTime += mTimeChange;
+        mTime = newTime;
         long millis = GetMillis();
         Debug("Scene::Render 1");
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

@@ -86,7 +86,7 @@ void Node::CheckCollisions()
     }
     for (auto&& p_child : mChildren) {
         Debug("Node::CheckCollisions 8");
-        bool collides = false;
+        Node* p_collision_with = nullptr;
         Debug("Node::CheckCollisions 9");
         for (auto&& p_other_child : mChildren) {
             Debug("Node::CheckCollisions 10");
@@ -98,24 +98,28 @@ void Node::CheckCollisions()
             //if (p_child->mpCollisionBound && (*j)->mpCollisionBound && p_child->mpCollisionBound->Collides(*(*j)->mpCollisionBound)) {
             if (CheckCollisions(*p_child, *p_other_child)) {
                 Debug("Node::CheckCollisions 13");
-                collides = true;
+                p_collision_with = p_other_child; // Currently only binary collisions are supported
                 break;
             }
             Debug("Node::CheckCollisions 14");
         }
-        if (!collides) {
+        if (!p_collision_with) {
             Debug("Node::CheckCollisions 15");
             p_child->Transform();
             if (p_child->mpCollisionBound) {
                 p_child->mpCollisionBound->Transform();
             }
+        } else {
+            CollisionWith(*p_collision_with);
         }
-        else {
-            p_child->Revert();
-            if (p_child->mpCollisionBound) {
-                p_child->mpCollisionBound->Revert();
-            }
-        }
+    }
+}
+
+void Node::CollisionWith(const Node& rNode)
+{
+    Revert();
+    if (mpCollisionBound) {
+        mpCollisionBound->Revert();
     }
 }
 
@@ -197,7 +201,7 @@ Node& Node::GetChild(int i) const
 }
 
 /**
- * @return the child node with the given name or NULL
+ * @return the child node with the given name or nullptr
  * if no such child element exists
  **/
 Node* Node::GetChild(const string& name) const
