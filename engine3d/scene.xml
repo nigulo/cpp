@@ -5,6 +5,7 @@
 	<near>0.1</near>
 	<far>100</far>
 </projection>
+<controller name = "mousecontroller" type = "mouse"/>
 <node name = "room">
 	<camera projection = "projection">
 		<bound type = "polygon" usage = "collision">
@@ -15,6 +16,7 @@
 				<coords>0.0, 0.0, 0.0</coords>
 			</vertex>
 		</bound>
+		<usecontroller name = "mousecontroller"/>
 	</camera>
 	<useshape name = "tube">
 	</useshape>

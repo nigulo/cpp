@@ -83,6 +83,10 @@ class Scene : public Object
          **/
         void AddController(Controller* pController);
 
+        const vector<Controller*>& GetControllers() {
+        	return mControllers;
+        }
+
         void AddBody(Body* pBody);
         void AddField(Field* pField);
         

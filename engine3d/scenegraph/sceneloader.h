@@ -8,6 +8,7 @@
 #include "engine3d/program/texture.h"
 #include "engine3d/containment/boundingvolume.h"
 #include "engine3d/projection/projection.h"
+#include "engine3d/controllers/transformationcontroller.h"
 #include "utils/xmlparser.h"
 #include <map>
 #include <string>
@@ -44,6 +45,8 @@ namespace engine3d {
             Shape* LoadUseShape(XmlParser::XmlElement& rElement);
             void LoadProjection(XmlParser::XmlElement& rElement);
             Camera* LoadCamera(XmlParser::XmlElement& rElement);
+            void LoadController(XmlParser::XmlElement& rElement);
+            void LoadUseController(XmlParser::XmlElement& rElement, Spatial* pSpatial);
 
             Texture* GetTexture(const string& rName);
     	private:
@@ -53,6 +56,7 @@ namespace engine3d {
             Scene* mpScene;
             map<string, Texture*> mTextures;
             map<string, Projection*> mProjections;
+            map<string, TransformationController*> mControllers;
             Node mShapes;
     };
 }

@@ -34,7 +34,7 @@ using namespace engine3d;
 using namespace base;
 
 //Camera* pCamera = nullptr;
-MouseController* pMouseController = nullptr;
+//MouseController* pMouseController = nullptr;
 double theta = 0;
 Scene* pScene = nullptr;
 bool doubleBuffer = true;
@@ -59,14 +59,24 @@ void junk() {
 
 void motionFunc(int x, int y) {
     Object::Dbg("motionFunc 1");
-    pMouseController->OnMove(x, y);
+    for (auto&& p_controller : pScene->GetControllers()) {
+    	MouseController* p_mouse_controller = dynamic_cast<MouseController*>(p_controller);
+    	if (p_mouse_controller) {
+    		p_mouse_controller->OnMove(x, y);
+    	}
+    }
     glutPostRedisplay();
     Object::Dbg("motionFunc 2");
 }
 
 void mouseFunc(int button, int state, int x, int y) {
     Object::Dbg("mouseFunc 1");
-    pMouseController->OnButton(button, state, x, y);
+    for (auto&& p_controller : pScene->GetControllers()) {
+    	MouseController* p_mouse_controller = dynamic_cast<MouseController*>(p_controller);
+    	if (p_mouse_controller) {
+    		p_mouse_controller->OnButton(button, state, x, y);
+    	}
+    }
     glutPostRedisplay();
     Object::Dbg("mouseFunc 2");
 }
@@ -165,8 +175,8 @@ void init() {
 
     Object::Dbg("main 3");
 
-    pMouseController = new MouseController(*pScene);
-    pMouseController->AddTarget(&pScene->GetCamera());
+    //pMouseController = new MouseController(*pScene);
+    //pMouseController->AddTarget(&pScene->GetCamera());
     
     Object::Dbg("main 4");
     /*

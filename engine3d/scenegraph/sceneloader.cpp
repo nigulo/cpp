@@ -9,6 +9,8 @@
 #include "engine3d/projection/ortho.h"
 #include "engine3d/projection/perspective.h"
 #include "engine3d/scenegraph/camera.h"
+#include "engine3d/controllers/mousecontroller.h"
+#include "engine3d/controllers/keycontroller.h"
 
 #include <math.h>
 #include <typeinfo>
@@ -39,6 +41,8 @@
 #define CAMERA          "camera"
 #define BODY            "body"
 #define FIELD           "field"
+#define CONTROLLER		"controller"
+#define USECONTROLLER	"usecontroller"
 
 
 using namespace engine3d;
@@ -102,6 +106,12 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         LoadTranslation(rElement, p_spatial);
 	} else if (rElement.GetName() == PROJECTION) {
 		LoadProjection(rElement);
+	} else if (rElement.GetName() == CONTROLLER) {
+		LoadController(rElement);
+	} else if (rElement.GetName() == USECONTROLLER) {
+        Spatial* p_spatial = dynamic_cast<Spatial*>(pObject);
+        assert(p_spatial);
+		LoadUseController(rElement, p_spatial);
     } else if (rElement.GetName() == TEXTURE) {
         Debug(string("Creating new texutre: ") + rElement.GetAttribute("name") + ", " + rElement.GetAttribute("file"));
         try {
@@ -258,6 +268,17 @@ Shape* SceneLoader::LoadUseShape(XmlParser::XmlElement& rElement) {
     return p_shape_clone;
 }
 
+void SceneLoader::LoadUseController(XmlParser::XmlElement& rElement, Spatial* pSpatial) {
+	string controller = rElement.GetAttribute("name");
+    Debug(string("Using controller: ") + controller);
+	auto i = mControllers.find(controller);
+	if (i != mControllers.end()) {
+		i->second->AddTarget(pSpatial);
+	} else {
+		Debug(string("Controller <") + controller + "> not found for spatial");
+	}
+}
+
 void SceneLoader::LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatial) {
     Debug(string("Rotation: ") + rElement.GetInnerText());
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
@@ -406,4 +427,20 @@ Camera* SceneLoader::LoadCamera(XmlParser::XmlElement& rElement) {
 	}
     mpScene->SetCamera(p_camera);
     return p_camera;
+}
+
+void SceneLoader::LoadController(XmlParser::XmlElement& rElement) {
+	Debug(string("Creating new projection: ") + rElement.GetAttribute("name"));
+	TransformationController* p_controller = nullptr;
+	if (rElement.GetAttribute("type") == "key") {
+		p_controller = new KeyController(*mpScene);
+	} else if (rElement.GetAttribute("type") == "interpolation") {
+		//TODO
+	} else {
+		p_controller = new MouseController(*mpScene);
+	}
+	if (p_controller) {
+		mControllers.insert({rElement.GetAttribute("name"), p_controller});
+		mpScene->AddController(p_controller);
+	}
 }
