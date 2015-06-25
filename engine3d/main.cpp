@@ -33,7 +33,7 @@ using namespace std;
 using namespace engine3d;
 using namespace base;
 
-Camera* pCamera = nullptr;
+//Camera* pCamera = nullptr;
 MouseController* pMouseController = nullptr;
 double theta = 0;
 Scene* pScene = nullptr;
@@ -104,13 +104,14 @@ void init() {
 
     SceneLoader sl;
     pScene = sl.Load();
-    Perspective* p_projection = new Perspective(pScene->GetProgram());
-    pCamera = new Camera(pScene->GetProgram(), p_projection);
-    pScene->SetCamera(pCamera);
-    BoundingPolygon* p_bp = new BoundingPolygon();
-    p_bp->AddVertex(Vector(0, 0, 0.5));
-    p_bp->AddVertex(Vector(0, 0, 0));
-    pCamera->SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
+    Object::Dbg(pScene->GetCamera().GetProjection().ToString());
+    //Perspective* p_projection = new Perspective(pScene->GetProgram());
+    //pCamera = new Camera(pScene->GetProgram(), p_projection);
+    //pScene->SetCamera(pCamera);
+    //BoundingPolygon* p_bp = new BoundingPolygon();
+    //p_bp->AddVertex(Vector(0, 0, 0.5));
+    //p_bp->AddVertex(Vector(0, 0, 0));
+    //pCamera->SetCollisionBound(p_bp);//new BoundingSphere(Vector(0, 0, 0), 0.5));
 
     //string textureFile("ConcreteWall.png");
     //Texture* p_tex = new Texture(textureFile);
@@ -220,7 +221,7 @@ void update() {
 }
 
 static void reshape(int w, int h) {
-	pCamera->GetProjection().Update(w, h);
+	pScene->GetCamera().GetProjection().Update(w, h);
     glViewport(0, 0, w, h);
 }
 

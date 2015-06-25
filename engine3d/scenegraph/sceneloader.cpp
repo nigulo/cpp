@@ -6,6 +6,9 @@
 #include "engine3d/containment/boundingpolygon.h"
 #include "engine3d/containment/boundingsphere.h"
 #include "utils/utils.h"
+#include "engine3d/projection/ortho.h"
+#include "engine3d/projection/perspective.h"
+#include "engine3d/scenegraph/camera.h"
 
 #include <math.h>
 #include <typeinfo>
@@ -13,6 +16,29 @@
 #include <vector>
 #include <cassert>
 #include <iostream>
+
+#define VERTEXSHADER    "vertexshader"
+#define FRAGMENTSHADER  "fragmentshader"
+#define NODE            "node"
+#define TRIANGLES       "triangles"
+#define TRIANGLESTRIP   "trianglestrip"
+#define TRIANGLEFAN     "trianglefan"
+#define VERTEX          "vertex"
+#define COORDS          "coords"
+#define TRIANGLE        "triangle"
+#define TEXFILE         "texfile"
+#define TEXCOORDS       "texcoords"
+#define SHAPE           "shape"
+#define TEXTURE         "texture"
+#define USETEXTURE      "usetexture"
+#define USESHAPE        "useshape"
+#define ROTATION        "rotation"
+#define TRANSLATION     "translation"
+#define BOUND           "bound"
+#define PROJECTION      "projection"
+#define CAMERA          "camera"
+#define BODY            "body"
+#define FIELD           "field"
 
 
 using namespace engine3d;
@@ -41,7 +67,9 @@ Scene* SceneLoader::Load()
     }
     Debug("Objects loaded.");
     Debug("Loading scene...");
-	Load(*(mSceneParser.Load()->GetSubElements().front()));
+    for (auto&& p_element : mSceneParser.Load()->GetSubElements()) {
+    	Load(*p_element);
+    }
     Debug("Scene loaded.");
     mTextures.clear();
     return mpScene;
@@ -49,7 +77,7 @@ Scene* SceneLoader::Load()
 
 void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
 {
-    Debug("SceneLoader::Load 1");
+    Debug("SceneLoader::Load: element=" + rElement.GetName());
     if (rElement.GetName() == TRIANGLE) {
         Mesh* p_mesh = dynamic_cast<Mesh*>(pObject);
         assert(p_mesh);
@@ -72,6 +100,8 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         Spatial* p_spatial = dynamic_cast<Spatial*>(pObject);
         assert(p_spatial);
         LoadTranslation(rElement, p_spatial);
+	} else if (rElement.GetName() == PROJECTION) {
+		LoadProjection(rElement);
     } else if (rElement.GetName() == TEXTURE) {
         Debug(string("Creating new texutre: ") + rElement.GetAttribute("name") + ", " + rElement.GetAttribute("file"));
         try {
@@ -111,6 +141,8 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
 			p_object = LoadBound(rElement, p_parent_node);
 		} else if (rElement.GetName() == USESHAPE) {
 			p_object = LoadUseShape(rElement);
+		} else if (rElement.GetName() == CAMERA) {
+			p_object = LoadCamera(rElement);
 		} else {
 			Debug(string("Unknown element type: ") + rElement.GetName());
 		}
@@ -333,4 +365,45 @@ Texture* SceneLoader::GetTexture(const string& rName)
 		return i->second;
 	}
     return nullptr;
+}
+
+void SceneLoader::LoadProjection(XmlParser::XmlElement& rElement) {
+	Debug(string("Creating new projection: ") + rElement.GetAttribute("name"));
+	if (rElement.GetAttribute("type") == "ortho") {
+		mProjections.insert({rElement.GetAttribute("name"), new Ortho(mpScene->GetProgram(), stof(rElement.GetAttrOrElemValue("left")),
+				stof(rElement.GetAttrOrElemValue("right")),
+				stof(rElement.GetAttrOrElemValue("bottom")),
+				stof(rElement.GetAttrOrElemValue("top")),
+				stof(rElement.GetAttrOrElemValue("near")),
+				stof(rElement.GetAttrOrElemValue("far")))});
+	} else {
+		string sViewAngle = rElement.GetAttrOrElemValue("viewangle");
+		string sAspect = rElement.GetAttrOrElemValue("aspect");
+		string sNear = rElement.GetAttrOrElemValue("near");
+		string sFar = rElement.GetAttrOrElemValue("far");
+		float viewAngle = sViewAngle.length() > 0 ? stof(sViewAngle) : 90.0f;
+		float aspect = sAspect.length() > 0 ? stof(sAspect) : 1.0f;
+		float near = sNear.length() > 0 ? stof(sNear) : 0.1f;
+		float far = sFar.length() > 0 ? stof(sFar) : 100.0f;
+		mProjections.insert({rElement.GetAttribute("name"), new Perspective(mpScene->GetProgram(), viewAngle, aspect, near, far)});
+	}
+}
+
+Camera* SceneLoader::LoadCamera(XmlParser::XmlElement& rElement) {
+	Debug(string("Creating camera: ") + rElement.GetAttribute("name"));
+	string projection = rElement.GetAttribute("projection");
+	Camera* p_camera = nullptr;
+	if (!projection.empty()) {
+		auto i = mProjections.find(projection);
+		if (i != mProjections.end()) {
+		    p_camera = new Camera(mpScene->GetProgram(), i->second);
+		} else {
+			Debug(string("Projection <") + projection + "> not found for camera");
+		}
+	}
+	if (!p_camera) {
+	    p_camera = new Camera(mpScene->GetProgram(), new Perspective(mpScene->GetProgram()));
+	}
+    mpScene->SetCamera(p_camera);
+    return p_camera;
 }

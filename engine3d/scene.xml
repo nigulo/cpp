@@ -1,6 +1,21 @@
 <scene>
+<projection type = "perspective" name = "projection">
+	<viewangle>90</viewangle>
+	<aspect>1</aspect>
+	<near>0.1</near>
+	<far>100</far>
+</projection>
 <node name = "room">
-
+	<camera projection = "projection">
+		<bound type = "polygon" usage = "collision">
+			<vertex>
+				<coords>0.0, 0.0, 0.5</coords>
+			</vertex>
+			<vertex>
+				<coords>0.0, 0.0, 0.0</coords>
+			</vertex>
+		</bound>
+	</camera>
 	<useshape name = "tube">
 	</useshape>
 

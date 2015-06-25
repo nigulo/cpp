@@ -24,17 +24,17 @@ void Scene::SetNode(Node* pNode)
 {
     pNode->SetScene(this);
     mpNode = pNode;
-    if (mpCamera) {
-        mpNode->AddChild(mpCamera);
-    }
+    //if (mpCamera) {
+    //    mpNode->AddChild(mpCamera);
+    //}
 }
 
 void Scene::SetCamera(Camera* pCamera)
 {
     mpCamera = pCamera;
-    if (mpNode) {
-        mpNode->AddChild(mpCamera);
-    }
+    //if (mpNode) {
+    //    mpNode->AddChild(mpCamera);
+    //}
 }
 
 Camera& Scene::GetCamera()

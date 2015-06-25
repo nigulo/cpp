@@ -7,28 +7,10 @@
 #include "engine3d/meshes/mesh.h"
 #include "engine3d/program/texture.h"
 #include "engine3d/containment/boundingvolume.h"
+#include "engine3d/projection/projection.h"
 #include "utils/xmlparser.h"
 #include <map>
 #include <string>
-
-#define VERTEXSHADER    "vertexshader"
-#define FRAGMENTSHADER  "fragmentshader"
-#define NODE            "node"
-#define TRIANGLES       "triangles"
-#define TRIANGLESTRIP   "trianglestrip"
-#define TRIANGLEFAN     "trianglefan"
-#define VERTEX          "vertex"
-#define COORDS          "coords"
-#define TRIANGLE        "triangle"
-#define TEXFILE         "texfile"
-#define TEXCOORDS       "texcoords"
-#define SHAPE           "shape"
-#define TEXTURE         "texture"
-#define USETEXTURE      "usetexture"
-#define USESHAPE        "useshape"
-#define ROTATION        "rotation"
-#define TRANSLATION     "translation"
-#define BOUND           "bound"
 
 using namespace base;
 using namespace utils;
@@ -60,6 +42,8 @@ namespace engine3d {
             Object* LoadVertex(XmlParser::XmlElement& rElement, Object* pObject);
             BoundingVolume* LoadBound(XmlParser::XmlElement& rElement, Node* pNode);
             Shape* LoadUseShape(XmlParser::XmlElement& rElement);
+            void LoadProjection(XmlParser::XmlElement& rElement);
+            Camera* LoadCamera(XmlParser::XmlElement& rElement);
 
             Texture* GetTexture(const string& rName);
     	private:
@@ -68,6 +52,7 @@ namespace engine3d {
             XmlParser mObjParser;
             Scene* mpScene;
             map<string, Texture*> mTextures;
+            map<string, Projection*> mProjections;
             Node mShapes;
     };
 }
