@@ -27,13 +27,42 @@ class XmlParser : public Object
             const string& GetName() const {
             	return mName;
             }
-            
+
+            bool HasAttribute(const string& rName) const {
+            	auto i = mAttributes.find(rName);
+            	return (i != mAttributes.end());
+            }
+
             const string GetAttribute(const string& rName) const {
             	auto i = mAttributes.find(rName);
             	if (i != mAttributes.end()) {
             		return i->second;
             	}
             	return "";
+            }
+
+            const XmlElement* GetElement(const string& rName) const {
+            	for (auto&& p_sub_element: mSubElements) {
+            		if (p_sub_element->GetName() == rName) {
+            			return p_sub_element;
+            		}
+            	}
+            	return nullptr;
+            }
+
+            const string GetElementValue(const string& rName) const {
+            	const XmlElement* p_sub_element = GetElement(rName);
+            	if (p_sub_element) {
+            		return p_sub_element->GetInnerText();
+            	}
+            	return "";
+            }
+
+            const string GetAttrOrElemValue(const string& rName) const {
+            	if (HasAttribute(rName)) {
+            		return GetAttribute(rName);
+            	}
+            	return GetElementValue(rName);
             }
 
             const string& GetInnerText() const {
