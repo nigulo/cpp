@@ -6,8 +6,16 @@
 	<far>100</far>
 </projection>
 <controller name = "mousecontroller" type = "mouse"/>
+<node name = "world">
+<node name = "centerofearth">
+	<translation>0.0, -100.0, 0.0</translation>
+	<body mass = "100">
+		<field type = "gravity"/>
+	</body>
+</node>
 <node name = "room">
 	<camera projection = "projection">
+		<translation>0.0, 0.0, 0.0</translation>
 		<bound type = "polygon" usage = "collision">
 			<vertex>
 				<coords>0.0, 0.0, 0.5</coords>
@@ -17,6 +25,7 @@
 			</vertex>
 		</bound>
 		<usecontroller name = "mousecontroller"/>
+		<body mass = "1"/>
 	</camera>
 	<useshape name = "tube">
 	</useshape>
@@ -36,6 +45,7 @@
 			</node>
 		</node>>
 	</node>
+</node>
 </node>
 </scene>
 

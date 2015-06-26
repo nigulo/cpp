@@ -1,7 +1,7 @@
 #ifndef BODY_H
 #define BODY_H
 
-#include "engine3d/geometry/spatial.h"
+#include "engine3d/scenegraph/node.h"
 #include "engine3d/geometry/vector.h"
 
 namespace engine3d {
@@ -11,7 +11,7 @@ namespace engine3d {
     class Body : public Object
     {
     	public:
-    		Body(Spatial& rSpatial, float mass = 0);
+    		Body(Node& rNode, float mass = 0, const Vector& rVelocity = Vector());
     		~Body();
     		
     		/**
@@ -41,7 +41,7 @@ namespace engine3d {
     		//void CollisionWith(const Node& rNode);
 
     		const Vector& GetPosition() const {
-    			return mrSpatial.GetPosition();
+    			return mrNode.GetPosition();
     		}
 
     		float GetMass() const {
@@ -51,7 +51,7 @@ namespace engine3d {
     		//Vector GetForceBetweenBodies() const;
             
     	protected:
-    		Spatial& mrSpatial;
+    		Node& mrNode;
             /**
              * Mass of the body
              **/

@@ -225,9 +225,11 @@ void init() {
 
 void update() {
     int milliseconds = glutGet(GLUT_ELAPSED_TIME);
-    GLfloat seconds = (GLfloat)milliseconds * (1.0f/1000.0f);
+    //GLfloat seconds = (GLfloat)milliseconds * (1.0f/1000.0f);
     // Do stuff
-    //glutPostRedisplay();
+    if (milliseconds > 100) {
+    	glutPostRedisplay();
+    }
 }
 
 static void reshape(int w, int h) {

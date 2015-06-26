@@ -12,7 +12,7 @@ Scene::Scene() :
 {
     mPolygonMode[0] = GL_FRONT;
     mPolygonMode[1] = GL_FILL;
-    mTime = ((double) GetMillis()) / 1000;
+    mTime = ((double) GetMillis()) / 10000;
     mTimeChange = 0;
 }
 
@@ -63,7 +63,7 @@ void Scene::Render()
 {
     assert(mpNode);
     assert(mpCamera);
-    double newTime = ((double) GetMillis()) / 1000;
+    double newTime = ((double) GetMillis()) / 10000;
     mTimeChange = newTime - mTime;
     // Execute all controllers
     Debug("Scene::Render gl------------------------------------");

@@ -11,6 +11,7 @@
 #include "engine3d/scenegraph/camera.h"
 #include "engine3d/controllers/mousecontroller.h"
 #include "engine3d/controllers/keycontroller.h"
+#include "engine3d/physics/gravity.h"
 
 #include <math.h>
 #include <typeinfo>
@@ -86,8 +87,6 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         Mesh* p_mesh = dynamic_cast<Mesh*>(pObject);
         assert(p_mesh);
     	LoadTriangle(rElement, p_mesh);
-    } else if (rElement.GetName() == COORDS) {
-    	LoadCoords(rElement, pObject);
     } else if (rElement.GetName() == TEXCOORDS) {
         Vertex* p_vertex = dynamic_cast<Vertex*>(pObject);
         assert(p_vertex);
@@ -126,6 +125,8 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
         //    //p_texture->Modulate(tex_alpha);
         //    Debug("after modulate");
         //}
+	} else if (rElement.GetName() == FIELD) {
+		LoadField(rElement, pObject);
     } else {
         Object* p_object = nullptr;
         if (rElement.GetName() == VERTEX) {
@@ -153,6 +154,10 @@ void SceneLoader::Load(XmlParser::XmlElement& rElement, Object* pObject)
 			p_object = LoadUseShape(rElement);
 		} else if (rElement.GetName() == CAMERA) {
 			p_object = LoadCamera(rElement);
+		} else if (rElement.GetName() == BODY) {
+			Node* p_parent_node = dynamic_cast<Node*>(pObject);
+			assert(p_parent_node);
+			p_object = LoadBody(rElement, p_parent_node);
 		} else {
 			Debug(string("Unknown element type: ") + rElement.GetName());
 		}
@@ -201,7 +206,7 @@ Program* SceneLoader::LoadProgram(XmlParser::XmlElement& rElement) {
 	return p_program;
 }
 
-void SceneLoader::LoadTriangle(XmlParser::XmlElement& rElement, Mesh* pMesh) {
+void SceneLoader::LoadTriangle(const XmlParser::XmlElement& rElement, Mesh* pMesh) {
     Debug("SceneLoader::Load 2");
     Debug(string("indices: ") + rElement.GetInnerText());
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
@@ -215,7 +220,7 @@ void SceneLoader::LoadTriangle(XmlParser::XmlElement& rElement, Mesh* pMesh) {
     Debug("SceneLoader::Load 5");
 }
 
-void SceneLoader::LoadCoords(XmlParser::XmlElement& rElement, Object* pObject) {
+void SceneLoader::LoadCoords(const XmlParser::XmlElement& rElement, Object* pObject) {
     Debug("SceneLoader::Load 9");
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
     Debug("SceneLoader::Load 10 " + to_string(data.size()));
@@ -242,7 +247,7 @@ void SceneLoader::LoadCoords(XmlParser::XmlElement& rElement, Object* pObject) {
     Debug("SceneLoader::Load 12");
 }
 
-void SceneLoader::LoadTexCoords(XmlParser::XmlElement& rElement, Vertex* pVertex) {
+void SceneLoader::LoadTexCoords(const XmlParser::XmlElement& rElement, Vertex* pVertex) {
     Debug("SceneLoader::LoadTexCoords 1");
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
     float s = stof(data[0]);
@@ -253,14 +258,14 @@ void SceneLoader::LoadTexCoords(XmlParser::XmlElement& rElement, Vertex* pVertex
     Debug("SceneLoader::LoadTexCoords 2");
 }
 
-void SceneLoader::LoadUseTexture(XmlParser::XmlElement& rElement, Shape* pShape) {
+void SceneLoader::LoadUseTexture(const XmlParser::XmlElement& rElement, Shape* pShape) {
     Debug(string("Setting texture: ") + rElement.GetAttribute("name"));
     Texture* p_tex = GetTexture(rElement.GetAttribute("name"));
     assert(p_tex);
     pShape->SetTexture(p_tex);
 }
 
-Shape* SceneLoader::LoadUseShape(XmlParser::XmlElement& rElement) {
+Shape* SceneLoader::LoadUseShape(const XmlParser::XmlElement& rElement) {
     Debug(string("Using shape: ") + rElement.GetAttribute("name"));
     Shape* p_shape = dynamic_cast<Shape*>(mShapes.GetChild(rElement.GetAttribute("name")));
     assert(p_shape);
@@ -268,7 +273,7 @@ Shape* SceneLoader::LoadUseShape(XmlParser::XmlElement& rElement) {
     return p_shape_clone;
 }
 
-void SceneLoader::LoadUseController(XmlParser::XmlElement& rElement, Spatial* pSpatial) {
+void SceneLoader::LoadUseController(const XmlParser::XmlElement& rElement, Spatial* pSpatial) {
 	string controller = rElement.GetAttribute("name");
     Debug(string("Using controller: ") + controller);
 	auto i = mControllers.find(controller);
@@ -279,7 +284,7 @@ void SceneLoader::LoadUseController(XmlParser::XmlElement& rElement, Spatial* pS
 	}
 }
 
-void SceneLoader::LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatial) {
+void SceneLoader::LoadRotation(const XmlParser::XmlElement& rElement, Spatial* pSpatial) {
     Debug(string("Rotation: ") + rElement.GetInnerText());
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
     float x = stof(data[0]);
@@ -294,9 +299,10 @@ void SceneLoader::LoadRotation(XmlParser::XmlElement& rElement, Spatial* pSpatia
     Transformation t = pSpatial->GetTransformation();
     t.SetRotation(Vector(x, y, z), a * M_PI / 180);
     pSpatial->SetTransformation(t);
+    pSpatial->Transform();
 }
 
-void SceneLoader::LoadTranslation(XmlParser::XmlElement& rElement, Spatial* pSpatial) {
+void SceneLoader::LoadTranslation(const XmlParser::XmlElement& rElement, Spatial* pSpatial) {
     Debug(string("Translation: ") + rElement.GetInnerText());
     vector<string> data = Utils::Split(rElement.GetInnerText(), ",");
     float x = stof(data[0]);
@@ -309,16 +315,17 @@ void SceneLoader::LoadTranslation(XmlParser::XmlElement& rElement, Spatial* pSpa
     Transformation t = pSpatial->GetTransformation();
     t.SetTranslation(Vector(x, y, z));
     pSpatial->SetTransformation(t);
+    pSpatial->Transform();
 }
 
-Vector SceneLoader::LoadVector(XmlParser::XmlElement& rElement) {
+Vector SceneLoader::LoadVector(const XmlParser::XmlElement& rElement) {
     Debug(string("Creating new vertex"));
     Object::Dbg(string("Finding property x"));
-    const string sx = rElement.GetAttribute("x");
+    const string sx = rElement.GetAttrOrElemValue("x");
     Object::Dbg(string("Finding property y"));
-    const string sy = rElement.GetAttribute("y");
+    const string sy = rElement.GetAttrOrElemValue("y");
     Object::Dbg(string("Finding property z"));
-    const string sz = rElement.GetAttribute("z");
+    const string sz = rElement.GetAttrOrElemValue("z");
     float x = 0;
     float y = 0;
     float z = 0;
@@ -332,10 +339,15 @@ Vector SceneLoader::LoadVector(XmlParser::XmlElement& rElement) {
     if (sz.length() > 0) {
         z = stof(sz);
     }
-    return Vector(x, y, z);
+    Vector v(x, y, z);
+    auto p_coords = rElement.GetElement(COORDS);
+    if (p_coords) {
+    	LoadCoords(*p_coords, &v);
+    }
+    return v;
 }
 
-Object* SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject) {
+Object* SceneLoader::LoadVertex(const XmlParser::XmlElement& rElement, Object* pObject) {
 	Vector v = LoadVector(rElement);
     if (typeid(*pObject) == typeid(BoundingPolygon)) {
         Debug(string("vertex for boundingpolygon"));
@@ -351,7 +363,7 @@ Object* SceneLoader::LoadVertex(XmlParser::XmlElement& rElement, Object* pObject
     }
 }
 
-BoundingVolume* SceneLoader::LoadBound(XmlParser::XmlElement& rElement, Node* pNode) {
+BoundingVolume* SceneLoader::LoadBound(const XmlParser::XmlElement& rElement, Node* pNode) {
     string type = rElement.GetAttribute("type");
     vector<string> usages = Utils::Split(rElement.GetAttribute("usage"), ",");
     Debug(string("Creating new bound: ") + rElement.GetAttribute("name") + "; " + type + "; " + rElement.GetAttribute("usage"));
@@ -388,7 +400,7 @@ Texture* SceneLoader::GetTexture(const string& rName)
     return nullptr;
 }
 
-void SceneLoader::LoadProjection(XmlParser::XmlElement& rElement) {
+void SceneLoader::LoadProjection(const XmlParser::XmlElement& rElement) {
 	Debug(string("Creating new projection: ") + rElement.GetAttribute("name"));
 	if (rElement.GetAttribute("type") == "ortho") {
 		mProjections.insert({rElement.GetAttribute("name"), new Ortho(mpScene->GetProgram(), stof(rElement.GetAttrOrElemValue("left")),
@@ -410,7 +422,7 @@ void SceneLoader::LoadProjection(XmlParser::XmlElement& rElement) {
 	}
 }
 
-Camera* SceneLoader::LoadCamera(XmlParser::XmlElement& rElement) {
+Camera* SceneLoader::LoadCamera(const XmlParser::XmlElement& rElement) {
 	Debug(string("Creating camera: ") + rElement.GetAttribute("name"));
 	string projection = rElement.GetAttribute("projection");
 	Camera* p_camera = nullptr;
@@ -429,7 +441,7 @@ Camera* SceneLoader::LoadCamera(XmlParser::XmlElement& rElement) {
     return p_camera;
 }
 
-void SceneLoader::LoadController(XmlParser::XmlElement& rElement) {
+void SceneLoader::LoadController(const XmlParser::XmlElement& rElement) {
 	Debug(string("Creating new projection: ") + rElement.GetAttribute("name"));
 	TransformationController* p_controller = nullptr;
 	if (rElement.GetAttribute("type") == "key") {
@@ -444,3 +456,25 @@ void SceneLoader::LoadController(XmlParser::XmlElement& rElement) {
 		mpScene->AddController(p_controller);
 	}
 }
+
+Body* SceneLoader::LoadBody(const XmlParser::XmlElement& rElement, Node* pNode) {
+	Debug(string("Creating new body: ") + rElement.GetAttribute("name"));
+	string mass = rElement.GetAttrOrElemValue("mass");
+	auto p_velocity = rElement.GetElement("velocity");
+	Body* p_body = new Body(*pNode, !mass.empty() ? stof(mass) : 0, p_velocity ? LoadVector(*p_velocity) : Vector());
+	mpScene->AddBody(p_body);
+	return p_body;
+}
+
+void SceneLoader::LoadField(const XmlParser::XmlElement& rElement, Object* pObject) {
+	Debug(string("Creating new field: ") + rElement.GetAttribute("name"));
+	string type = rElement.GetAttribute("type");
+	if (type == "gravity") {
+	    Body* p_source = dynamic_cast<Body*>(pObject);
+	    assert(p_source);
+	    Gravity* p_gravity = new Gravity(*p_source);
+	    mpScene->AddField(p_gravity);
+	}
+
+}
+

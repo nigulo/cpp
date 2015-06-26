@@ -2,8 +2,8 @@
 
 using namespace engine3d;
 
-Body::Body(Spatial& rSpatial, float mass) :
-		mrSpatial(rSpatial), mMass(mass)
+Body::Body(Node& rNode, float mass, const Vector& rVelocity) :
+		mrNode(rNode), mMass(mass), mVelocity(rVelocity)
 {
 }
 
@@ -19,7 +19,10 @@ void Body::SetForce(const Vector& rForce)
 void Body::Move(double dt) {
     mVelocity += mForce / mMass * dt;
     Vector dr = mVelocity * dt;
-   	mrSpatial.SetTransformation(Transformation(dr) * mrSpatial.GetTransformation());
+    Debug("Moving body: F" + mForce.ToString() + ", P" + mrNode.GetPosition() + "+" + dr.ToString());
+    if (dr.Length2() > 0) {
+    	mrNode.SetTransformation(Transformation(dr) * mrNode.GetTransformation());
+    }
 }
 
 //void Body::Render() {
