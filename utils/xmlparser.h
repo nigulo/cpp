@@ -69,7 +69,7 @@ class XmlParser : public Object
             	return mInnerText;
             }
 
-            list<XmlElement*>& GetSubElements() {
+            const list<XmlElement*>& GetSubElements() {
             	return mSubElements;
             }
             
