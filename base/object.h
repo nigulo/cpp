@@ -97,6 +97,8 @@ namespace base {
              * Specifies if the debugging is enabled
              **/
             static bool msDebug;
+            static unsigned msId;
+            unsigned mId;
             
             /**
              * Name describing the object

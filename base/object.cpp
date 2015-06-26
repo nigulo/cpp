@@ -11,17 +11,18 @@ ofstream Object::msOut("log.txt");
 //#else
 bool Object::msDebug = true;
 //#endif
+unsigned Object::msId = 1;
 
 void Object::Flush()
 {
 	msOut.flush();
 }
 
-Object::Object(const string& rName) : mName(rName)
+Object::Object(const string& rName) : mId(msId++), mName(rName)
 {
 }
 
-Object::Object(const Object& rObj) : mName(rObj.mName)
+Object::Object(const Object& rObj) : mId(msId++), mName(rObj.mName)
 {
 }
 
@@ -44,7 +45,7 @@ Object::~Object()
 void Object::Debug(const string& rText) const
 {
     if (msDebug) {
-        msOut << GetMillis() << " " << mName << " " << rText << "\n";
+        msOut << GetMillis() << " " << mId << " " << mName << " " << rText << "\n";
         msOut.flush();
     }
 }
