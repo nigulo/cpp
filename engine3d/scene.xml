@@ -18,10 +18,22 @@
 		<translation>0.0, 0.0, 0.0</translation>
 		<bound type = "polygon" usage = "collision">
 			<vertex>
+				<coords>0.0, 0.0, 0.0</coords>
+			</vertex>
+			<vertex>
 				<coords>0.0, 0.0, 0.5</coords>
 			</vertex>
 			<vertex>
-				<coords>0.0, 0.0, 0.0</coords>
+				<coords>0.0, 0.1, 0.0</coords>
+			</vertex>
+			<vertex>
+				<coords>0.0, -0.9, 0.0</coords>
+			</vertex>
+			<vertex>
+				<coords>0.1, 0.0, 0.0</coords>
+			</vertex>
+			<vertex>
+				<coords>-0.1, 0.0, 0.0</coords>
 			</vertex>
 		</bound>
 		<usecontroller name = "mousecontroller"/>

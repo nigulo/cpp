@@ -34,31 +34,33 @@ int BoundingSphere::WhichSide(const Plane& rPlane) const
     }
 }
 
-bool BoundingSphere::Intersects(const Line& rLine) const
+unique_ptr<Vector> BoundingSphere::Intersects(const Line& rLine) const
 {
     if (rLine.GetDistance(mTransformedPosition) <= mRadius) {
         if (!rLine.IsSegment()) {
             Debug("not segment");
-            return true;
+            // TODO correct this
+            return unique_ptr<Vector>(new Vector(mPosition));
         }
         else {
             if ((rLine.mPoint1 - mTransformedPosition).Length() <= mRadius ||
                 (rLine.mPoint2 - mTransformedPosition).Length() <= mRadius
             ) {
                 Debug("segment");
-                return true;
+                // TODO correct this
+                return unique_ptr<Vector>(new Vector(rLine.mPoint1));
             }
             else {
-                return false;
+                return unique_ptr<Vector>();
             }
         }
     }
     else {
-        return false;
+        return unique_ptr<Vector>();
     }
 }
 
-bool BoundingSphere::Collides(const BoundingVolume& rOtherBound) const
+unique_ptr<Vector> BoundingSphere::Collides(const BoundingVolume& rOtherBound) const
 {
     Debug("Sphere.Collide 1");
     const Vector& old_pos = mTransformedPosition;//mTransformation.Transform(mPosition);
@@ -68,9 +70,10 @@ bool BoundingSphere::Collides(const BoundingVolume& rOtherBound) const
     Vector v = (new_pos - old_pos).Normalize() * mRadius;
     Segment movement_line(old_pos - v, new_pos + v);
     Debug("Sphere.Collide 2");
-    if (rOtherBound.Intersects(movement_line)) {
+    unique_ptr<Vector> intersection_point = rOtherBound.Intersects(movement_line);
+    if (intersection_point.get()) {
         // movement line of the center of sphere intersects
-        return true;
+        return intersection_point;
     }
     // create arbitrary perpendicular to center movement line,
     // create some movement lines for sphere surface and check if
@@ -88,65 +91,73 @@ bool BoundingSphere::Collides(const BoundingVolume& rOtherBound) const
     perpendicular.Normalize();
     perpendicular *= mRadius;
     Debug("Sphere.Collide 3");
-    if (rOtherBound.Intersects(Segment(old_pos + perpendicular, new_pos + perpendicular))) {
+    intersection_point = rOtherBound.Intersects(Segment(old_pos + perpendicular, new_pos + perpendicular));
+    if (intersection_point.get()) {
         // 1st point on sphere surface intersects
-        return true;
+        return intersection_point;
     }
     Debug("Sphere.Collide 4");
     perpendicular = -perpendicular;
-    if (rOtherBound.Intersects(Segment(old_pos + perpendicular, new_pos + perpendicular))) {
+    intersection_point = rOtherBound.Intersects(Segment(old_pos + perpendicular, new_pos + perpendicular));
+    if (intersection_point.get()) {
         // 2nd point on sphere surface intersects
-        return true;
+        return intersection_point;
     }
     Debug("Sphere.Collide 5");
     Vector perpendicular2 = movement_line.mDirection.CrossProduct(perpendicular);
     perpendicular2.Normalize();
     perpendicular2 *= mRadius;
     Debug("Sphere.Collide 6");
-    if (rOtherBound.Intersects(Segment(old_pos + perpendicular2, new_pos + perpendicular2))) {
+    intersection_point = rOtherBound.Intersects(Segment(old_pos + perpendicular2, new_pos + perpendicular2));
+    if (intersection_point.get()) {
         // 3rd point on sphere surface intersects
-        return true;
+        return intersection_point;
     }
     Debug("Sphere.Collide 7");
     perpendicular2 = -perpendicular2;
-    if (rOtherBound.Intersects(Segment(old_pos + perpendicular2, new_pos + perpendicular2))) {
+    intersection_point = rOtherBound.Intersects(Segment(old_pos + perpendicular2, new_pos + perpendicular2));
+    if (intersection_point.get()) {
         // 4th point on sphere surface intersects
-        return true;
+        return intersection_point;
     }
     Debug("Sphere.Collide 8");
     Vector perpendicular3 = perpendicular + perpendicular2;
     perpendicular3.Normalize();
     perpendicular3 *= mRadius;
-    if (rOtherBound.Intersects(Segment(old_pos + perpendicular3, new_pos + perpendicular3))) {
+    intersection_point = rOtherBound.Intersects(Segment(old_pos + perpendicular3, new_pos + perpendicular3));
+    if (intersection_point.get()) {
         // 5th point on sphere surface intersects
-        return true;
+        return intersection_point;
     }
     Debug("Sphere.Collide 9");
     perpendicular3 = perpendicular - perpendicular2;
     perpendicular3.Normalize();
     perpendicular3 *= mRadius;
-    if (rOtherBound.Intersects(Segment(old_pos + perpendicular3, new_pos + perpendicular3))) {
+    intersection_point = rOtherBound.Intersects(Segment(old_pos + perpendicular3, new_pos + perpendicular3));
+    if (intersection_point.get()) {
         // 6th point on sphere surface intersects
-        return true;
+        return intersection_point;
     }
     Debug("Sphere.Collide 10");
     perpendicular3 = -perpendicular + perpendicular2;
     perpendicular3.Normalize();
     perpendicular3 *= mRadius;
-    if (rOtherBound.Intersects(Segment(old_pos + perpendicular3, new_pos + perpendicular3))) {
+    intersection_point = rOtherBound.Intersects(Segment(old_pos + perpendicular3, new_pos + perpendicular3));
+    if (intersection_point.get()) {
         // 7th point on sphere surface intersects
-        return true;
+        return intersection_point;
     }
     Debug("Sphere.Collide 11");
     perpendicular3 = -(perpendicular + perpendicular2);
     perpendicular3.Normalize();
     perpendicular3 *= mRadius;
-    if (rOtherBound.Intersects(Segment(old_pos + perpendicular3, new_pos + perpendicular3))) {
+    intersection_point = rOtherBound.Intersects(Segment(old_pos + perpendicular3, new_pos + perpendicular3));
+    if (intersection_point.get()) {
         // 8th point on sphere surface intersects
-        return true;
+        return intersection_point;
     }
     Debug("Sphere.Collide 12");
-    return false;
+    return unique_ptr<Vector>();
 }
 
 void BoundingSphere::Transform()

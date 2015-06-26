@@ -21,7 +21,7 @@ class Vector : public Object
 		explicit Vector(float x);
 		Vector(const Vector& v);
 		// class destructor
-		~Vector();
+		virtual ~Vector();
 		
 		friend bool operator==(const Vector& v1, const Vector& v2) {
             if (v1.mDim != v2.mDim) {

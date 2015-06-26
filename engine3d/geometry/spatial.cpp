@@ -60,7 +60,7 @@ void Spatial::Transform()
 {
     mOldTransformation = mTransformation;
     mOldWorldTransformation = mWorldTransformation;
-    mPosition = mTransformation.Transform(mPosition);
+    mPosition = mTransformation.Transform(Vector());
 }
 
 void Spatial::Revert()

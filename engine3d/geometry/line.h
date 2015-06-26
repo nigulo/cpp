@@ -3,7 +3,7 @@
 
 #include "base/object.h"
 #include "vector.h"
-#include "base/pointer.h"
+#include <memory>
 
 using namespace base;
 
@@ -34,10 +34,10 @@ namespace engine3d {
     		double GetSquaredDistance(const Line& rLine) const;
     		
     		/**
-    		 * @return poinmter to segment whose first point lies
+    		 * @return pointer to segment whose first point lies
     		 * on this line and second point on other line
     		 **/
-    		const Pointer<Segment*> GetDistance(const Line& rLine) const;
+    		const unique_ptr<Segment> GetDistance(const Line& rLine) const;
     		
     		virtual bool IsSegment() const {
                 return false;

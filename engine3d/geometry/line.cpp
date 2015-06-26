@@ -49,7 +49,7 @@ double Line::GetSquaredDistance(const Line& rLine) const
     return ((B * C * D) + (B * B * E) + (C * C * F) + A * (D * D - 4 * E * F)) / (C * C - 4 * A * E);
 }
 
-const Pointer<Segment*> Line::GetDistance(const Line& rLine) const
+const unique_ptr<Segment> Line::GetDistance(const Line& rLine) const
 {
     double A = mDirection.Length2();
     double B = 2 * (mDirection.DotProduct(mPoint1) - mDirection.DotProduct(rLine.mPoint1));
@@ -59,7 +59,7 @@ const Pointer<Segment*> Line::GetDistance(const Line& rLine) const
     double F = mPoint1.Length2() + rLine.mPoint1.Length2();
     double s = (2 * A * D + B * C) / (C * C - 4 * A * E);
     double t = (C * s - B) / (2 * A);
-    return new Segment(Vector(mPoint1 + mDirection * t), Vector(rLine.mPoint1 + rLine.mDirection * s));
+    return unique_ptr<Segment>(new Segment(Vector(mPoint1 + mDirection * t), Vector(rLine.mPoint1 + rLine.mDirection * s)));
 }
 
 bool Line::Crosses(const Line& rLine) const

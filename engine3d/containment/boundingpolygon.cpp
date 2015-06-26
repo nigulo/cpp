@@ -62,7 +62,7 @@ int BoundingPolygon::WhichSide(const Plane& rPlane) const
  * intersecting plane exists the polygon as a whole intersects
  * with the line.
  **/
-bool BoundingPolygon::Intersects(const Line& rLine) const
+unique_ptr<Vector> BoundingPolygon::Intersects(const Line& rLine) const
 {
     //Debug("polygon intersect 1");
     for (unsigned i = 0; i < mTransformedVertices.size(); i++) {
@@ -85,7 +85,8 @@ bool BoundingPolygon::Intersects(const Line& rLine) const
                             Segment(r_point3, r_point1).Crosses(rLine)
                             ) {
                             Debug("Parallel intersection");
-                            return true;
+                            // TODO Not correct value is returned
+                            return unique_ptr<Vector>(new Vector(rLine.mPoint1));
                         }
                     }
                     else {
@@ -135,7 +136,7 @@ bool BoundingPolygon::Intersects(const Line& rLine) const
                         if ((dott1 >= 0 && dott2 >= 0 && dott3 >= 0) ||
                             (dott1 < 0 && dott2 < 0 && dott3 < 0)) {
                                 // intersection point is inside the triangle
-                                return true;
+                            	return unique_ptr<Vector>(new Vector(intersectionPoint));
                         }
                         else {
                             // intersection point is outside of the triangle
@@ -150,10 +151,10 @@ bool BoundingPolygon::Intersects(const Line& rLine) const
             }
         }
     }
-    return false;
+    return unique_ptr<Vector>();
 }
 
-bool BoundingPolygon::Collides(const BoundingVolume& rOtherBound) const 
+unique_ptr<Vector> BoundingPolygon::Collides(const BoundingVolume& rOtherBound) const
 {
     Vector center;
     for (unsigned i = 0; i < mVertices.size(); i++) {
@@ -162,9 +163,10 @@ bool BoundingPolygon::Collides(const BoundingVolume& rOtherBound) const
         //Debug(String("Polygon old pos: ") + old_pos.ToString());
         //Debug(String("Polygon new pos: ") + new_pos.ToString());
         Segment movement_line(old_pos, new_pos);
-        if (rOtherBound.Intersects(movement_line)) {
+        unique_ptr<Vector> intersection_point = rOtherBound.Intersects(movement_line);
+        if (intersection_point.get()) {
             // movement line of the vertex intersects
-            return true;
+            return intersection_point;
         }
         center += mVertices[i];
     }
@@ -174,12 +176,13 @@ bool BoundingPolygon::Collides(const BoundingVolume& rOtherBound) const
         Vector new_center = GetTransformation().Transform(center);
         Segment movement_line(old_center, new_center);
         Debug(string("BoundingPolygon::Collides old_center=") + old_center.ToString() + ", new_center=" + new_center.ToString());
-        if (rOtherBound.Intersects(movement_line)) {
+        unique_ptr<Vector> intersection_point = rOtherBound.Intersects(movement_line);
+        if (intersection_point.get()) {
             // movement line of the center of polygon intersects
-            return true;
+            return intersection_point;
         }
     }
-    return false;
+    return unique_ptr<Vector>();
 }
 
 void BoundingPolygon::Transform() 

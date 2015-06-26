@@ -7,8 +7,10 @@
 #include "engine3d/containment/boundingvolume.h"
 #include "engine3d/program/program.h"
 #include "engine3d/program/attribute.h"
+#include "engine3d/scenegraph/collisionlistener.h"
 
 #include <vector>
+#include <memory>
 
 using namespace base;
 using namespace std;
@@ -47,7 +49,7 @@ class Node : public Spatial
 		bool IsLeaf() const;
         
         void CheckCollisions();
-        virtual void CollisionWith(const Node& rNode);
+        virtual void CollisionWith(const Node& rNode, const unique_ptr<Vector>& rPoint);
         
         void SetBound(BoundingVolume* pBound) {
             mpBound = pBound;
@@ -57,9 +59,14 @@ class Node : public Spatial
             mpCollisionBound = pCollisionBound;
         }
 
+        void AddCollisionListener(CollisionListener& rCollisionListener) {
+        	Debug("AddCollisionListener");
+        	mCollisionListeners.push_back(&rCollisionListener);
+        }
+
 	protected:
         void Copy(const Node& node);
-        static bool CheckCollisions(const Node& rNode1, const Node& rNode2);
+        static unique_ptr<Vector> CheckCollisions(const Node& rNode1, const Node& rNode2);
 
         // gets current world transformation for given node
         //Transformation GetWorldTransformation() const;
@@ -89,6 +96,7 @@ class Node : public Spatial
         BoundingVolume* mpBound;
 
         BoundingVolume* mpCollisionBound;
+        vector<CollisionListener*> mCollisionListeners;
 
 };
 }

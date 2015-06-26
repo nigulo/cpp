@@ -70,7 +70,7 @@ Vector::Vector(const Vector& v)
 Vector& Vector::operator=(const Vector& v) {
     if (this != &v) {
         if (mpCoords) {
-            delete mpCoords;
+            delete [](mpCoords);
         }
         mDim = v.mDim;
         mpCoords = new float[mDim];

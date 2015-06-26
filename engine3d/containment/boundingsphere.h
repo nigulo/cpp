@@ -19,9 +19,9 @@ class BoundingSphere : public BoundingVolume
 		
 		int WhichSide(const Plane& rPlane) const;
 
-        bool Intersects(const Line& rLine) const;
+		unique_ptr<Vector> Intersects(const Line& rLine) const;
         
-   		bool Collides(const BoundingVolume& rOtherBound) const;
+        unique_ptr<Vector> Collides(const BoundingVolume& rOtherBound) const;
 
         void Transform();
 	private:

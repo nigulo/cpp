@@ -68,13 +68,9 @@ class Scene : public Object
 		/**
 		 * Sets the polygon mode for this scene.
 		 **/
-		void SetPolygonMode(int face, int mode);
+		//void SetPolygonMode(int face, int mode);
 		
-		double GetTimeChange() const {
-            return mTimeChange;
-        }
-
-		double GetTime() const {
+		long GetTime() const {
             return mTime;
         }
         
@@ -104,8 +100,14 @@ class Scene : public Object
         Camera* mpCamera;
         // root node
         Node* mpNode;
+        /**
+         * Current time in seconds
+         **/
+        long mTime;
+        long mRenderCount;
+
         Viewport mViewport;
-        int mPolygonMode[2]; // [0] - face, [1] - mode
+        //int mPolygonMode[2]; // [0] - face, [1] - mode
         /**
          * Scene object controllers
          **/
@@ -115,15 +117,7 @@ class Scene : public Object
         vector<Body*> mBodies;
         vector<Field*> mFields;
 
-        /**
-         * Current time in seconds
-         **/
-        double mTime;
         
-        /**
-         * Time elapsed from last rendering in seconds
-         **/
-        double mTimeChange;
 };
 }
 #endif // SCENE_H

@@ -227,7 +227,7 @@ void update() {
     int milliseconds = glutGet(GLUT_ELAPSED_TIME);
     //GLfloat seconds = (GLfloat)milliseconds * (1.0f/1000.0f);
     // Do stuff
-    if (milliseconds > 100) {
+    if (milliseconds >= 50) {
     	glutPostRedisplay();
     }
 }

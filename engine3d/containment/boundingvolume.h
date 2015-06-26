@@ -7,6 +7,8 @@
 #include "engine3d/geometry/plane.h"
 #include "engine3d/geometry/line.h"
 
+#include <memory>
+
 using namespace base;
 
 namespace engine3d {
@@ -39,9 +41,9 @@ class BoundingVolume : public Spatial
 		/**
 		 * Testis if this volume intersects with given line
 		 **/
-		virtual bool Intersects(const Line& rLine) const = 0;
+		virtual unique_ptr<Vector> Intersects(const Line& rLine) const = 0;
 		
-		virtual bool Collides(const BoundingVolume& rOtherBound) const = 0;
+		virtual unique_ptr<Vector> Collides(const BoundingVolume& rOtherBound) const = 0;
 		
 };
 }

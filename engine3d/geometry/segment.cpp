@@ -32,20 +32,20 @@ bool Segment::Contains(const Vector& rPoint) const
 bool Segment::Crosses(const Line& rSegment) const
 {
     // THIS MAY BE PROBLEMATIC!!!
-    Segment& r_distance = **GetDistance(rSegment);
+    auto p_distance = GetDistance(rSegment).get();
     //---------------------------
-    if (r_distance.mDirection.Length() != 0) {
+    if (p_distance->mDirection.Length() != 0) {
         return false;
     }
     double length = mDirection.Length();
-    if ((r_distance.mPoint1 - mPoint1).Length() > length || (r_distance.mPoint1 - mPoint2).Length() > length) {
+    if ((p_distance->mPoint1 - mPoint1).Length() > length || (p_distance->mPoint1 - mPoint2).Length() > length) {
         return false;
     }
     if (!rSegment.IsSegment()) {
         return true;
     }
     length = rSegment.mDirection.Length();
-    if ((r_distance.mPoint2 - rSegment.mPoint1).Length() > length || (r_distance.mPoint2 - rSegment.mPoint2).Length() > length) {
+    if ((p_distance->mPoint2 - rSegment.mPoint1).Length() > length || (p_distance->mPoint2 - rSegment.mPoint2).Length() > length) {
         return false;
     }
     return true;

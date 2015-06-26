@@ -2,13 +2,14 @@
 #define BODY_H
 
 #include "engine3d/scenegraph/node.h"
+#include "engine3d/scenegraph/collisionlistener.h"
 #include "engine3d/geometry/vector.h"
 
 namespace engine3d {
     /**
      * Class containing physical properties of body
      */
-    class Body : public Object
+    class Body : public Object, CollisionListener
     {
     	public:
     		Body(Node& rNode, float mass = 0, const Vector& rVelocity = Vector());
@@ -35,10 +36,10 @@ namespace engine3d {
     		 * Moves the body according to external
     		 * forces during the given time span.
     		 **/
-    		void Move(double dt);
+    		void Move(float dt);
     		
     		// @Override
-    		//void CollisionWith(const Node& rNode);
+    		void Collision(const Node& rNode1, const Node& rNode2, const unique_ptr<Vector>& rPoint);
 
     		const Vector& GetPosition() const {
     			return mrNode.GetPosition();

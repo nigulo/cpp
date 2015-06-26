@@ -52,25 +52,32 @@ Node::~Node()
     mChildren.clear();
 }
 
-bool Node::CheckCollisions(const Node& rNode1, const Node& rNode2) {
+unique_ptr<Vector> Node::CheckCollisions(const Node& rNode1, const Node& rNode2) {
     if (!rNode1.mpCollisionBound) {
-        return false;
+        return unique_ptr<Vector>(nullptr);
     }
-    if (rNode2.mpCollisionBound && rNode1.mpCollisionBound->Collides(*(rNode2.mpCollisionBound))) {
-        return true;
+    if (rNode2.mpCollisionBound) {
+    	unique_ptr<Vector> collision_point = rNode1.mpCollisionBound->Collides(*(rNode2.mpCollisionBound));
+    	if (collision_point.get()) {
+            return collision_point;
+    	}
     }
     for (auto&& p_node2_child : rNode2.mChildren) {
         if (&rNode1 == p_node2_child) {
             continue;
         }
-        if (p_node2_child->mpCollisionBound && rNode1.mpCollisionBound->Collides(*p_node2_child->mpCollisionBound)) {
-            return true;
+        if (p_node2_child->mpCollisionBound) {
+        	unique_ptr<Vector> collision_point = rNode1.mpCollisionBound->Collides(*p_node2_child->mpCollisionBound);
+        	if (collision_point.get()) {
+                return collision_point;
+        	}
         }
-        if (CheckCollisions(rNode1, *p_node2_child)) {
-            return true;
-        }
+        unique_ptr<Vector> collision_point = CheckCollisions(rNode1, *p_node2_child);
+    	if (collision_point.get()) {
+            return collision_point;
+    	}
     }
-    return false;
+    return unique_ptr<Vector>(nullptr);
 }
 
 
@@ -87,6 +94,7 @@ void Node::CheckCollisions()
     for (auto&& p_child : mChildren) {
         Debug("Node::CheckCollisions 8");
         Node* p_collision_with = nullptr;
+        unique_ptr<Vector> collision_point;
         Debug("Node::CheckCollisions 9");
         for (auto&& p_other_child : mChildren) {
             Debug("Node::CheckCollisions 10");
@@ -95,10 +103,10 @@ void Node::CheckCollisions()
                 continue;
             }
             Debug("Node::CheckCollisions 12");
-            //if (p_child->mpCollisionBound && (*j)->mpCollisionBound && p_child->mpCollisionBound->Collides(*(*j)->mpCollisionBound)) {
-            if (CheckCollisions(*p_child, *p_other_child)) {
+            collision_point = CheckCollisions(*p_child, *p_other_child);
+            if (collision_point.get()) {
                 Debug("Node::CheckCollisions 13");
-                p_collision_with = p_other_child; // Currently only binary collisions are supported
+                p_collision_with = p_other_child;
                 break;
             }
             Debug("Node::CheckCollisions 14");
@@ -110,16 +118,20 @@ void Node::CheckCollisions()
                 p_child->mpCollisionBound->Transform();
             }
         } else {
-            CollisionWith(*p_collision_with);
+        	p_child->CollisionWith(*p_collision_with, collision_point);
         }
     }
 }
 
-void Node::CollisionWith(const Node& rNode)
+void Node::CollisionWith(const Node& rNode, const unique_ptr<Vector>& rPoint)
 {
     Revert();
     if (mpCollisionBound) {
         mpCollisionBound->Revert();
+    }
+	Debug("mCollisionListeners.size=" + to_string(mCollisionListeners.size()));
+    for (auto&& p_collision_listener : mCollisionListeners) {
+    	p_collision_listener->Collision(*this, rNode, rPoint);
     }
 }
 
