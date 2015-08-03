@@ -29,8 +29,11 @@ vector<std::string> split(const std::string& s, char delim) {
 
 int main(int argc, char *argv[]) {
 	ifstream input(argv[1]);
-	int col = argc > 2 ? atoi(argv[2]) : 1;
-	vector<double> x, y;
+	unsigned from_col = argc > 2 ? atoi(argv[2]) : 1;
+	unsigned to_col = argc > 3 ? atoi(argv[3]) + 1 : from_col + 1;
+	unsigned dim = to_col - from_col;
+	vector<double> x;
+	vector<double*> y;
 	for (string line; getline(input, line);) {
 		//cout << line << endl;
 		std::vector<std::string> words;
@@ -42,12 +45,15 @@ int main(int argc, char *argv[]) {
 		}
 		if (words.size() > 0 && words[0][0] == '#') {
 			//cout << "Skipping comment line: " << line << endl;
-		} else if (words.size() > col) {
+		} else if (words.size() > from_col) {
 			try {
 				double xVal = stod(words[0]);
-				double yVal = stod(words[col]);
 				x.push_back(xVal);
-				y.push_back(yVal);
+				double* yVals = new double[dim];
+				for (unsigned i = 0; i < dim; i++) {
+					yVals[i] = stod(words[from_col + i]);
+				}
+				y.push_back(yVals);
 			} catch (std::invalid_argument& ex) {
 				cout << "Skipping line, invalid number: " << line << endl;
 			}
@@ -61,7 +67,7 @@ int main(int argc, char *argv[]) {
 	double minCoherence = argc > 5 ? atof(argv[5]) : 0;
 	double maxCoherence = argc > 6 ? atof(argv[6]) : 60;//x[x.size() - 1] - x[0];
 	int bootstrapSample = argc > 7 ? atoi(argv[7]) : 0;
-	D2 d2(x, y, minPeriod, maxPeriod, minCoherence, maxCoherence);
+	D2 d2(x, y, dim, minPeriod, maxPeriod, minCoherence, maxCoherence);
 	if (bootstrapSample > 0) {
 		for (int i = 0; i < bootstrapSample; i++) {
 			d2.Compute2DSpectrum(true);
@@ -74,9 +80,10 @@ int main(int argc, char *argv[]) {
 
 #define square(x) ((x) * (x))
 
-D2::D2(const vector<double>& r_x, const vector<double>& r_y, double minp, double maxp, double minc, double maxc) :
+D2::D2(const vector<double>& r_x, const vector<double*>& r_y, unsigned dim, double minp, double maxp, double minc, double maxc) :
 		x(r_x),
 		y(r_y),
+		dim(dim),
 		minCoherence(minc),
 		maxCoherence(maxc) {
 
@@ -107,7 +114,7 @@ D2::D2(const vector<double>& r_x, const vector<double>& r_y, double minp, double
 
 double D2::Criterion(double d, double w) {
 
-   int j;
+   unsigned j;
    double tyv, tav, dd, ww, wp, ph;
 
    tyv = 0.0;
@@ -200,6 +207,16 @@ void MapTo01D(vector<double>& cum) {
 
 }
 
+// Currently implemented as Frobenius norm
+double D2::DiffNorm(const double y1[], const double y2[]) {
+	double norm = 0;
+	for (unsigned i; i < dim; i++) {
+		double diff = y1[i] - y2[i];
+		norm += diff * diff;
+	}
+	return norm;
+}
+
 void D2::Compute2DSpectrum(bool bootstrap) {
 
     cout << "l= " << l << endl;
@@ -220,9 +237,9 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 	vector<double> tta(m, 0);
 
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
-	int i, j;
-	for (i=0; i < l - 1; i++) {// to l-2 do
-		for (j=i+1; j < l; j++) {// to l-1 do begin
+	unsigned i, j;
+	for (i = 0; i < l - 1; i++) {// to l-2 do
+		for (j = i + 1; j < l; j++) {// to l-1 do begin
 			double d = x[j] - x[i];
 			if (d >= dmin && d <= dmax) {
 				int kk = round(a * d + b);
@@ -230,9 +247,9 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 					if (!ydiffs[kk]) {
 						ydiffs[kk] = new vector<double>(0);
 					}
-					ydiffs[kk]->push_back(square(y[j] - y[i]));
+					ydiffs[kk]->push_back(DiffNorm(y[j],  y[i]));
 				} else {
-					tty[kk] = tty[kk] + square(y[j] - y[i]);
+					tty[kk] = tty[kk] + DiffNorm(y[j], y[i]);
 				}
 				tta[kk] = tta[kk] + 1.0;
 			}
@@ -247,7 +264,7 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 				continue;
 			}
 			uniform_int_distribution<int> uniform_dist(0, ydiffs[i]->size() - 1);
-			for (int j1 = 0; j1 < ydiffs[i]->size(); j1++) {
+			for (unsigned j1 = 0; j1 < ydiffs[i]->size(); j1++) {
 				//if (i == 50) {
 				//	cout << i << "," << j << "-" << (*ydiffs[i])[j] << endl;
 				//}
@@ -270,10 +287,10 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 	cout << "td.size()=" << td.size() << endl;
 	double d = dmin;
 
-	// Build final grids for perdiodicity search.
+	// Build final grids for periodicity search.
 
-	j=0;
-	for (i=0; i < m; i++) {
+	j = 0;
+	for (i = 0; i < m; i++) {
 		if (tta[i]>0.5) {
 			ta[j]=tta[i];
 			ty[j]=tty[i];
@@ -312,8 +329,8 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 		}
 
 		vector<int> minima(0);
-		int dk = lp / 20;
-		for (j=0; j < lp; j++) {
+		unsigned dk = lp / 20;
+		for (j = 0; j < lp; j++) {
 			if (!bootstrap) {
 				output << d << " " << (wmin + j * step) << " " << cum[j] << endl;
 				if (d == minCoherence) {
@@ -324,7 +341,7 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 			}
 			if (j > dk - 1 && j < lp - dk - 1) {
 				bool isMinimum = true;
-				for (int k1 = j - dk; k1 <= j + dk; k1++) {
+				for (unsigned k1 = j - dk; k1 <= j + dk; k1++) {
 					if (cum[j] > cum[k1]) {
 						isMinimum = false;
 						break;
@@ -341,7 +358,7 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 				}
 			}
 		}
-		for (int k1 = 0; k1 < minima.size(); k1++) {
+		for (unsigned k1 = 0; k1 < minima.size(); k1++) {
 			if (k1 > 0) {
 				//cout << " ";
 			}

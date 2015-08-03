@@ -17,21 +17,25 @@ class D2 {
 
 	const Mode mode = GaussWithCosine;
 	const bool relative = true;
-	const int coherenceGrid = 200;
-	const double minCoherence;
-	const double maxCoherence = 0.1;
-	const int phaseBins = 50;
+	const unsigned coherenceGrid = 200;
+	const unsigned phaseBins = 50;
 	const double deltaPhi = 0.05;
 	const double epsilon = 0.1;
 
 	double epslim, eps, ln2, lnp;
-	const vector<double>& x, y;
-    vector<double> ty, ta, td, cum;
 
-    int l;
-    int lp;
-    int k;
-    int m;
+	const vector<double>& x;
+	const vector<double*>& y;
+	const unsigned dim;
+	const double minCoherence;
+	const double maxCoherence = 0.1;
+
+	vector<double> ty, ta, td, cum;
+
+    unsigned l;
+    unsigned lp;
+    unsigned k;
+    unsigned m;
     double a;
     double b;
     double dmin;
@@ -44,11 +48,14 @@ class D2 {
     random_device rd;
 
 	public:
-    D2(const vector<double>& x, const vector<double>& y, double minPeriod = 2, double maxPeriod = 10, double minCoherence = 0, double maxCoherence = 60);
+    D2(const vector<double>& r_x, const vector<double*>& r_y, unsigned dim, double minPeriod = 2, double maxPeriod = 10, double minCoherence = 0, double maxCoherence = 60);
     void Compute2DSpectrum(bool bootstrap = false);
 
 	private:
     double Criterion(double d, double w);
+
+    // The norm of the difference of two datasets
+    double DiffNorm(const double y1[], const double y2[]);
 };
 
 
