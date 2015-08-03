@@ -62,11 +62,11 @@ int main(int argc, char *argv[]) {
 		}
     }
 	input.close();
-	double minPeriod = argc > 3 ? atof(argv[3]) : 2;
-	double maxPeriod = argc > 4 ? atof(argv[4]) : 10;
-	double minCoherence = argc > 5 ? atof(argv[5]) : 0;
-	double maxCoherence = argc > 6 ? atof(argv[6]) : 60;//x[x.size() - 1] - x[0];
-	int bootstrapSample = argc > 7 ? atoi(argv[7]) : 0;
+	double minPeriod = argc > 4 ? atof(argv[4]) : 2;
+	double maxPeriod = argc > 5 ? atof(argv[5]) : 10;
+	double minCoherence = argc > 6 ? atof(argv[6]) : 0;
+	double maxCoherence = argc > 7 ? atof(argv[7]) : 60;//x[x.size() - 1] - x[0];
+	int bootstrapSample = argc > 8 ? atoi(argv[8]) : 0;
 	D2 d2(x, y, dim, minPeriod, maxPeriod, minCoherence, maxCoherence);
 	if (bootstrapSample > 0) {
 		for (int i = 0; i < bootstrapSample; i++) {
@@ -210,9 +210,8 @@ void MapTo01D(vector<double>& cum) {
 // Currently implemented as Frobenius norm
 double D2::DiffNorm(const double y1[], const double y2[]) {
 	double norm = 0;
-	for (unsigned i; i < dim; i++) {
-		double diff = y1[i] - y2[i];
-		norm += diff * diff;
+	for (unsigned i = 0; i < dim; i++) {
+		norm += square(y1[i] - y2[i]);
 	}
 	return norm;
 }
