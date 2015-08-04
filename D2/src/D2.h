@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <random>
+#include "DataLoader.h"
 
 using namespace std;
 
@@ -13,7 +14,7 @@ enum Mode {
 };
 
 class D2 {
-	private:
+private:
 
 	const Mode mode = GaussWithCosine;
 	const bool relative = true;
@@ -24,15 +25,12 @@ class D2 {
 
 	double epslim, eps, ln2, lnp;
 
-	const vector<double>& x;
-	const vector<double*>& y;
-	const unsigned dim;
+	DataLoader& mrDataLoader;
 	const double minCoherence;
 	const double maxCoherence = 0.1;
 
 	vector<double> ty, ta, td, cum;
 
-    unsigned l;
     unsigned lp;
     unsigned k;
     unsigned m;
@@ -47,11 +45,11 @@ class D2 {
     // Seed with a real random value, if available
     random_device rd;
 
-	public:
-    D2(const vector<double>& r_x, const vector<double*>& r_y, unsigned dim, double minPeriod = 2, double maxPeriod = 10, double minCoherence = 0, double maxCoherence = 60);
+public:
+    D2(DataLoader& rDataLoader, double minPeriod = 2, double maxPeriod = 10, double minCoherence = 0, double maxCoherence = 60);
     void Compute2DSpectrum(bool bootstrap = false);
 
-	private:
+private:
     double Criterion(double d, double w);
 
     // The norm of the difference of two datasets
