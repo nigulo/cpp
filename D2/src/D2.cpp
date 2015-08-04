@@ -5,6 +5,7 @@
 #include <cmath>
 #include <math.h>
 #include <sstream>
+#include <memory>
 
 using namespace std;
 
@@ -150,21 +151,21 @@ double D2::Criterion(double d, double w) {
 
 void MapTo01D(vector<double>& cum) {
 
-	double* min = 0;
-	double* max = 0;
+	unique_ptr<double> min;
+	unique_ptr<double> max;
 
-	for (vector<double>::iterator it = cum.begin() ; it != cum.end(); ++it) {
-		if (!min || *it < *min) {
-			min = new double(*it);
+	for (auto& val : cum) {
+		if (!min.get() || val < *min.get()) {
+			min.reset(new double(val));
 		}
-		if (!max || *it > *max) {
-			max = new double(*it);
+		if (!max.get() || val > *max.get()) {
+			max.reset(new double(val));
 		}
 	}
-	if (max && min && *max > *min) {
-		double range = *max - *min;
-		for (vector<double>::iterator it = cum.begin() ; it != cum.end(); ++it) {
-			*it = (*it - *min) / range;
+	if (max.get() && min.get() && *max.get() > *min.get()) {
+		double range = *max.get() - *min.get();
+		for (auto& val: cum) {
+			val = (val - *min.get()) / range;
 		}
 
 	} else {
