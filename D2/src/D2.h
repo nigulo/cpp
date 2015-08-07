@@ -1,9 +1,9 @@
 #ifndef D2_H_
 #define D2_H_
 
+#include "DataLoader.h"
 #include <vector>
 #include <random>
-#include "DataLoader.h"
 
 using namespace std;
 

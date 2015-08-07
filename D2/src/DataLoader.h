@@ -11,29 +11,23 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <memory>
 
 using namespace std;
 
 class DataLoader {
 public:
-	DataLoader(const string& fileName, unsigned startCol = 1, unsigned dim = 1, unsigned bufferSize = 0);
+	DataLoader(const string& fileName, unsigned bufferSize = 0, ios::openmode mode = ios::in, unsigned dim = 1, unsigned totalNumVars = 1, const vector<unsigned>& varIndices = {0});
 	DataLoader(const DataLoader& dataLoader);
 	virtual ~DataLoader();
 
-	bool Next();
+	virtual bool Next() = 0;
+	virtual unique_ptr<DataLoader> Clone() const = 0;
 
 	void Reset();
 
 	const string& GetFileName() const {
 		return fileName;
-	}
-
-	unsigned GetStartCol() const {
-		return startCol;
-	}
-
-	unsigned GetDim() const {
-		return dim;
 	}
 
 	const vector<double>& GetX() const {
@@ -48,16 +42,29 @@ public:
 		return page;
 	}
 
-private:
+	unsigned GetDim() const {
+		return dim;
+	}
+
+	unsigned GetNumVars() const {
+		return varIndices.size();
+	}
+
+	const vector<unsigned>& GetVarIndices() const {
+		return varIndices;
+	}
+
+protected:
 	const string fileName;
-	ifstream input;
-	const unsigned startCol;
-	const unsigned dim;
 	const unsigned bufferSize;
 	vector<double> x;
 	vector<double*> y;
-
 	int page;
+	const ios::openmode mode;
+	ifstream input;
+	const unsigned dim;
+	const unsigned totalNumVars;
+	const vector<unsigned> varIndices;
 
 };
 

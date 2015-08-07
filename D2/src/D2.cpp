@@ -1,4 +1,6 @@
 #include "D2.h"
+#include "BinaryDataLoader.h"
+
 #include <iostream>
 #include <cstdlib>
 #include <string>
@@ -6,6 +8,7 @@
 #include <math.h>
 #include <sstream>
 #include <memory>
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
 
@@ -29,15 +32,27 @@ vector<std::string> split(const std::string& s, char delim) {
 #define BUFFER_SIZE 1000
 
 int main(int argc, char *argv[]) {
-	unsigned from_col = argc > 2 ? atoi(argv[2]) : 1;
-	unsigned to_col = argc > 3 ? atoi(argv[3]) + 1 : from_col + 1;
-	unsigned dim = to_col - from_col;
-	double minPeriod = argc > 4 ? atof(argv[4]) : 2;
-	double maxPeriod = argc > 5 ? atof(argv[5]) : 10;
-	double minCoherence = argc > 6 ? atof(argv[6]) : 0;
-	double maxCoherence = argc > 7 ? atof(argv[7]) : 60;//x[x.size() - 1] - x[0];
-	int bootstrapSample = argc > 8 ? atoi(argv[8]) : 0;
-	DataLoader dl(argv[1], from_col, dim, BUFFER_SIZE);
+	int i = 1;
+	unsigned bufferSize = argc > ++i ? atoi(argv[i]) : 0;
+	unsigned dim = argc > ++i ? atoi(argv[i]) : 1;
+	unsigned totalNumVars = argc > ++i ? atoi(argv[i]) + 1 : 1;
+
+	string strVarIndices = argc > ++i ? argv[i] : "0";
+	vector<string> varIndicesStr;
+	vector<unsigned> varIndices;
+	boost::split(varIndicesStr, strVarIndices, boost::is_any_of(","), boost::token_compress_on);
+	for (vector<string>::iterator it = varIndicesStr.begin() ; it != varIndicesStr.end(); ++it) {
+		if ((*it).length() != 0) {
+			varIndices.push_back(stoi(*it));
+		}
+	}
+
+	double minPeriod = argc > ++i ? atof(argv[i]) : 2;
+	double maxPeriod = argc > ++i ? atof(argv[i]) : 10;
+	double minCoherence = argc > ++i ? atof(argv[i]) : 0;
+	double maxCoherence = argc > ++i ? atof(argv[i]) : 60;//x[x.size() - 1] - x[0];
+	int bootstrapSample = argc > ++i ? atoi(argv[i]) : 0;
+	BinaryDataLoader dl(argv[1], bufferSize, dim, totalNumVars, varIndices);
 	D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence);
 	if (bootstrapSample > 0) {
 		for (int i = 0; i < bootstrapSample; i++) {
@@ -177,7 +192,7 @@ void MapTo01D(vector<double>& cum) {
 // Currently implemented as Frobenius norm
 double D2::DiffNorm(const double y1[], const double y2[]) {
 	double norm = 0;
-	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
+	for (unsigned i = 0; i < mrDataLoader.GetDim() * mrDataLoader.GetNumVars(); i++) {
 		norm += square(y1[i] - y2[i]);
 	}
 	return norm;
@@ -204,29 +219,29 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
 	unsigned i, j;
 	while (mrDataLoader.Next()) {
-		DataLoader dl2(mrDataLoader);
+		DataLoader* dl2 = mrDataLoader.Clone().get();
 		do {
 			for (i = 0; i < mrDataLoader.GetX().size() - 1; i++) {// to l-2 do
-				for (j = 0; j < dl2.GetX().size(); j++) {// to l-1 do begin
-					if (i == j && mrDataLoader.GetPage() == dl2.GetPage()) {
+				for (j = 0; j < dl2->GetX().size(); j++) {// to l-1 do begin
+					if (i == j && mrDataLoader.GetPage() == dl2->GetPage()) {
 						continue;
 					}
-					double d = dl2.GetX()[j] - mrDataLoader.GetX()[i];
+					double d = dl2->GetX()[j] - mrDataLoader.GetX()[i];
 					if (d >= dmin && d <= dmax) {
 						int kk = round(a * d + b);
 						if (bootstrap) {
 							if (!ydiffs[kk]) {
 								ydiffs[kk] = new vector<double>(0);
 							}
-							ydiffs[kk]->push_back(DiffNorm(dl2.GetY()[j], mrDataLoader.GetY()[i]));
+							ydiffs[kk]->push_back(DiffNorm(dl2->GetY()[j], mrDataLoader.GetY()[i]));
 						} else {
-							tty[kk] = tty[kk] + DiffNorm(dl2.GetY()[j], mrDataLoader.GetY()[i]);
+							tty[kk] = tty[kk] + DiffNorm(dl2->GetY()[j], mrDataLoader.GetY()[i]);
 						}
 						tta[kk] = tta[kk] + 1.0;
 					}
 				}
 			}
-		} while (dl2.Next());
+		} while (dl2->Next());
 	}
 	j=0;
 
