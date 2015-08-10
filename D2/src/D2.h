@@ -47,7 +47,7 @@ private:
 
 public:
     D2(DataLoader& rDataLoader, double minPeriod = 2, double maxPeriod = 10, double minCoherence = 0, double maxCoherence = 60);
-    void Compute2DSpectrum(bool bootstrap = false);
+    void Compute2DSpectrum();
 
 private:
     double Criterion(double d, double w);

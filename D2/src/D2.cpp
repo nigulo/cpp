@@ -10,11 +10,28 @@
 #include <sstream>
 #include <memory>
 #include <boost/algorithm/string.hpp>
+#include "mpi.h"
 
 using namespace std;
 
+int procId;
+int numProc;
+
 int main(int argc, char *argv[]) {
-	int i = 1;
+
+	MPI::Init (argc, argv);
+	numProc = MPI::COMM_WORLD.Get_size();
+	procId = MPI::COMM_WORLD.Get_rank();
+
+	string dirPrefix = argv[1];
+	string fileName = argv[2];
+	string path;
+	if (numProc > 1) {
+		path = dirPrefix + to_string(procId) + "/" + fileName;
+	} else {
+		path = dirPrefix + "/" + fileName;
+	}
+	int i = 2;
 	bool binary = argc > ++i ? atoi(argv[i]) : 0;
 	unsigned bufferSize = argc > ++i ? atoi(argv[i]) : 0;
 	unsigned dim = argc > ++i ? atoi(argv[i]) : 1;
@@ -34,28 +51,17 @@ int main(int argc, char *argv[]) {
 	double maxPeriod = argc > ++i ? atof(argv[i]) : 10;
 	double minCoherence = argc > ++i ? atof(argv[i]) : 0;
 	double maxCoherence = argc > ++i ? atof(argv[i]) : 60;//x[x.size() - 1] - x[0];
-	int bootstrapSample = argc > ++i ? atoi(argv[i]) : 0;
 	DataLoader* dl;
 	if (binary) {
-		dl = new BinaryDataLoader(argv[1], bufferSize, dim, totalNumVars, varIndices);
+		dl = new BinaryDataLoader(path, bufferSize, dim, totalNumVars, varIndices);
 	} else {
-		dl = new TextDataLoader(argv[1], bufferSize, dim, totalNumVars, varIndices);
+		dl = new TextDataLoader(path, bufferSize, dim, totalNumVars, varIndices);
 	}
-	while (dl->Next()) {
-		//getchar();
-	}
-	/*
 	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence);
-	if (bootstrapSample > 0) {
-		for (int i = 0; i < bootstrapSample; i++) {
-			d2.Compute2DSpectrum(true);
-		}
-	} else {
-		d2.Compute2DSpectrum(false);
-	}
+	d2.Compute2DSpectrum();
 	delete dl;
+	MPI::Finalize();
 	return 0;
-	*/
 }
 
 #define square(x) ((x) * (x))
@@ -192,7 +198,7 @@ double D2::DiffNorm(const double y1[], const double y2[]) {
 	return norm;
 }
 
-void D2::Compute2DSpectrum(bool bootstrap) {
+void D2::Compute2DSpectrum() {
 
     cout << "lp= " << lp << endl;
     cout << "k= " << k << endl;
@@ -223,133 +229,117 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 					double d = dl2->GetX(j) - mrDataLoader.GetX(i);
 					if (d >= dmin && d <= dmax) {
 						int kk = round(a * d + b);
-						if (bootstrap) {
-							if (!ydiffs[kk]) {
-								ydiffs[kk] = new vector<double>(0);
-							}
-							ydiffs[kk]->push_back(DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i)));
-						} else {
-							tty[kk] = tty[kk] + DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
-						}
-						tta[kk] = tta[kk] + 1.0;
+						tty[kk] += DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
+						tta[kk] += 1.0;
 					}
 				}
 			}
 		} while (dl2->Next());
 	}
-	j=0;
 
-	if (bootstrap) {
-		default_random_engine e1(rd());
-		for (i = 0; i < ydiffs.size(); i++) {
-			if (!ydiffs[i]) {
-				continue;
+	if (procId > 0) {
+		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, 1);
+	} else {
+		for (int i = 1; i < numProc; i++) {
+			double received[m];
+			MPI::Status status;
+			MPI::COMM_WORLD.Recv (received, m,  MPI::DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, status);
+			for (unsigned j = 0; j < m; j++) {
+				tty[j] += received[j];
 			}
-			uniform_int_distribution<int> uniform_dist(0, ydiffs[i]->size() - 1);
-			for (unsigned j1 = 0; j1 < ydiffs[i]->size(); j1++) {
-				//if (i == 50) {
-				//	cout << i << "," << j << "-" << (*ydiffs[i])[j] << endl;
-				//}
-				tty[i] = tty[i] + (*ydiffs[i])[uniform_dist(e1)];
+		}
+		cout << "Siin" << endl;
+		// How many time differences was actually used?
+		j=0;
+		for (i = 0; i < m; i++) {
+			if (tta[i] > 0.5) {
+				j++;
 			}
-			delete ydiffs[i];
 		}
-	}
-	// How many time differences was actually used?
+		cout << "j=" << j << endl;
+		ta.assign(j, 0);
+		ty.assign(j, 0);
+		td.assign(j, 0);
+		cout << "td.size()=" << td.size() << endl;
+		double d = dmin;
 
-	for (i = 0; i < m; i++) {
-		if (tta[i] > 0.5) {
-			j++;
-		}
-	}
-	cout << "j=" << j << endl;
-	ta.assign(j, 0);
-	ty.assign(j, 0);
-	td.assign(j, 0);
-	cout << "td.size()=" << td.size() << endl;
-	double d = dmin;
+		// Build final grids for periodicity search.
 
-	// Build final grids for periodicity search.
-
-	j = 0;
-	for (i = 0; i < m; i++) {
-		if (tta[i] > 0.5) {
-			ta[j] = tta[i];
-			ty[j] = tty[i];
-			td[j] = d;
-			j++;
-		}
-		d = d + delta;
-	}
-	ofstream output("phasedisp.csv");
-	ofstream output_min("phasedisp_min.csv");
-	ofstream output_max("phasedisp_max.csv");
-
-	// Basic cycle with printing for GnuPlot
-
-	if (bootstrap) {
-		k = 1;
-	}
-
-	double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (k - 1) : 0;
-	for (i = 0; i < k; i++) {
-		d = minCoherence + i * deltac;
-		for (j = 0; j < lp; j++) {
-			double w = wmin + j * step;
-			double d1 = d;
-			if (relative) {
-				d1 = d / w;
+		j = 0;
+		for (i = 0; i < m; i++) {
+			if (tta[i] > 0.5) {
+				ta[j] = tta[i];
+				ty[j] = tty[i];
+				td[j] = d;
+				j++;
 			}
-			double res=Criterion(d1, w);
-			cum[j] = res;
+			d = d + delta;
 		}
+		ofstream output("phasedisp.csv");
+		ofstream output_min("phasedisp_min.csv");
+		ofstream output_max("phasedisp_max.csv");
 
-		// Spectrum in cum can be normalized
+		// Basic cycle with printing for GnuPlot
 
-		if (true) {
-			MapTo01D(cum);
-		}
+		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (k - 1) : 0;
+		for (i = 0; i < k; i++) {
+			d = minCoherence + i * deltac;
+			for (j = 0; j < lp; j++) {
+				double w = wmin + j * step;
+				double d1 = d;
+				if (relative) {
+					d1 = d / w;
+				}
+				double res=Criterion(d1, w);
+				cum[j] = res;
+			}
 
-		vector<int> minima(0);
-		unsigned dk = lp / 20;
-		for (j = 0; j < lp; j++) {
-			if (!bootstrap) {
+			// Spectrum in cum can be normalized
+
+			if (true) {
+				MapTo01D(cum);
+			}
+
+			vector<int> minima(0);
+			unsigned dk = lp / 20;
+			for (j = 0; j < lp; j++) {
 				output << d << " " << (wmin + j * step) << " " << cum[j] << endl;
 				if (d == minCoherence) {
 					output_min << (wmin + j * step) << " " << cum[j] << endl;
 				} else if (d == maxCoherence) {
 					output_max << (wmin + j * step) << " " << cum[j] << endl;
 				}
-			}
-			if (j > dk - 1 && j < lp - dk - 1) {
-				bool isMinimum = true;
-				for (unsigned k1 = j - dk; k1 <= j + dk; k1++) {
-					if (cum[j] > cum[k1]) {
-						isMinimum = false;
-						break;
-					}
-				}
-				if (isMinimum) {
-					vector<int>::iterator it = minima.begin();
-					for (; it != minima.end(); ++it) {
-						if (cum[j] < cum[(*it)]) {
+
+				if (j > dk - 1 && j < lp - dk - 1) {
+					bool isMinimum = true;
+					for (unsigned k1 = j - dk; k1 <= j + dk; k1++) {
+						if (cum[j] > cum[k1]) {
+							isMinimum = false;
 							break;
 						}
 					}
-					minima.insert(it, j);
+					if (isMinimum) {
+						vector<int>::iterator it = minima.begin();
+						for (; it != minima.end(); ++it) {
+							if (cum[j] < cum[(*it)]) {
+								break;
+							}
+						}
+						minima.insert(it, j);
+					}
 				}
 			}
-		}
-		for (unsigned k1 = 0; k1 < minima.size(); k1++) {
-			if (k1 > 0) {
-				//cout << " ";
+			for (unsigned k1 = 0; k1 < minima.size(); k1++) {
+				if (k1 > 0) {
+					//cout << " ";
+				}
+				//cout << wmin + minima[k1] * step;
 			}
-			//cout << wmin + minima[k1] * step;
+			//cout << endl;
 		}
-		//cout << endl;
+		output.close();
+		output_min.close();
+		output_max.close();
 	}
-	output.close();
-	output_min.close();
-	output_max.close();
 }
 
