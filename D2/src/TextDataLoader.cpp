@@ -1,7 +1,7 @@
 #include "TextDataLoader.h"
 #include <boost/algorithm/string.hpp>
 
-TextDataLoader::TextDataLoader(const string& fileName, unsigned bufferSize, ios::openmode mode, unsigned dim, unsigned totalNumVars, const vector<unsigned>& varIndices) :
+TextDataLoader::TextDataLoader(const string& fileName, unsigned bufferSize, unsigned dim, unsigned totalNumVars, const vector<unsigned>& varIndices) :
 		DataLoader(fileName, bufferSize, ios::in, dim, totalNumVars, varIndices) {
 }
 
@@ -19,11 +19,8 @@ bool TextDataLoader::Next() {
 		return false;
 	}
 	page++;
-	x.clear();
-	for (auto& yVals : y) {
-		delete[] yVals;
-	}
-	y.clear();
+	delete[] data;
+	data = new double[bufferSize * (dim * totalNumVars + 1)];
 	unsigned i = 0;
 	while (bufferSize == 0 || i < bufferSize) {
 		string line;
@@ -40,16 +37,10 @@ bool TextDataLoader::Next() {
 				//cout << "Skipping comment line: " << line << endl;
 			} else if (words.size() == dim * totalNumVars) {
 				try {
-					double xVal = stod(words[0]);
-					x.push_back(xVal);
-					double* yVals = new double[dim * varIndices.size()];
-					for (unsigned j = 0; j < dim; j++) {
-						unsigned k = 0;
-						for (unsigned varIndex : varIndices) {
-							yVals[j * dim + k++] = stod(words[dim * totalNumVars + varIndex]);
-						}
+					data[i * (dim * totalNumVars + 1)] = stod(words[0]); // x
+					for (unsigned j = 0; j < dim * totalNumVars; j++) {
+						data[i * (dim * totalNumVars + 1) + j + 1] = stod(words[j + 1]);
 					}
-					y.push_back(yVals);
 				} catch (std::invalid_argument& ex) {
 					cout << "Skipping line, invalid number: " << line << endl;
 				}
@@ -62,7 +53,8 @@ bool TextDataLoader::Next() {
 			break;
 		}
 	}
-	return !x.empty();
+	pageSize = i;
+	return pageSize > 0;
 }
 
 unique_ptr<DataLoader> TextDataLoader::Clone() const {

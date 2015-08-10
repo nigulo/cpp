@@ -10,42 +10,35 @@
 DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmode mode, unsigned dim, unsigned totalNumVars, const vector<unsigned>& varIndices) :
 	fileName(fileName),
 	bufferSize(bufferSize),
-	page(-1),
 	mode(mode),
-	input(fileName, mode),
 	dim(dim),
 	totalNumVars(totalNumVars),
-	varIndices(varIndices) {
-
+	varIndices(varIndices),
+	input(fileName, mode),
+	page(-1),
+	data(nullptr),
+	pageSize(0) {
+	for (unsigned varIndex : varIndices) {
+		assert(varIndex < GetYSize());
+	}
 }
 
 DataLoader::DataLoader(const DataLoader& dataLoader) :
 	fileName(dataLoader.fileName),
 	bufferSize(dataLoader.bufferSize),
-	page(-1),
 	mode(dataLoader.mode),
-	input(fileName, mode),
 	dim(dataLoader.dim),
 	totalNumVars(dataLoader.totalNumVars),
-	varIndices(dataLoader.varIndices) {
+	varIndices(dataLoader.varIndices),
+	input(fileName, mode),
+	page(-1),
+	data(nullptr),
+	pageSize(0) {
 }
 
 DataLoader::~DataLoader() {
 	if (input.is_open()) {
 		input.close();
 	}
-}
-
-void DataLoader::Reset() {
-	x.clear();
-	for (auto& yVals : y) {
-		delete[] yVals;
-	}
-	y.clear();
-	if (input.is_open()) {
-		input.close();
-	}
-	input.open(fileName, mode);
-	page = -1;
 }
 

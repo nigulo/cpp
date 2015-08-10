@@ -12,6 +12,7 @@
 #include <vector>
 #include <fstream>
 #include <memory>
+#include <cassert>
 
 using namespace std;
 
@@ -30,12 +31,14 @@ public:
 		return fileName;
 	}
 
-	const vector<double>& GetX() const {
-		return x;
+	const double GetX(unsigned i) const {
+		assert(i < pageSize);
+		return data[i * (dim * totalNumVars + 1)];
 	}
 
-	const vector<double*>& GetY() const {
-		return y;
+	const double* GetY(unsigned i) const {
+		assert(i < pageSize);
+		return &data[i * (dim * totalNumVars + 1) + 1];
 	}
 
 	int GetPage() const {
@@ -46,8 +49,12 @@ public:
 		return dim;
 	}
 
-	unsigned GetNumVars() const {
-		return varIndices.size();
+	unsigned GetYSize() const {
+		return dim * totalNumVars;
+	}
+
+	unsigned GetPageSize() const {
+		return pageSize;
 	}
 
 	const vector<unsigned>& GetVarIndices() const {
@@ -57,14 +64,16 @@ public:
 protected:
 	const string fileName;
 	const unsigned bufferSize;
-	vector<double> x;
-	vector<double*> y;
-	int page;
+	//vector<double> x;
+	//vector<double*> y;
 	const ios::openmode mode;
-	ifstream input;
 	const unsigned dim;
 	const unsigned totalNumVars;
 	const vector<unsigned> varIndices;
+	ifstream input;
+	int page;
+	double* data;
+	unsigned pageSize;
 
 };
 

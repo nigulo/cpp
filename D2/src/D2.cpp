@@ -1,5 +1,6 @@
 #include "D2.h"
 #include "BinaryDataLoader.h"
+#include "TextDataLoader.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -12,27 +13,9 @@
 
 using namespace std;
 
-
-vector<std::string>& split(const std::string& s, char delim, std::vector<std::string> &elems) {
-    stringstream ss(s);
-    string item;
-    while (getline(ss, item, delim)) {
-        elems.push_back(item);
-    }
-    return elems;
-}
-
-
-vector<std::string> split(const std::string& s, char delim) {
-    std::vector<std::string> elems;
-    split(s, delim, elems);
-    return elems;
-}
-
-#define BUFFER_SIZE 1000
-
 int main(int argc, char *argv[]) {
 	int i = 1;
+	bool binary = argc > ++i ? atoi(argv[i]) : 0;
 	unsigned bufferSize = argc > ++i ? atoi(argv[i]) : 0;
 	unsigned dim = argc > ++i ? atoi(argv[i]) : 1;
 	unsigned totalNumVars = argc > ++i ? atoi(argv[i]) + 1 : 1;
@@ -52,8 +35,17 @@ int main(int argc, char *argv[]) {
 	double minCoherence = argc > ++i ? atof(argv[i]) : 0;
 	double maxCoherence = argc > ++i ? atof(argv[i]) : 60;//x[x.size() - 1] - x[0];
 	int bootstrapSample = argc > ++i ? atoi(argv[i]) : 0;
-	BinaryDataLoader dl(argv[1], bufferSize, dim, totalNumVars, varIndices);
-	D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence);
+	DataLoader* dl;
+	if (binary) {
+		dl = new BinaryDataLoader(argv[1], bufferSize, dim, totalNumVars, varIndices);
+	} else {
+		dl = new TextDataLoader(argv[1], bufferSize, dim, totalNumVars, varIndices);
+	}
+	while (dl->Next()) {
+		//getchar();
+	}
+	/*
+	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence);
 	if (bootstrapSample > 0) {
 		for (int i = 0; i < bootstrapSample; i++) {
 			d2.Compute2DSpectrum(true);
@@ -61,7 +53,9 @@ int main(int argc, char *argv[]) {
 	} else {
 		d2.Compute2DSpectrum(false);
 	}
+	delete dl;
 	return 0;
+	*/
 }
 
 #define square(x) ((x) * (x))
@@ -120,23 +114,23 @@ double D2::Criterion(double d, double w) {
    case Gauss: //This is important, in td[] are precomputed sums of squares and counts.
    case GaussWithCosine:
 	  for (j = 0; j < td.size(); j++) {// to jj-1 do begin
-		 dd=td[j];
-		 if (d>0.0) {
-			ww=exp(-square(ln2*dd/d));
+		 dd = td[j];
+		 if (d > 0.0) {
+			ww = exp(-square(ln2 * dd / d));
 		 } else {
-			ww=0.0;
+			ww = 0.0;
 		 }
-		 ph=dd*w - floor(dd*w);//Frac(dd*w);
-		 if (ph<0.0) {
-			ph=ph+1;
+		 ph=dd * w - floor(dd * w);//Frac(dd*w);
+		 if (ph < 0.0) {
+			ph = ph + 1;
 		 }
 		 if (ph>0.5) {
-			ph=1.0-ph;
+			ph = 1.0 - ph;
 		 }
 		 bool closeInPhase = true;
 		 if (mode == Gauss) {
-			 closeInPhase = ph<eps || ph>epslim;
-			 wp=exp(-square(lnp*ph));
+			 closeInPhase = ph < eps || ph > epslim;
+			 wp = exp(-square(lnp*ph));
 		 } else {
 			 if (ph == 0.5) {
 				 wp = 0;
@@ -192,7 +186,7 @@ void MapTo01D(vector<double>& cum) {
 // Currently implemented as Frobenius norm
 double D2::DiffNorm(const double y1[], const double y2[]) {
 	double norm = 0;
-	for (unsigned i = 0; i < mrDataLoader.GetDim() * mrDataLoader.GetNumVars(); i++) {
+	for (unsigned i : mrDataLoader.GetVarIndices()) {
 		norm += square(y1[i] - y2[i]);
 	}
 	return norm;
@@ -221,21 +215,21 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 	while (mrDataLoader.Next()) {
 		DataLoader* dl2 = mrDataLoader.Clone().get();
 		do {
-			for (i = 0; i < mrDataLoader.GetX().size() - 1; i++) {// to l-2 do
-				for (j = 0; j < dl2->GetX().size(); j++) {// to l-1 do begin
+			for (i = 0; i < mrDataLoader.GetPageSize() - 1; i++) {// to l-2 do
+				for (j = 0; j < dl2->GetPageSize(); j++) {// to l-1 do begin
 					if (i == j && mrDataLoader.GetPage() == dl2->GetPage()) {
 						continue;
 					}
-					double d = dl2->GetX()[j] - mrDataLoader.GetX()[i];
+					double d = dl2->GetX(j) - mrDataLoader.GetX(i);
 					if (d >= dmin && d <= dmax) {
 						int kk = round(a * d + b);
 						if (bootstrap) {
 							if (!ydiffs[kk]) {
 								ydiffs[kk] = new vector<double>(0);
 							}
-							ydiffs[kk]->push_back(DiffNorm(dl2->GetY()[j], mrDataLoader.GetY()[i]));
+							ydiffs[kk]->push_back(DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i)));
 						} else {
-							tty[kk] = tty[kk] + DiffNorm(dl2->GetY()[j], mrDataLoader.GetY()[i]);
+							tty[kk] = tty[kk] + DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
 						}
 						tta[kk] = tta[kk] + 1.0;
 					}
@@ -279,13 +273,13 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 
 	j = 0;
 	for (i = 0; i < m; i++) {
-		if (tta[i]>0.5) {
-			ta[j]=tta[i];
-			ty[j]=tty[i];
-			td[j]=d;
+		if (tta[i] > 0.5) {
+			ta[j] = tta[i];
+			ty[j] = tty[i];
+			td[j] = d;
 			j++;
 		}
-		d=d+delta;
+		d = d + delta;
 	}
 	ofstream output("phasedisp.csv");
 	ofstream output_min("phasedisp_min.csv");
@@ -298,16 +292,16 @@ void D2::Compute2DSpectrum(bool bootstrap) {
 	}
 
 	double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (k - 1) : 0;
-	for (i=0; i < k; i++) {
+	for (i = 0; i < k; i++) {
 		d = minCoherence + i * deltac;
-		for (j=0; j < lp; j++) {
-			double w=wmin+j*step;
+		for (j = 0; j < lp; j++) {
+			double w = wmin + j * step;
 			double d1 = d;
 			if (relative) {
 				d1 = d / w;
 			}
-			double res=Criterion(d1,w);
-			cum[j]=res;
+			double res=Criterion(d1, w);
+			cum[j] = res;
 		}
 
 		// Spectrum in cum can be normalized

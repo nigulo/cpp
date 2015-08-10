@@ -12,7 +12,7 @@
 
 class TextDataLoader: public DataLoader {
 public:
-	TextDataLoader(const string& fileName, unsigned bufferSize = 0, ios::openmode mode = ios::in, unsigned dim = 1, unsigned totalNumVars = 1, const vector<unsigned>& varIndices = {0});
+	TextDataLoader(const string& fileName, unsigned bufferSize = 0, unsigned dim = 1, unsigned totalNumVars = 1, const vector<unsigned>& varIndices = {0});
 	TextDataLoader(const TextDataLoader& dataLoader);
 	virtual ~TextDataLoader();
 
