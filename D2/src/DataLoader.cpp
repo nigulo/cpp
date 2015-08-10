@@ -18,6 +18,7 @@ DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmod
 	page(-1),
 	data(nullptr),
 	pageSize(0) {
+	assert(input.is_open());
 	for (unsigned varIndex : varIndices) {
 		assert(varIndex < GetYSize());
 	}
@@ -34,6 +35,7 @@ DataLoader::DataLoader(const DataLoader& dataLoader) :
 	page(-1),
 	data(nullptr),
 	pageSize(0) {
+	assert(input.is_open());
 }
 
 DataLoader::~DataLoader() {

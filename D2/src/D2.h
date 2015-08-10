@@ -53,7 +53,7 @@ private:
     double Criterion(double d, double w);
 
     // The norm of the difference of two datasets
-    double DiffNorm(const double y1[], const double y2[]);
+    double DiffNorm(const real y1[], const real y2[]);
 };
 
 

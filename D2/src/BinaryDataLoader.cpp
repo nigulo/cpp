@@ -8,7 +8,7 @@ BinaryDataLoader::BinaryDataLoader(const string& fileName, unsigned bufferSize, 
 
 BinaryDataLoader::BinaryDataLoader(const BinaryDataLoader& dataLoader) : DataLoader(dataLoader) {
 	if (dataLoader.page > 1) {
-		input.seekg((dataLoader.page - 1) * bufferSize * (dim * totalNumVars + 1) * sizeof (double), ios::cur);
+		input.seekg((dataLoader.page - 1) * bufferSize * (dim * totalNumVars + 1) * sizeof (real), ios::cur);
 		page = dataLoader.page - 1;
 	}
 	if (dataLoader.page >= 0) {
@@ -26,12 +26,13 @@ bool BinaryDataLoader::Next() {
 	}
 	page++;
 	delete[] data;
-	data = new double[bufferSize * (dim * totalNumVars + 1)];
-	input.read((char*) data, (sizeof (double)) * bufferSize * (dim * totalNumVars + 1));
+	unsigned dataSize = bufferSize * (dim * totalNumVars + 1);
+	data = new real[dataSize];
+	input.read((char*) data, (sizeof (real)) * bufferSize * (dim * totalNumVars + 1));
 	unsigned numBytesRead = input.gcount();
-	if (numBytesRead < sizeof data) {
-		assert(numBytesRead % ((sizeof (double)) * (dim * totalNumVars + 1)) == 0);
-		pageSize = numBytesRead / ((sizeof (double)) * (dim * totalNumVars + 1));
+	if (numBytesRead < (sizeof (real)) * dataSize) {
+		assert(numBytesRead % ((sizeof (real)) * (dim * totalNumVars + 1)) == 0);
+		pageSize = numBytesRead / ((sizeof (real)) * (dim * totalNumVars + 1));
 		input.close();
 	} else {
 		pageSize = bufferSize;

@@ -16,6 +16,8 @@
 
 using namespace std;
 
+typedef float real;
+
 class DataLoader {
 public:
 	DataLoader(const string& fileName, unsigned bufferSize = 0, ios::openmode mode = ios::in, unsigned dim = 1, unsigned totalNumVars = 1, const vector<unsigned>& varIndices = {0});
@@ -31,12 +33,12 @@ public:
 		return fileName;
 	}
 
-	const double GetX(unsigned i) const {
+	const real GetX(unsigned i) const {
 		assert(i < pageSize);
 		return data[i * (dim * totalNumVars + 1)];
 	}
 
-	const double* GetY(unsigned i) const {
+	const real* GetY(unsigned i) const {
 		assert(i < pageSize);
 		return &data[i * (dim * totalNumVars + 1) + 1];
 	}
@@ -64,15 +66,13 @@ public:
 protected:
 	const string fileName;
 	const unsigned bufferSize;
-	//vector<double> x;
-	//vector<double*> y;
 	const ios::openmode mode;
 	const unsigned dim;
 	const unsigned totalNumVars;
 	const vector<unsigned> varIndices;
 	ifstream input;
 	int page;
-	double* data;
+	real* data;
 	unsigned pageSize;
 
 };

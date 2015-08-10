@@ -20,7 +20,7 @@ bool TextDataLoader::Next() {
 	}
 	page++;
 	delete[] data;
-	data = new double[bufferSize * (dim * totalNumVars + 1)];
+	data = new real[bufferSize * (dim * totalNumVars + 1)];
 	unsigned i = 0;
 	while (bufferSize == 0 || i < bufferSize) {
 		string line;

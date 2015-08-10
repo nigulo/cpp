@@ -190,7 +190,7 @@ void MapTo01D(vector<double>& cum) {
 }
 
 // Currently implemented as Frobenius norm
-double D2::DiffNorm(const double y1[], const double y2[]) {
+double D2::DiffNorm(const real y1[], const real y2[]) {
 	double norm = 0;
 	for (unsigned i : mrDataLoader.GetVarIndices()) {
 		norm += square(y1[i] - y2[i]);
@@ -220,22 +220,27 @@ void D2::Compute2DSpectrum() {
 	unsigned i, j;
 	while (mrDataLoader.Next()) {
 		DataLoader* dl2 = mrDataLoader.Clone().get();
+		cout << "Siin 1" << endl;
 		do {
 			for (i = 0; i < mrDataLoader.GetPageSize() - 1; i++) {// to l-2 do
+				cout << "x1: " << mrDataLoader.GetX(i) << endl;
 				for (j = 0; j < dl2->GetPageSize(); j++) {// to l-1 do begin
 					if (i == j && mrDataLoader.GetPage() == dl2->GetPage()) {
 						continue;
 					}
-					double d = dl2->GetX(j) - mrDataLoader.GetX(i);
+					real d = dl2->GetX(j) - mrDataLoader.GetX(i);
 					if (d >= dmin && d <= dmax) {
+						cout << "Siin 1.3" << endl;
 						int kk = round(a * d + b);
 						tty[kk] += DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
+						cout << "Siin 1.4" << endl;
 						tta[kk] += 1.0;
 					}
 				}
 			}
 		} while (dl2->Next());
 	}
+	cout << "Siin 2" << endl;
 
 	if (procId > 0) {
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, 1);
@@ -246,9 +251,10 @@ void D2::Compute2DSpectrum() {
 			MPI::COMM_WORLD.Recv (received, m,  MPI::DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, status);
 			for (unsigned j = 0; j < m; j++) {
 				tty[j] += received[j];
+				tta[j] += 1.0;
 			}
 		}
-		cout << "Siin" << endl;
+		cout << "Siin 3" << endl;
 		// How many time differences was actually used?
 		j=0;
 		for (i = 0; i < m; i++) {
