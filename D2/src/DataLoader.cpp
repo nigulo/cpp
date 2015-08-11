@@ -31,7 +31,7 @@ DataLoader::DataLoader(const DataLoader& dataLoader) :
 	dim(dataLoader.dim),
 	totalNumVars(dataLoader.totalNumVars),
 	varIndices(dataLoader.varIndices),
-	input(fileName, mode),
+	input(dataLoader.fileName, dataLoader.mode),
 	page(-1),
 	data(nullptr),
 	pageSize(0) {

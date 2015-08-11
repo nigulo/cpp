@@ -221,12 +221,18 @@ void D2::Compute2DSpectrum() {
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
 	unsigned i, j;
 	while (mrDataLoader.Next()) {
-		DataLoader* dl2 = mrDataLoader.Clone().get();
+		cout << "A page: " << mrDataLoader.GetPage() << endl;
+		auto dl2Ptr = mrDataLoader.Clone();
+		DataLoader* dl2 = dl2Ptr.get();
+		cout << "    B page: " << dl2->GetPage() << endl;
 		do {
-			for (i = 0; i < mrDataLoader.GetPageSize() - 1; i++) {// to l-2 do
-				cout << "x1: " << mrDataLoader.GetX(i) << endl;
-				for (j = 0; j < dl2->GetPageSize(); j++) {// to l-1 do begin
-					if (i == j && mrDataLoader.GetPage() == dl2->GetPage()) {
+			for (i = 0; i < mrDataLoader.GetPageSize(); i++) {
+				for (j = 0; j < dl2->GetPageSize(); j++) {
+					//if (i == 999) {
+					//	cout << "pageSize: " << mrDataLoader.GetPageSize() << " " << dl2->GetPageSize() << endl;
+					//	cout << "        j1: " << j << " " << dl2->GetX(j) << " " << mrDataLoader.GetX(i) << endl;
+					//}
+					if (j <= i && mrDataLoader.GetPage() == dl2->GetPage()) {
 						continue;
 					}
 					real d = (dl2->GetX(j) - mrDataLoader.GetX(i)) * tScale;
@@ -239,6 +245,7 @@ void D2::Compute2DSpectrum() {
 			}
 		} while (dl2->Next());
 	}
+	cout << "Siin" << endl;
 
 	if (procId > 0) {
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, 1);

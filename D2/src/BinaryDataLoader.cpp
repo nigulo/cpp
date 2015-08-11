@@ -8,7 +8,11 @@ BinaryDataLoader::BinaryDataLoader(const string& fileName, unsigned bufferSize, 
 
 BinaryDataLoader::BinaryDataLoader(const BinaryDataLoader& dataLoader) : DataLoader(dataLoader) {
 	if (dataLoader.page > 1) {
-		input.seekg((dataLoader.page - 1) * bufferSize * (dim * totalNumVars + 1) * sizeof (real), ios::cur);
+		if (RECORDHEADER) {
+			input.seekg((dataLoader.page - 1) * bufferSize * ((dim * totalNumVars + 1) * sizeof (real) + 16), ios::cur);
+		} else {
+			input.seekg((dataLoader.page - 1) * bufferSize * (dim * totalNumVars + 1) * sizeof (real), ios::cur);
+		}
 		page = dataLoader.page - 1;
 	}
 	if (dataLoader.page >= 0) {
@@ -40,13 +44,25 @@ bool BinaryDataLoader::Next() {
 			}
 			unsigned recordSize;
 			input.read((char*) &recordSize, 4);
+			unsigned numBytesRead = input.gcount();
+			assert(numBytesRead == 4);
 			assert(recordSize == 4);
 			input.read((char*) (data + dataOffset), recordSize);
+			numBytesRead = input.gcount();
+			assert(numBytesRead == 4);
 			input.read((char*) &recordSize, 4);
+			numBytesRead = input.gcount();
+			assert(numBytesRead == 4);
 			input.read((char*) &recordSize, 4);
+			numBytesRead = input.gcount();
+			assert(numBytesRead == 4);
 			assert(recordSize == (sizeof (real) * (varSize - 1)));
-			input.read((char*) data, recordSize);
+			input.read((char*) (data + dataOffset + 1), recordSize);
+			numBytesRead = input.gcount();
+			assert(numBytesRead == recordSize);
 			input.read((char*) &recordSize, 4);
+			numBytesRead = input.gcount();
+			assert(numBytesRead == 4);
 			dataOffset += varSize;
 			i++;
 		}
@@ -66,5 +82,6 @@ bool BinaryDataLoader::Next() {
 }
 
 unique_ptr<DataLoader> BinaryDataLoader::Clone() const {
-	return unique_ptr<DataLoader>(new BinaryDataLoader(*this));
+	BinaryDataLoader* clone = new BinaryDataLoader(*this);
+	return unique_ptr<DataLoader>(clone);
 }
