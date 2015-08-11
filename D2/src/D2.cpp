@@ -224,8 +224,8 @@ void D2::Compute2DSpectrum() {
 		cout << "A page: " << mrDataLoader.GetPage() << endl;
 		auto dl2Ptr = mrDataLoader.Clone();
 		DataLoader* dl2 = dl2Ptr.get();
-		cout << "    B page: " << dl2->GetPage() << endl;
 		do {
+			cout << "    B page: " << dl2->GetPage() << endl;
 			for (i = 0; i < mrDataLoader.GetPageSize(); i++) {
 				for (j = 0; j < dl2->GetPageSize(); j++) {
 					//if (i == 999) {
