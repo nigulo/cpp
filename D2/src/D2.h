@@ -27,7 +27,8 @@ private:
 
 	DataLoader& mrDataLoader;
 	const double minCoherence;
-	const double maxCoherence = 0.1;
+	const double maxCoherence;
+	const double tScale;
 
 	vector<double> ty, ta, td, cum;
 
@@ -46,7 +47,7 @@ private:
     random_device rd;
 
 public:
-    D2(DataLoader& rDataLoader, double minPeriod = 2, double maxPeriod = 10, double minCoherence = 0, double maxCoherence = 60);
+    D2(DataLoader& rDataLoader, double minPeriod = 2, double maxPeriod = 10, double minCoherence = 3, double maxCoherence = 30, double tScale = 1);
     void Compute2DSpectrum();
 
 private:

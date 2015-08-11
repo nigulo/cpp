@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 	bool binary = argc > ++i ? atoi(argv[i]) : 0;
 	unsigned bufferSize = argc > ++i ? atoi(argv[i]) : 0;
 	unsigned dim = argc > ++i ? atoi(argv[i]) : 1;
-	unsigned totalNumVars = argc > ++i ? atoi(argv[i]) + 1 : 1;
+	unsigned totalNumVars = argc > ++i ? atoi(argv[i]) : 1;
 
 	string strVarIndices = argc > ++i ? argv[i] : "0";
 	vector<string> varIndicesStr;
@@ -49,15 +49,16 @@ int main(int argc, char *argv[]) {
 
 	double minPeriod = argc > ++i ? atof(argv[i]) : 2;
 	double maxPeriod = argc > ++i ? atof(argv[i]) : 10;
-	double minCoherence = argc > ++i ? atof(argv[i]) : 0;
-	double maxCoherence = argc > ++i ? atof(argv[i]) : 60;//x[x.size() - 1] - x[0];
+	double minCoherence = argc > ++i ? atof(argv[i]) : 3;
+	double maxCoherence = argc > ++i ? atof(argv[i]) : 30;
+	double tScale = argc > ++i ? atof(argv[i]) : 1;
 	DataLoader* dl;
 	if (binary) {
 		dl = new BinaryDataLoader(path, bufferSize, dim, totalNumVars, varIndices);
 	} else {
 		dl = new TextDataLoader(path, bufferSize, dim, totalNumVars, varIndices);
 	}
-	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence);
+	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, tScale);
 	d2.Compute2DSpectrum();
 	delete dl;
 	MPI::Finalize();
@@ -66,18 +67,19 @@ int main(int argc, char *argv[]) {
 
 #define square(x) ((x) * (x))
 
-D2::D2(DataLoader& rDataLoader, double minp, double maxp, double minc, double maxc) :
+D2::D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod, double minCoherence, double maxCoherence, double tScale) :
 		mrDataLoader(rDataLoader),
-		minCoherence(minc),
-		maxCoherence(maxc) {
+		minCoherence(minCoherence),
+		maxCoherence(maxCoherence),
+		tScale(tScale) {
 
-	double wmax = 1.0 / minp;
-	wmin = 1.0 / maxp;
+	double wmax = 1.0 / minPeriod;
+	wmin = 1.0 / maxPeriod;
 
-	dmin = minCoherence * (relative ? minp : 1);
-	dmax = maxCoherence * (relative ? maxp : 1);
+	dmin = minCoherence * (relative ? minPeriod : 1);
+	dmax = maxCoherence * (relative ? maxPeriod : 1);
 
-	if (dmax < dmin || minp > maxp) {
+	if (dmax < dmin || minPeriod > maxPeriod) {
 		throw "Check Arguments";
 	}
 	k = dmax > dmin ? coherenceGrid : 1;
@@ -96,72 +98,72 @@ D2::D2(DataLoader& rDataLoader, double minp, double maxp, double minc, double ma
 
 double D2::Criterion(double d, double w) {
 
-   unsigned j;
-   double tyv, tav, dd, ww, wp, ph;
+	unsigned j;
+	double tyv, tav, dd, ww, wp, ph;
 
-   tyv = 0.0;
-   tav = 0.0;
-   switch (mode) {
-   case Box:
-	  for (j = 0; j < td.size(); j++) {// to jj-1 do begin
-		 dd = td[j];
-		 if (dd <= d) {
-			ph = dd*w - floor(dd*w);//Frac(dd*w);
+	tyv = 0.0;
+	tav = 0.0;
+	switch (mode) {
+	case Box:
+		for (j = 0; j < td.size(); j++) {// to jj-1 do begin
+			dd = td[j];
+			if (dd <= d) {
+				ph = dd * w - floor(dd * w);//Frac(dd*w);
+				if (ph < 0.0) {
+					ph = ph+1;
+				}
+				if (ph<eps || ph>epslim) {
+					tyv = tyv+ty[j];
+					tav = tav+ta[j];
+				}
+			}
+		}
+		break;
+	case Gauss: //This is important, in td[] are precomputed sums of squares and counts.
+	case GaussWithCosine:
+		for (j = 0; j < td.size(); j++) {// to jj-1 do begin
+			dd = td[j];
+			if (d > 0.0) {
+				ww = exp(-square(ln2 * dd / d));
+			} else {
+				ww = 0.0;
+			}
+			ph=dd * w - floor(dd * w);//Frac(dd*w);
 			if (ph < 0.0) {
-			   ph = ph+1;
+				ph = ph + 1;
 			}
-			if (ph<eps || ph>epslim) {
-			   tyv = tyv+ty[j];
-			   tav = tav+ta[j];
+			if (ph>0.5) {
+				ph = 1.0 - ph;
 			}
-		 }
-	  }
-	  break;
-   case Gauss: //This is important, in td[] are precomputed sums of squares and counts.
-   case GaussWithCosine:
-	  for (j = 0; j < td.size(); j++) {// to jj-1 do begin
-		 dd = td[j];
-		 if (d > 0.0) {
-			ww = exp(-square(ln2 * dd / d));
-		 } else {
-			ww = 0.0;
-		 }
-		 ph=dd * w - floor(dd * w);//Frac(dd*w);
-		 if (ph < 0.0) {
-			ph = ph + 1;
-		 }
-		 if (ph>0.5) {
-			ph = 1.0 - ph;
-		 }
-		 bool closeInPhase = true;
-		 if (mode == Gauss) {
-			 closeInPhase = ph < eps || ph > epslim;
-			 wp = exp(-square(lnp*ph));
-		 } else {
-			 if (ph == 0.5) {
-				 wp = 0;
-			 } else if (ph == 0) {
-				 wp = 1;
-			 } else {
-				 wp = 0.5 * (cos (0.5 * M_PI / ph) + 1);
-			 }
-			 if (std::isnan(wp)) {
-				 wp = 0;
-				 cout << "wp is still nan" << endl;
-			 }
-		 }
-		 if (closeInPhase) {
-			 tyv=tyv + ww * wp * ty[j];
-			 tav=tav + ww * wp * ta[j];
-		 }
-	  }
-	  break;
-   }
-   if (tav > 0.0) {
-	  return 0.5 * tyv / tav;
-   } else {
-	  return 0.0;
-   }
+			bool closeInPhase = true;
+			if (mode == Gauss) {
+				closeInPhase = ph < eps || ph > epslim;
+				wp = exp(-square(lnp*ph));
+			} else {
+				if (ph == 0.5) {
+					wp = 0;
+				} else if (ph == 0) {
+					wp = 1;
+				} else {
+					wp = 0.5 * (cos (0.5 * M_PI / ph) + 1);
+				}
+				if (std::isnan(wp)) {
+					wp = 0;
+					cout << "wp is still nan" << endl;
+				}
+			}
+			if (closeInPhase) {
+				tyv=tyv + ww * wp * ty[j];
+				tav=tav + ww * wp * ta[j];
+			}
+		}
+		break;
+	}
+	if (tav > 0.0) {
+		return 0.5 * tyv / tav;
+	} else {
+		return 0.0;
+	}
 }
 
 void MapTo01D(vector<double>& cum) {
@@ -220,7 +222,6 @@ void D2::Compute2DSpectrum() {
 	unsigned i, j;
 	while (mrDataLoader.Next()) {
 		DataLoader* dl2 = mrDataLoader.Clone().get();
-		cout << "Siin 1" << endl;
 		do {
 			for (i = 0; i < mrDataLoader.GetPageSize() - 1; i++) {// to l-2 do
 				cout << "x1: " << mrDataLoader.GetX(i) << endl;
@@ -228,19 +229,16 @@ void D2::Compute2DSpectrum() {
 					if (i == j && mrDataLoader.GetPage() == dl2->GetPage()) {
 						continue;
 					}
-					real d = dl2->GetX(j) - mrDataLoader.GetX(i);
+					real d = (dl2->GetX(j) - mrDataLoader.GetX(i)) * tScale;
 					if (d >= dmin && d <= dmax) {
-						cout << "Siin 1.3" << endl;
 						int kk = round(a * d + b);
 						tty[kk] += DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
-						cout << "Siin 1.4" << endl;
 						tta[kk] += 1.0;
 					}
 				}
 			}
 		} while (dl2->Next());
 	}
-	cout << "Siin 2" << endl;
 
 	if (procId > 0) {
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, 1);
@@ -254,7 +252,6 @@ void D2::Compute2DSpectrum() {
 				tta[j] += 1.0;
 			}
 		}
-		cout << "Siin 3" << endl;
 		// How many time differences was actually used?
 		j=0;
 		for (i = 0; i < m; i++) {

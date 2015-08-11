@@ -26,16 +26,41 @@ bool BinaryDataLoader::Next() {
 	}
 	page++;
 	delete[] data;
-	unsigned dataSize = bufferSize * (dim * totalNumVars + 1);
-	data = new real[dataSize];
-	input.read((char*) data, (sizeof (real)) * bufferSize * (dim * totalNumVars + 1));
-	unsigned numBytesRead = input.gcount();
-	if (numBytesRead < (sizeof (real)) * dataSize) {
-		assert(numBytesRead % ((sizeof (real)) * (dim * totalNumVars + 1)) == 0);
-		pageSize = numBytesRead / ((sizeof (real)) * (dim * totalNumVars + 1));
-		input.close();
+	unsigned varSize = dim * totalNumVars + 1;
+	unsigned dataPageSize = bufferSize * varSize;
+	data = new real[dataPageSize];
+	if (RECORDHEADER) {
+		assert(sizeof (unsigned) == 4);
+		unsigned i = 0;
+		unsigned dataOffset = 0;
+		while (i < bufferSize) {
+			if (input.eof()) {
+				input.close();
+				break;
+			}
+			unsigned recordSize;
+			input.read((char*) &recordSize, 4);
+			assert(recordSize == 4);
+			input.read((char*) (data + dataOffset), recordSize);
+			input.read((char*) &recordSize, 4);
+			input.read((char*) &recordSize, 4);
+			assert(recordSize == (sizeof (real) * (varSize - 1)));
+			input.read((char*) data, recordSize);
+			input.read((char*) &recordSize, 4);
+			dataOffset += varSize;
+			i++;
+		}
+		pageSize = i;
 	} else {
-		pageSize = bufferSize;
+		input.read((char*) data, (sizeof (real)) * dataPageSize);
+		unsigned numBytesRead = input.gcount();
+		if (numBytesRead < (sizeof (real)) * dataPageSize) {
+			assert(numBytesRead % ((sizeof (real)) * varSize) == 0);
+			pageSize = numBytesRead / ((sizeof (real)) * varSize);
+			input.close();
+		} else {
+			pageSize = bufferSize;
+		}
 	}
 	return pageSize > 0;
 }

@@ -10,6 +10,8 @@
 
 #include "DataLoader.h"
 
+#define RECORDHEADER true
+
 class BinaryDataLoader: public DataLoader {
 public:
 	BinaryDataLoader(const string& fileName, unsigned bufferSize = 0, unsigned dim = 1, unsigned totalNumVars = 1, const vector<unsigned>& varIndices = {0});
