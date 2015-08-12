@@ -1,5 +1,6 @@
 #include "TextDataLoader.h"
 #include <boost/algorithm/string.hpp>
+#include <iostream>
 
 TextDataLoader::TextDataLoader(const string& fileName, unsigned bufferSize, unsigned dim, unsigned totalNumVars, const vector<unsigned>& varIndices) :
 		DataLoader(fileName, bufferSize, ios::in, dim, totalNumVars, varIndices) {

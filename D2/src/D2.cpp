@@ -1,6 +1,7 @@
 #include "D2.h"
 #include "BinaryDataLoader.h"
 #include "TextDataLoader.h"
+#include "utils.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -10,9 +11,12 @@
 #include <sstream>
 #include <memory>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include "mpi.h"
 
 using namespace std;
+using namespace boost::filesystem;
+using namespace utils;
 
 int procId;
 int numProc;
@@ -23,21 +27,29 @@ int main(int argc, char *argv[]) {
 	numProc = MPI::COMM_WORLD.Get_size();
 	procId = MPI::COMM_WORLD.Get_rank();
 
-	string dirPrefix = argv[1];
-	string fileName = argv[2];
-	string path;
-	if (numProc > 1) {
-		path = dirPrefix + to_string(procId) + "/" + fileName;
-	} else {
-		path = dirPrefix + "/" + fileName;
+	if (argc == 2 && string("-h") == argv[1]) {
+		cout << "Usage: ./D2 [paramfile]\nparamfile defaults to parameters.txt" << endl;
+		return EXIT_FAILURE;
 	}
-	int i = 2;
-	bool binary = argc > ++i ? atoi(argv[i]) : 0;
-	unsigned bufferSize = argc > ++i ? atoi(argv[i]) : 0;
-	unsigned dim = argc > ++i ? atoi(argv[i]) : 1;
-	unsigned totalNumVars = argc > ++i ? atoi(argv[i]) : 1;
 
-	string strVarIndices = argc > ++i ? argv[i] : "0";
+	string paramFileName = argc > 1 ? argv[1] : "parameters.txt";
+
+	if (!exists("parameters.txt")) {
+		cout << "Cannot find parameters.txt" << endl;
+		return EXIT_FAILURE;
+	}
+
+	map<string, string> params = Utils::ReadProperties(paramFileName);
+
+	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId) , "");
+	assert(filePath.size() > 0);
+	assert(exists(filePath));
+	bool binary = Utils::FindIntProperty(params, "binary", 0);
+	unsigned bufferSize = Utils::FindIntProperty(params, "bufferSize", 0);
+	unsigned dim = Utils::FindIntProperty(params, "dim", 1);
+	unsigned totalNumVars = Utils::FindIntProperty(params, "numVars", 1);
+
+	string strVarIndices = Utils::FindProperty(params, "varIndices", "0");
 	vector<string> varIndicesStr;
 	vector<unsigned> varIndices;
 	boost::split(varIndicesStr, strVarIndices, boost::is_any_of(","), boost::token_compress_on);
@@ -47,31 +59,85 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	double minPeriod = argc > ++i ? atof(argv[i]) : 2;
-	double maxPeriod = argc > ++i ? atof(argv[i]) : 10;
-	double minCoherence = argc > ++i ? atof(argv[i]) : 3;
-	double maxCoherence = argc > ++i ? atof(argv[i]) : 30;
-	double tScale = argc > ++i ? atof(argv[i]) : 1;
+	double minPeriod = Utils::FindDoubleProperty(params, "minPeriod", 2);
+	double maxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
+	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
+	double maxCoherence = Utils::FindDoubleProperty(params, "maxCoherence", 30);
+	double tScale = Utils::FindDoubleProperty(params, "tScale", 1);
+
+	string strVarScales = Utils::FindProperty(params, "varScales", "1");
+	vector<string> varScalesStr;
+	vector<double> varScales;
+	boost::split(varScalesStr, strVarScales, boost::is_any_of(","), boost::token_compress_on);
+	for (vector<string>::iterator it = varScalesStr.begin() ; it != varScalesStr.end(); ++it) {
+		if ((*it).length() != 0) {
+			varScales.push_back(stod(*it));
+		}
+	}
+	assert(varScales.size() <= varIndices.size());
+	if (varScales.size() < varIndices.size()) {
+		cout << "Replacing missing variable scales with 1" << endl;
+		for (unsigned i = 0; i < varIndices.size() - varScales.size(); i++) {
+			varScales.push_back(1.0f);
+		}
+	}
+
+	if (procId == 0) {
+		cout << "----------------" << endl;
+		cout << "Parameter values" << endl;
+		cout << "----------------" << endl;
+		cout << "numProc      " << numProc << endl;
+		cout << "binary       " << binary << endl;
+		cout << "bufferSize   " << bufferSize << endl;
+		cout << "dim          " << dim << endl;
+		cout << "numVars      " << totalNumVars << endl;
+		cout << "minPeriod    " << minPeriod << endl;
+		cout << "maxPeriod    " << maxPeriod << endl;
+		cout << "minCoherence " << minCoherence << endl;
+		cout << "maxCoherence " << maxCoherence << endl;
+		cout << "tScale       " << tScale << endl;
+		cout << "varIndices   ";
+		for (unsigned i = 0; i < varIndices.size(); i++) {
+			cout << varIndices[i];
+			if (i < varIndices.size() - 1) {
+				cout << ",";
+			} else {
+				cout << endl;
+			}
+		}
+		cout << "varScales    ";
+		for (unsigned i = 0; i < varScales.size(); i++) {
+			cout << varScales[i];
+			if (i < varScales.size() - 1) {
+				cout << ",";
+			} else {
+				cout << endl;
+			}
+		}
+		cout << "----------------" << endl;
+	}
 	DataLoader* dl;
 	if (binary) {
-		dl = new BinaryDataLoader(path, bufferSize, dim, totalNumVars, varIndices);
+		dl = new BinaryDataLoader(filePath, bufferSize, dim, totalNumVars, varIndices);
 	} else {
-		dl = new TextDataLoader(path, bufferSize, dim, totalNumVars, varIndices);
+		dl = new TextDataLoader(filePath, bufferSize, dim, totalNumVars, varIndices);
 	}
-	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, tScale);
+	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, tScale, varScales);
 	d2.Compute2DSpectrum();
 	delete dl;
 	MPI::Finalize();
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 #define square(x) ((x) * (x))
 
-D2::D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod, double minCoherence, double maxCoherence, double tScale) :
+D2::D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod, double minCoherence, double maxCoherence, double tScale, const vector<double>& varScales) :
 		mrDataLoader(rDataLoader),
 		minCoherence(minCoherence),
 		maxCoherence(maxCoherence),
-		tScale(tScale) {
+		tScale(tScale),
+		varScales(varScales) {
+	assert(varScales.size() == rDataLoader.GetVarIndices().size());
 
 	double wmax = 1.0 / minPeriod;
 	wmin = 1.0 / maxPeriod;
