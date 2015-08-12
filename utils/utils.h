@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 using namespace std;
 namespace utils {
@@ -74,6 +75,13 @@ public:
      * @param rPropertyName name of property to search
      **/
     static string GetProperty(const string& rStr, const string& rPropertyName);
+
+    static map<string, string> ReadProperties(const string& rFileName, bool caseSensitive = false);
+    static string FindProperty(const map<string, string>& rProperties, const string& key, const string& rDefaultValue = string(), bool caseSensitive = false);
+    static int FindIntProperty(const map<string, string>& rProperties, const string& key, int defaultValue, bool caseSensitive = false);
+    static long FindLongProperty(const map<string, string>& rProperties, const string& key, long defaultValue, bool caseSensitive = false);
+    static float FindFloatProperty(const map<string, string>& rProperties, const string& key, float defaultValue, bool caseSensitive = false);
+    static double FindDoubleProperty(const map<string, string>& rProperties, const string& key, double defaultValue, bool caseSensitive = false);
 
     /**
      * @return the index of the given object or -1 if the object is

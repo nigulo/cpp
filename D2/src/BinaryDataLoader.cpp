@@ -38,13 +38,13 @@ bool BinaryDataLoader::Next() {
 		unsigned i = 0;
 		unsigned dataOffset = 0;
 		while (i < bufferSize) {
+			unsigned recordSize;
+			input.read((char*) &recordSize, 4);
+			unsigned numBytesRead = input.gcount();
 			if (input.eof()) {
 				input.close();
 				break;
 			}
-			unsigned recordSize;
-			input.read((char*) &recordSize, 4);
-			unsigned numBytesRead = input.gcount();
 			assert(numBytesRead == 4);
 			assert(recordSize == 4);
 			input.read((char*) (data + dataOffset), recordSize);

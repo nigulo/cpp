@@ -1,7 +1,12 @@
 #include "utils.h"
 #include <fstream>
 #include <cassert>
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
+#include <iostream>
 
+using namespace boost;
+using namespace boost::filesystem;
 using namespace utils;
 
 string Utils::ReadTextFile(const string& rFileName) {
@@ -170,4 +175,84 @@ string Utils::GetProperty(const string& rStr, const string& rPropertyName) {
 
     }
     return str.substr(0, index);
+}
+
+map<string, string> Utils::ReadProperties(const string& rFileName, bool caseSensitive) {
+	map<string, string> retVal;
+	ifstream input(rFileName);
+	for (string line; getline(input, line);) {
+		//cout << line << endl;
+		std::vector<std::string> words;
+		boost::split(words, line, boost::is_any_of("="), boost::token_compress_on);
+		for (vector<string>::iterator it = words.begin(); it != words.end();) {
+			//cout << "<" << (*it) << ">" << endl;
+			if ((*it).length() == 0) {
+				it = words.erase(it);
+			} else {
+				it++;
+			}
+		}
+		if (words.size() > 0 && words[0][0] == '#') {
+			//cout << "Skipping comment line: " << line << endl;
+		} else if (words.size() == 2) {
+			trim(words[0]);
+			if (!caseSensitive) {
+				to_upper(words[0]);
+			}
+			trim(words[1]);
+			retVal.insert({words[0], words[1]});
+		} else {
+			cout << "Skipping line, invalid format: " << line << endl;
+		}
+    }
+	input.close();
+	return retVal;
+}
+
+string Utils::FindProperty(const map<string, string>& rProperties, const string& rKey, const string& rDefaultValue, bool caseSensitive) {
+	string key(rKey);
+	if (!caseSensitive) {
+		to_upper(key);
+	}
+	auto property = rProperties.find(key);
+	return property != rProperties.end() ? property->second : rDefaultValue;
+}
+
+int Utils::FindIntProperty(const map<string, string>& rProperties, const string& rKey, int defaultValue, bool caseSensitive) {
+	string key(rKey);
+	if (!caseSensitive) {
+		to_upper(key);
+	}
+	auto property = rProperties.find(key);
+	return property != rProperties.end() ? stoi(property->second) : defaultValue;
+}
+
+long Utils::FindLongProperty(const map<string, string>& rProperties, const string& rKey, long defaultValue, bool caseSensitive) {
+	string key(rKey);
+	if (!caseSensitive) {
+		to_upper(key);
+	}
+	auto property = rProperties.find(key);
+	return property != rProperties.end() ? stol(property->second) : defaultValue;
+
+}
+
+float Utils::FindFloatProperty(const map<string, string>& rProperties, const string& rKey, float defaultValue, bool caseSensitive) {
+	string key(rKey);
+	if (!caseSensitive) {
+		to_upper(key);
+	}
+	auto property = rProperties.find(key);
+	return property != rProperties.end() ? stof(property->second) : defaultValue;
+
+}
+
+double Utils::FindDoubleProperty(const map<string, string>& rProperties, const string& rKey, double defaultValue, bool caseSensitive) {
+	string key(rKey);
+	if (!caseSensitive) {
+		to_upper(key);
+	}
+	auto property = rProperties.find(key);
+	return property != rProperties.end() ? stod(property->second) : defaultValue;
+
 }
