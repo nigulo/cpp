@@ -286,18 +286,15 @@ void D2::Compute2DSpectrum() {
 
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
 	unsigned i, j;
+	if (procId == 0) {
+		cout << "Loading data..." << endl;
+	}
 	while (mrDataLoader.Next()) {
-		cout << "A page: " << mrDataLoader.GetPage() << endl;
 		auto dl2Ptr = mrDataLoader.Clone();
 		DataLoader* dl2 = dl2Ptr.get();
 		do {
-			cout << "    B page: " << dl2->GetPage() << endl;
 			for (i = 0; i < mrDataLoader.GetPageSize(); i++) {
 				for (j = 0; j < dl2->GetPageSize(); j++) {
-					//if (i == 999) {
-					//	cout << "pageSize: " << mrDataLoader.GetPageSize() << " " << dl2->GetPageSize() << endl;
-					//	cout << "        j1: " << j << " " << dl2->GetX(j) << " " << mrDataLoader.GetX(i) << endl;
-					//}
 					if (j <= i && mrDataLoader.GetPage() == dl2->GetPage()) {
 						continue;
 					}
@@ -310,17 +307,21 @@ void D2::Compute2DSpectrum() {
 				}
 			}
 		} while (dl2->Next());
+		if (procId == 0) {
+			cout << "Page " << mrDataLoader.GetPage() << " loaded." << endl;
+		}
 	}
-	cout << "Siin" << endl;
 
 	if (procId > 0) {
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, 1);
 	} else {
 		for (int i = 1; i < numProc; i++) {
-			double received[m];
+			double received[tty.size()];
 			MPI::Status status;
-			MPI::COMM_WORLD.Recv (received, m,  MPI::DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, status);
-			for (unsigned j = 0; j < m; j++) {
+			MPI::COMM_WORLD.Recv (received, tty.size(),  MPI::DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, status);
+			assert(status.Get_error() == MPI::SUCCESS);
+			cout << "Received data from " << status.Get_source() << " loaded." << endl;
+			for (unsigned j = 0; j < tty.size(); j++) {
 				tty[j] += received[j];
 				tta[j] += 1.0;
 			}
