@@ -23,10 +23,6 @@ int numProc;
 
 int main(int argc, char *argv[]) {
 
-	MPI::Init (argc, argv);
-	numProc = MPI::COMM_WORLD.Get_size();
-	procId = MPI::COMM_WORLD.Get_rank();
-
 	if (argc == 2 && string("-h") == argv[1]) {
 		cout << "Usage: ./D2 [paramfile]\nparamfile defaults to parameters.txt" << endl;
 		return EXIT_FAILURE;
@@ -39,6 +35,11 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
+	MPI::Init (argc, argv);
+	numProc = MPI::COMM_WORLD.Get_size();
+	procId = MPI::COMM_WORLD.Get_rank();
+
+	cout << "Rank: " << procId << ", size: " << numProc << endl;
 	map<string, string> params = Utils::ReadProperties(paramFileName);
 
 	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId) , "");
@@ -311,8 +312,9 @@ void D2::Compute2DSpectrum() {
 			cout << "Page " << mrDataLoader.GetPage() << " loaded." << endl;
 		}
 	}
-
+	//MPI::COMM_WORLD.Barrier();
 	if (procId > 0) {
+		cout << "Sending data from " << procId << "." << endl;
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, 1);
 	} else {
 		for (int i = 1; i < numProc; i++) {
@@ -320,7 +322,7 @@ void D2::Compute2DSpectrum() {
 			MPI::Status status;
 			MPI::COMM_WORLD.Recv (received, tty.size(),  MPI::DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, status);
 			assert(status.Get_error() == MPI::SUCCESS);
-			cout << "Received data from " << status.Get_source() << " loaded." << endl;
+			cout << "Received data from " << status.Get_source() << "." << endl;
 			for (unsigned j = 0; j < tty.size(); j++) {
 				tty[j] += received[j];
 				tta[j] += 1.0;
