@@ -36,7 +36,7 @@ bool TextDataLoader::Next() {
 			}
 			if (words.size() > 0 && words[0][0] == '#') {
 				//cout << "Skipping comment line: " << line << endl;
-			} else if (words.size() == dim * totalNumVars) {
+			} else if (words.size() >= dim * totalNumVars + 1) {
 				try {
 					data[i * (dim * totalNumVars + 1)] = stod(words[0]); // x
 					for (unsigned j = 0; j < dim * totalNumVars; j++) {

@@ -39,12 +39,12 @@ int main(int argc, char *argv[]) {
 	numProc = MPI::COMM_WORLD.Get_size();
 	procId = MPI::COMM_WORLD.Get_rank();
 
-	cout << "Rank: " << procId << ", size: " << numProc << endl;
 	map<string, string> params = Utils::ReadProperties(paramFileName);
 
 	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId) , "");
 	assert(filePath.size() > 0);
 	assert(exists(filePath));
+	cout << "Rank: " << procId << " file: " << filePath << endl;
 	bool binary = Utils::FindIntProperty(params, "binary", 0);
 	unsigned bufferSize = Utils::FindIntProperty(params, "bufferSize", 0);
 	unsigned dim = Utils::FindIntProperty(params, "dim", 1);
