@@ -2,8 +2,12 @@
 #include <iostream>
 using namespace std;
 
-BinaryDataLoader::BinaryDataLoader(const string& fileName, unsigned bufferSize, unsigned dim, unsigned totalNumVars, const vector<unsigned>& varIndices) :
-		DataLoader(fileName, bufferSize, ios::in | ios::binary, dim, totalNumVars, varIndices) {
+BinaryDataLoader::BinaryDataLoader(const string& fileName, unsigned bufferSize,
+		const vector<unsigned>& dims,
+		const vector<unsigned>& mins,
+		const vector<unsigned>& maxs,
+		unsigned totalNumVars, const vector<unsigned>& varIndices) :
+				DataLoader(fileName, bufferSize, ios::in | ios::binary, dims, dims, maxs, totalNumVars, varIndices) {
 }
 
 BinaryDataLoader::BinaryDataLoader(const BinaryDataLoader& dataLoader) : DataLoader(dataLoader) {

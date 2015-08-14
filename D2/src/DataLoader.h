@@ -20,7 +20,12 @@ typedef float real;
 
 class DataLoader {
 public:
-	DataLoader(const string& fileName, unsigned bufferSize = 0, ios::openmode mode = ios::in, unsigned dim = 1, unsigned totalNumVars = 1, const vector<unsigned>& varIndices = {0});
+	DataLoader(const string& fileName, unsigned bufferSize = 0, ios::openmode mode = ios::in,
+			const vector<unsigned>& dims = {1},
+			const vector<unsigned>& mins = {},
+			const vector<unsigned>& maxs = {},
+			unsigned totalNumVars = 1,
+			const vector<unsigned>& varIndices = {0});
 	DataLoader(const DataLoader& dataLoader);
 	virtual ~DataLoader();
 
@@ -43,12 +48,39 @@ public:
 		return &data[i * (dim * totalNumVars + 1) + 1];
 	}
 
+	unsigned GetAbsoluteIndex(const vector<unsigned>& indices) const {
+		assert(indices.size() == dims.size());
+		assert(mins.empty() || mins[0] <= indices[0]);
+		assert(maxs.empty() || maxs[0] >= indices[0]);
+		unsigned i = indices[0];
+		unsigned d = 1;
+		for (unsigned j = 1; j < indices.size(); j++) {
+			assert(mins.size() <= j || mins[j] <= indices[j]);
+			assert(maxs.size() <= j || maxs[j] >= indices[j]);
+			d *= dims[j - 1];
+			i += d * indices[j];
+		}
+		return i;
+	}
+
 	int GetPage() const {
 		return page;
 	}
 
-	unsigned GetDim() const {
+	const vector<unsigned>& GetDims() const {
+		return dims;
+	}
+
+	const unsigned GetDim() const {
 		return dim;
+	}
+
+	const vector<unsigned>& GetMins() const {
+		return mins;
+	}
+
+	const vector<unsigned>& GetMaxs() const {
+		return maxs;
 	}
 
 	unsigned GetYSize() const {
@@ -59,6 +91,10 @@ public:
 		return pageSize;
 	}
 
+	const unsigned GetNumVars() const {
+		return totalNumVars;
+	}
+
 	const vector<unsigned>& GetVarIndices() const {
 		return varIndices;
 	}
@@ -67,13 +103,16 @@ protected:
 	const string fileName;
 	const unsigned bufferSize;
 	const ios::openmode mode;
-	const unsigned dim;
+	const vector<unsigned> dims;
+	const vector<unsigned> mins;
+	const vector<unsigned> maxs;
 	const unsigned totalNumVars;
 	const vector<unsigned> varIndices;
 	ifstream input;
 	int page;
 	real* data;
 	unsigned pageSize;
+	unsigned dim;
 
 };
 

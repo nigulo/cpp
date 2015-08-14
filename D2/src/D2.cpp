@@ -21,6 +21,20 @@ using namespace utils;
 int procId;
 int numProc;
 
+template<typename T> string vecToStr(const vector<T>& vec) {
+	stringstream ss;
+	bool first = true;
+	for (auto t : vec) {
+		if (!first) {
+			ss << ",";
+		}
+		ss << t;
+		first = false;
+	}
+	return ss.str();
+}
+
+
 int main(int argc, char *argv[]) {
 
 	if (argc == 2 && string("-h") == argv[1]) {
@@ -47,7 +61,39 @@ int main(int argc, char *argv[]) {
 	cout << "Rank: " << procId << " file: " << filePath << endl;
 	bool binary = Utils::FindIntProperty(params, "binary", 0);
 	unsigned bufferSize = Utils::FindIntProperty(params, "bufferSize", 0);
-	unsigned dim = Utils::FindIntProperty(params, "dim", 1);
+
+	string strDims = Utils::FindProperty(params, "dims", "1");
+	vector<string> dimsStr;
+	vector<unsigned> dims;
+	boost::split(dimsStr, strDims, boost::is_any_of(","), boost::token_compress_on);
+	for (vector<string>::iterator it = dimsStr.begin() ; it != dimsStr.end(); ++it) {
+		if ((*it).length() != 0) {
+			dims.push_back(stoi(*it));
+		}
+	}
+
+	string strMins = Utils::FindProperty(params, "mins", "0");
+	vector<string> minsStr;
+	vector<unsigned> mins;
+	boost::split(minsStr, strMins, boost::is_any_of(","), boost::token_compress_on);
+	for (vector<string>::iterator it = minsStr.begin() ; it != minsStr.end(); ++it) {
+		if ((*it).length() != 0) {
+			mins.push_back(stoi(*it));
+		}
+	}
+	assert(mins.size() <= dims.size());
+
+	string strMaxs = Utils::FindProperty(params, "maxs", to_string(dims[0] - 1));
+	vector<string> maxsStr;
+	vector<unsigned> maxs;
+	boost::split(maxsStr, strMaxs, boost::is_any_of(","), boost::token_compress_on);
+	for (vector<string>::iterator it = maxsStr.begin() ; it != maxsStr.end(); ++it) {
+		if ((*it).length() != 0) {
+			maxs.push_back(stoi(*it));
+		}
+	}
+	assert(maxs.size() <= dims.size());
+
 	unsigned totalNumVars = Utils::FindIntProperty(params, "numVars", 1);
 
 	string strVarIndices = Utils::FindProperty(params, "varIndices", "0");
@@ -78,7 +124,7 @@ int main(int argc, char *argv[]) {
 	assert(varScales.size() <= varIndices.size());
 	if (varScales.size() < varIndices.size()) {
 		cout << "Replacing missing variable scales with 1" << endl;
-		for (unsigned i = 0; i < varIndices.size() - varScales.size(); i++) {
+		while (varScales.size() < varIndices.size()) {
 			varScales.push_back(1.0f);
 		}
 	}
@@ -90,43 +136,30 @@ int main(int argc, char *argv[]) {
 		cout << "numProc      " << numProc << endl;
 		cout << "binary       " << binary << endl;
 		cout << "bufferSize   " << bufferSize << endl;
-		cout << "dim          " << dim << endl;
+		cout << "dims         " << vecToStr(dims) << endl;
+		cout << "mins         " << vecToStr(mins) << endl;
+		cout << "maxs         " << vecToStr(maxs) << endl;
 		cout << "numVars      " << totalNumVars << endl;
 		cout << "minPeriod    " << minPeriod << endl;
 		cout << "maxPeriod    " << maxPeriod << endl;
 		cout << "minCoherence " << minCoherence << endl;
 		cout << "maxCoherence " << maxCoherence << endl;
 		cout << "tScale       " << tScale << endl;
-		cout << "varIndices   ";
-		for (unsigned i = 0; i < varIndices.size(); i++) {
-			cout << varIndices[i];
-			if (i < varIndices.size() - 1) {
-				cout << ",";
-			} else {
-				cout << endl;
-			}
-		}
-		cout << "varScales    ";
-		for (unsigned i = 0; i < varScales.size(); i++) {
-			cout << varScales[i];
-			if (i < varScales.size() - 1) {
-				cout << ",";
-			} else {
-				cout << endl;
-			}
-		}
+		cout << "varIndices   " << vecToStr(varIndices) << endl;
+		cout << "varScales    " << vecToStr(varScales) << endl;
 		cout << "----------------" << endl;
 	}
 	DataLoader* dl;
 	if (binary) {
-		dl = new BinaryDataLoader(filePath, bufferSize, dim, totalNumVars, varIndices);
+		dl = new BinaryDataLoader(filePath, bufferSize, dims, mins, maxs, totalNumVars, varIndices);
 	} else {
-		dl = new TextDataLoader(filePath, bufferSize, dim, totalNumVars, varIndices);
+		dl = new TextDataLoader(filePath, bufferSize, dims, mins, maxs, totalNumVars, varIndices);
 	}
 	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, tScale, varScales);
 	d2.Compute2DSpectrum();
 	delete dl;
 	MPI::Finalize();
+	cout << "done!" << endl;
 	return EXIT_SUCCESS;
 }
 
@@ -261,24 +294,29 @@ void MapTo01D(vector<double>& cum) {
 // Currently implemented as Frobenius norm
 double D2::DiffNorm(const real y1[], const real y2[]) {
 	double norm = 0;
-	for (unsigned i : mrDataLoader.GetVarIndices()) {
-		norm += square(y1[i] - y2[i]);
+	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
+		for (unsigned j : mrDataLoader.GetVarIndices()) {
+			auto index = i * mrDataLoader.GetNumVars() + j;
+			norm += square(y1[index] - y2[index]);
+		}
 	}
 	return norm;
 }
 
 void D2::Compute2DSpectrum() {
 
-    cout << "lp= " << lp << endl;
-    cout << "k= " << k << endl;
-    cout << "m= " << m << endl;
-    cout << "a= " << a << endl;
-    cout << "b= " << b << endl;
-    cout << "dmin= " << dmin << endl;
-    cout << "dmax= " << dmax << endl;
-    cout << "wmin= " << wmin << endl;
-    cout << "delta= " << delta << endl;
-    cout << "step= " << step << endl;
+	if (procId == 0) {
+		cout << "lp= " << lp << endl;
+		cout << "k= " << k << endl;
+		cout << "m= " << m << endl;
+		cout << "a= " << a << endl;
+		cout << "b= " << b << endl;
+		cout << "dmin= " << dmin << endl;
+		cout << "dmax= " << dmax << endl;
+		cout << "wmin= " << wmin << endl;
+		cout << "delta= " << delta << endl;
+		cout << "step= " << step << endl;
+	}
 
 	cum.assign(lp, 0);
 	vector<vector<double>*> ydiffs(m, 0);
@@ -326,6 +364,7 @@ void D2::Compute2DSpectrum() {
 			for (unsigned j = 0; j < tty.size(); j++) {
 				tty[j] += received[j];
 				tta[j] += 1.0;
+				cout << received[j] << endl;
 			}
 		}
 		// How many time differences was actually used?

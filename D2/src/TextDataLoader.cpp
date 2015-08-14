@@ -2,8 +2,12 @@
 #include <boost/algorithm/string.hpp>
 #include <iostream>
 
-TextDataLoader::TextDataLoader(const string& fileName, unsigned bufferSize, unsigned dim, unsigned totalNumVars, const vector<unsigned>& varIndices) :
-		DataLoader(fileName, bufferSize, ios::in, dim, totalNumVars, varIndices) {
+TextDataLoader::TextDataLoader(const string& fileName, unsigned bufferSize,
+		const vector<unsigned>& dims,
+		const vector<unsigned>& mins,
+		const vector<unsigned>& maxs,
+		unsigned totalNumVars, const vector<unsigned>& varIndices) :
+				DataLoader(fileName, bufferSize, ios::in, dims, mins, maxs, totalNumVars, varIndices) {
 }
 
 TextDataLoader::TextDataLoader(const TextDataLoader& dataLoader) : DataLoader(dataLoader) {

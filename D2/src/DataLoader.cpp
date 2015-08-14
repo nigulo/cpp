@@ -7,11 +7,17 @@
 
 #include "DataLoader.h"
 
-DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmode mode, unsigned dim, unsigned totalNumVars, const vector<unsigned>& varIndices) :
+DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmode mode,
+		const vector<unsigned>& dims,
+		const vector<unsigned>& mins,
+		const vector<unsigned>& maxs,
+		unsigned totalNumVars, const vector<unsigned>& varIndices) :
 	fileName(fileName),
 	bufferSize(bufferSize),
 	mode(mode),
-	dim(dim),
+	dims(dims),
+	mins(mins),
+	maxs(maxs),
 	totalNumVars(totalNumVars),
 	varIndices(varIndices),
 	input(fileName, mode),
@@ -22,19 +28,26 @@ DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmod
 	for (unsigned varIndex : varIndices) {
 		assert(varIndex < GetYSize());
 	}
+	dim = 1;
+	for (auto dimx : dims) {
+		dim *= dimx;
+	}
 }
 
 DataLoader::DataLoader(const DataLoader& dataLoader) :
 	fileName(dataLoader.fileName),
 	bufferSize(dataLoader.bufferSize),
 	mode(dataLoader.mode),
-	dim(dataLoader.dim),
+	dims(dataLoader.dims),
+	mins(dataLoader.mins),
+	maxs(dataLoader.maxs),
 	totalNumVars(dataLoader.totalNumVars),
 	varIndices(dataLoader.varIndices),
 	input(dataLoader.fileName, dataLoader.mode),
 	page(-1),
 	data(nullptr),
-	pageSize(0) {
+	pageSize(0),
+	dim(dataLoader.dim) {
 	assert(input.is_open());
 }
 
