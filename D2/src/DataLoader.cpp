@@ -25,12 +25,12 @@ DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmod
 	data(nullptr),
 	pageSize(0) {
 	assert(input.is_open());
-	for (unsigned varIndex : varIndices) {
-		assert(varIndex < GetYSize());
-	}
 	dim = 1;
 	for (auto dimx : dims) {
 		dim *= dimx;
+	}
+	for (unsigned varIndex : varIndices) {
+		assert(varIndex < GetNumVars());
 	}
 }
 

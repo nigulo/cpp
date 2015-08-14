@@ -63,6 +63,17 @@ public:
 		return i;
 	}
 
+	bool Skip(unsigned i, const vector<bool> useMin, const vector<bool> useMax) const {
+		for (unsigned j = 0; j < dims.size(); j++) {
+			unsigned d = i % dims[j];
+			if ((useMin[j] && mins.size() > j && d < mins[j]) || (useMax[j] && maxs.size() > j && d > maxs[j])) {
+				return true;
+			}
+			i -= d;
+			i /= dims[j];
+		}
+	}
+
 	int GetPage() const {
 		return page;
 	}
@@ -81,10 +92,6 @@ public:
 
 	const vector<unsigned>& GetMaxs() const {
 		return maxs;
-	}
-
-	unsigned GetYSize() const {
-		return dim * totalNumVars;
 	}
 
 	unsigned GetPageSize() const {

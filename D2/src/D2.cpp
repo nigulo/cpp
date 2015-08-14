@@ -37,22 +37,25 @@ template<typename T> string vecToStr(const vector<T>& vec) {
 
 int main(int argc, char *argv[]) {
 
-	if (argc == 2 && string("-h") == argv[1]) {
-		cout << "Usage: ./D2 [paramfile]\nparamfile defaults to parameters.txt" << endl;
-		return EXIT_FAILURE;
-	}
-
-	string paramFileName = argc > 1 ? argv[1] : "parameters.txt";
-
-	if (!exists("parameters.txt")) {
-		cout << "Cannot find parameters.txt" << endl;
-		return EXIT_FAILURE;
-	}
-
 	MPI::Init (argc, argv);
 	numProc = MPI::COMM_WORLD.Get_size();
 	procId = MPI::COMM_WORLD.Get_rank();
 
+	if (procId == 0) {
+		if (argc == 2 && string("-h") == argv[1]) {
+			cout << "Usage: ./D2 [paramfile]\nparamfile defaults to parameters.txt" << endl;
+			return EXIT_FAILURE;
+		}
+	}
+
+	string paramFileName = argc > 1 ? argv[1] : "parameters.txt";
+
+	if (procId == 0) {
+		if (!exists("parameters.txt")) {
+			cout << "Cannot find parameters.txt" << endl;
+			return EXIT_FAILURE;
+		}
+	}
 	map<string, string> params = Utils::ReadProperties(paramFileName);
 
 	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId) , "");
@@ -123,7 +126,9 @@ int main(int argc, char *argv[]) {
 	}
 	assert(varScales.size() <= varIndices.size());
 	if (varScales.size() < varIndices.size()) {
-		cout << "Replacing missing variable scales with 1" << endl;
+		if (procId == 0) {
+			cout << "Replacing missing variable scales with 1" << endl;
+		}
 		while (varScales.size() < varIndices.size()) {
 			varScales.push_back(1.0f);
 		}
@@ -158,8 +163,10 @@ int main(int argc, char *argv[]) {
 	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, tScale, varScales);
 	d2.Compute2DSpectrum();
 	delete dl;
+	if (procId == 0) {
+		cout << "done!" << endl;
+	}
 	MPI::Finalize();
-	cout << "done!" << endl;
 	return EXIT_SUCCESS;
 }
 
@@ -294,10 +301,13 @@ void MapTo01D(vector<double>& cum) {
 // Currently implemented as Frobenius norm
 double D2::DiffNorm(const real y1[], const real y2[]) {
 	double norm = 0;
+	#pragma omp parallel for reduction(+:norm)
 	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
-		for (unsigned j : mrDataLoader.GetVarIndices()) {
-			auto index = i * mrDataLoader.GetNumVars() + j;
-			norm += square(y1[index] - y2[index]);
+		if (!mrDataLoader.Skip(i, {true, procId == 0}, {true, procId == numProc - 1})) {
+			for (unsigned j : mrDataLoader.GetVarIndices()) {
+				auto index = i * mrDataLoader.GetNumVars() + j;
+				norm += square(y1[index] - y2[index]);
+			}
 		}
 	}
 	return norm;
