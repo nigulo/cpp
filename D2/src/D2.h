@@ -16,8 +16,6 @@ enum Mode {
 class D2 {
 private:
 
-	const Mode mode = GaussWithCosine;
-	const bool relative = true;
 	const unsigned coherenceGrid = 200;
 	const unsigned phaseBins = 50;
 	const double deltaPhi = 0.05;
@@ -28,6 +26,10 @@ private:
 	DataLoader& mrDataLoader;
 	const double minCoherence;
 	const double maxCoherence;
+	const Mode mode;
+	const bool normalize;
+	const bool relative;
+
 	const double tScale;
 	const vector<double> varScales;
 
@@ -48,7 +50,10 @@ private:
     random_device rd;
 
 public:
-    D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod, double minCoherence, double maxCoherence, double tScale, const vector<double>& varScales);
+    D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod,
+    		double minCoherence, double maxCoherence,
+			Mode mode, bool normalize, bool relative,
+			double tScale, const vector<double>& varScales);
     void Compute2DSpectrum();
 
 private:

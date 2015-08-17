@@ -15,6 +15,7 @@
 #include "mpi.h"
 
 using namespace std;
+using namespace boost;
 using namespace boost::filesystem;
 using namespace utils;
 
@@ -113,6 +114,21 @@ int main(int argc, char *argv[]) {
 	double maxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
 	double maxCoherence = Utils::FindDoubleProperty(params, "maxCoherence", 30);
+	string modeStr = Utils::FindProperty(params, "mode", "GaussWithCosine");
+	to_upper(modeStr);
+	Mode mode;
+	if (modeStr == "BOX") {
+
+	} else if (modeStr == "GAUSS") {
+	} else if (modeStr == "GAUSSWITHCOSINE") {
+		mode = Mode::GaussWithCosine;
+	} else {
+		cerr << "Invalid mode" << endl;
+		assert(false);
+	}
+	bool normalize = Utils::FindIntProperty(params, "normalize", 1);
+	bool relative = Utils::FindIntProperty(params, "relative", 1);
+
 	double tScale = Utils::FindDoubleProperty(params, "tScale", 1);
 
 	string strVarScales = Utils::FindProperty(params, "varScales", "1");
@@ -149,6 +165,9 @@ int main(int argc, char *argv[]) {
 		cout << "maxPeriod    " << maxPeriod << endl;
 		cout << "minCoherence " << minCoherence << endl;
 		cout << "maxCoherence " << maxCoherence << endl;
+		cout << "mode         " << mode << endl;
+		cout << "normalize    " << normalize << endl;
+		cout << "relative     " << relative << endl;
 		cout << "tScale       " << tScale << endl;
 		cout << "varIndices   " << vecToStr(varIndices) << endl;
 		cout << "varScales    " << vecToStr(varScales) << endl;
@@ -160,7 +179,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		dl = new TextDataLoader(filePath, bufferSize, dims, mins, maxs, totalNumVars, varIndices);
 	}
-	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, tScale, varScales);
+	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales);
 	d2.Compute2DSpectrum();
 	delete dl;
 	if (procId == 0) {
@@ -172,12 +191,18 @@ int main(int argc, char *argv[]) {
 
 #define square(x) ((x) * (x))
 
-D2::D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod, double minCoherence, double maxCoherence, double tScale, const vector<double>& varScales) :
-		mrDataLoader(rDataLoader),
-		minCoherence(minCoherence),
-		maxCoherence(maxCoherence),
-		tScale(tScale),
-		varScales(varScales) {
+D2::D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod,
+		double minCoherence, double maxCoherence,
+		Mode mode, bool normalize, bool relative,
+		double tScale, const vector<double>& varScales) :
+			mrDataLoader(rDataLoader),
+			minCoherence(minCoherence),
+			maxCoherence(maxCoherence),
+			mode(mode),
+			normalize(normalize),
+			relative(relative),
+			tScale(tScale),
+			varScales(varScales) {
 	assert(varScales.size() == rDataLoader.GetVarIndices().size());
 
 	double wmax = 1.0 / minPeriod;
@@ -217,11 +242,11 @@ double D2::Criterion(double d, double w) {
 			if (dd <= d) {
 				ph = dd * w - floor(dd * w);//Frac(dd*w);
 				if (ph < 0.0) {
-					ph = ph+1;
+					ph = ph + 1;
 				}
 				if (ph<eps || ph>epslim) {
-					tyv = tyv+ty[j];
-					tav = tav+ta[j];
+					tyv = tyv + ty[j];
+					tav = tav + ta[j];
 				}
 			}
 		}
@@ -235,11 +260,11 @@ double D2::Criterion(double d, double w) {
 			} else {
 				ww = 0.0;
 			}
-			ph=dd * w - floor(dd * w);//Frac(dd*w);
+			ph = dd * w - floor(dd * w);//Frac(dd*w);
 			if (ph < 0.0) {
 				ph = ph + 1;
 			}
-			if (ph>0.5) {
+			if (ph > 0.5) {
 				ph = 1.0 - ph;
 			}
 			bool closeInPhase = true;
@@ -252,7 +277,7 @@ double D2::Criterion(double d, double w) {
 				} else if (ph == 0) {
 					wp = 1;
 				} else {
-					wp = 0.5 * (cos (0.5 * M_PI / ph) + 1);
+					wp = 0.5 * (cos(0.5 * M_PI / ph) + 1);
 				}
 				if (std::isnan(wp)) {
 					wp = 0;
@@ -304,14 +329,18 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 	#pragma omp parallel for reduction(+:norm)
 	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
 		if (!mrDataLoader.Skip(i, {true, procId == 0}, {true, procId == numProc - 1})) {
+			auto offset = i * mrDataLoader.GetNumVars();
 			for (unsigned j : mrDataLoader.GetVarIndices()) {
-				auto index = i * mrDataLoader.GetNumVars() + j;
+				auto index = offset + j;
 				norm += square(y1[index] - y2[index]);
 			}
 		}
 	}
 	return norm;
 }
+
+#define TAG_TTY 1
+#define TAG_TTA 2
 
 void D2::Compute2DSpectrum() {
 
@@ -363,18 +392,23 @@ void D2::Compute2DSpectrum() {
 	//MPI::COMM_WORLD.Barrier();
 	if (procId > 0) {
 		cout << "Sending data from " << procId << "." << endl;
-		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, 1);
+		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, TAG_TTY);
+		MPI::COMM_WORLD.Send(tta.data(), tta.size(), MPI::DOUBLE, 0, TAG_TTA);
 	} else {
 		for (int i = 1; i < numProc; i++) {
-			double received[tty.size()];
+			double ttyRecv[m];
+			double ttaRecv[m];
 			MPI::Status status;
-			MPI::COMM_WORLD.Recv (received, tty.size(),  MPI::DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, status);
+			MPI::COMM_WORLD.Recv (ttyRecv, m,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
 			assert(status.Get_error() == MPI::SUCCESS);
-			cout << "Received data from " << status.Get_source() << "." << endl;
+			cout << "Received square differences from " << status.Get_source() << "." << endl;
+			MPI::COMM_WORLD.Recv (ttaRecv, m,  MPI::DOUBLE, status.Get_source(), TAG_TTA, status);
+			assert(status.Get_error() == MPI::SUCCESS);
+			cout << "Received weights from " << status.Get_source() << "." << endl;
 			for (unsigned j = 0; j < tty.size(); j++) {
-				tty[j] += received[j];
-				tta[j] += 1.0;
-				cout << received[j] << endl;
+				tty[j] += ttyRecv[j];
+				tta[j] += ttaRecv[j];
+				cout << ttyRecv[j] << endl;
 			}
 		}
 		// How many time differences was actually used?
@@ -424,7 +458,7 @@ void D2::Compute2DSpectrum() {
 
 			// Spectrum in cum can be normalized
 
-			if (true) {
+			if (normalize) {
 				MapTo01D(cum);
 			}
 

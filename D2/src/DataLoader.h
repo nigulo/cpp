@@ -72,6 +72,7 @@ public:
 			i -= d;
 			i /= dims[j];
 		}
+		return false;
 	}
 
 	int GetPage() const {
