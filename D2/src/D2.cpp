@@ -13,6 +13,11 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include "mpi.h"
+#ifdef _OPENACC
+#include <openacc.h>
+#else
+#include <omp.h>
+#endif
 
 using namespace std;
 using namespace boost;
@@ -41,6 +46,11 @@ int main(int argc, char *argv[]) {
 	MPI::Init (argc, argv);
 	numProc = MPI::COMM_WORLD.Get_size();
 	procId = MPI::COMM_WORLD.Get_rank();
+
+#ifdef _OPENACC
+	// It's recommended to perform one-off initialization of GPU-devices before any OpenACC regions
+	acc_init(acc_get_device_type()) ; // from openacc.h
+#endif
 
 	if (procId == 0) {
 		if (argc == 2 && string("-h") == argv[1]) {
@@ -326,7 +336,12 @@ void MapTo01D(vector<double>& cum) {
 // Currently implemented as Frobenius norm
 double D2::DiffNorm(const real y1[], const real y2[]) {
 	double norm = 0;
+#ifdef _OPENACC
+	#pragma acc data copyin(y1[0:mrDataLoader.GetDim() * mrDataLoader.GetNumVars()], y2[0:mrDataLoader.GetDim() * mrDataLoader.GetNumVars()])
+	#pragma acc parallel loop reduction(+:norm)
+#else
 	#pragma omp parallel for reduction(+:norm)
+#endif
 	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
 		if (!mrDataLoader.Skip(i, {true, procId == 0}, {true, procId == numProc - 1})) {
 			auto offset = i * mrDataLoader.GetNumVars();
@@ -363,21 +378,26 @@ void D2::Compute2DSpectrum() {
 	vector<double> tta(m, 0);
 
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
-	unsigned i, j;
 	if (procId == 0) {
 		cout << "Loading data..." << endl;
 	}
 	while (mrDataLoader.Next()) {
-		auto dl2Ptr = mrDataLoader.Clone();
-		DataLoader* dl2 = dl2Ptr.get();
+		DataLoader* dl2 = mrDataLoader.Clone();
 		do {
-			for (i = 0; i < mrDataLoader.GetPageSize(); i++) {
-				for (j = 0; j < dl2->GetPageSize(); j++) {
-					if (j <= i && mrDataLoader.GetPage() == dl2->GetPage()) {
-						continue;
-					}
+			if ((dl2->GetX(0) - mrDataLoader.GetX(mrDataLoader.GetPageSize() - 1)) * tScale > dmax) {
+				break;
+			}
+			for (unsigned i = 0; i < mrDataLoader.GetPageSize(); i++) {
+				unsigned j = 0;
+				if (mrDataLoader.GetPage() == dl2->GetPage()) {
+					j = i + 1;
+				}
+				for (; j < dl2->GetPageSize(); j++) {
 					real d = (dl2->GetX(j) - mrDataLoader.GetX(i)) * tScale;
-					if (d >= dmin && d <= dmax) {
+					if (d > dmax) {
+						break;
+					}
+					if (d >= dmin) {
 						int kk = round(a * d + b);
 						tty[kk] += DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
 						tta[kk] += 1.0;
@@ -388,6 +408,7 @@ void D2::Compute2DSpectrum() {
 		if (procId == 0) {
 			cout << "Page " << mrDataLoader.GetPage() << " loaded." << endl;
 		}
+		delete dl2;
 	}
 	//MPI::COMM_WORLD.Barrier();
 	if (procId > 0) {
@@ -405,15 +426,15 @@ void D2::Compute2DSpectrum() {
 			MPI::COMM_WORLD.Recv (ttaRecv, m,  MPI::DOUBLE, status.Get_source(), TAG_TTA, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received weights from " << status.Get_source() << "." << endl;
-			for (unsigned j = 0; j < tty.size(); j++) {
+			for (unsigned j = 0; j < m; j++) {
 				tty[j] += ttyRecv[j];
 				tta[j] += ttaRecv[j];
 				cout << ttyRecv[j] << endl;
 			}
 		}
 		// How many time differences was actually used?
-		j=0;
-		for (i = 0; i < m; i++) {
+		unsigned j = 0;
+		for (unsigned i = 0; i < m; i++) {
 			if (tta[i] > 0.5) {
 				j++;
 			}
@@ -428,7 +449,7 @@ void D2::Compute2DSpectrum() {
 		// Build final grids for periodicity search.
 
 		j = 0;
-		for (i = 0; i < m; i++) {
+		for (unsigned i = 0; i < m; i++) {
 			if (tta[i] > 0.5) {
 				ta[j] = tta[i];
 				ty[j] = tty[i];
@@ -444,7 +465,7 @@ void D2::Compute2DSpectrum() {
 		// Basic cycle with printing for GnuPlot
 
 		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (k - 1) : 0;
-		for (i = 0; i < k; i++) {
+		for (unsigned i = 0; i < k; i++) {
 			d = minCoherence + i * deltac;
 			for (j = 0; j < lp; j++) {
 				double w = wmin + j * step;

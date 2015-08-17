@@ -12,16 +12,16 @@
 
 class TextDataLoader: public DataLoader {
 public:
-	TextDataLoader(const string& fileName, unsigned bufferSize = 0,
-			const vector<unsigned>& dims = {1},
-			const vector<unsigned>& mins = {},
-			const vector<unsigned>& maxs = {},
-			unsigned totalNumVars = 1, const vector<unsigned>& varIndices = {0});
+	TextDataLoader(const string& fileName, unsigned bufferSize,
+			const vector<unsigned>& dims,
+			const vector<unsigned>& mins,
+			const vector<unsigned>& maxs,
+			unsigned totalNumVars, const vector<unsigned>& varIndices);
 	TextDataLoader(const TextDataLoader& dataLoader);
 	virtual ~TextDataLoader();
 
 	virtual bool Next();
-	virtual unique_ptr<DataLoader> Clone() const;
+	virtual DataLoader* Clone() const;
 
 };
 

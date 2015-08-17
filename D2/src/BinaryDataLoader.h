@@ -14,16 +14,16 @@
 
 class BinaryDataLoader: public DataLoader {
 public:
-	BinaryDataLoader(const string& fileName, unsigned bufferSize = 0,
-			const vector<unsigned>& dims = {1},
-			const vector<unsigned>& mins = {},
-			const vector<unsigned>& maxs = {},
-			unsigned totalNumVars = 1, const vector<unsigned>& varIndices = {0});
+	BinaryDataLoader(const string& fileName, unsigned bufferSize,
+			const vector<unsigned>& dims,
+			const vector<unsigned>& mins,
+			const vector<unsigned>& maxs,
+			unsigned totalNumVars, const vector<unsigned>& varIndices);
 	BinaryDataLoader(const BinaryDataLoader& dataLoader);
 	virtual ~BinaryDataLoader();
 
 	virtual bool Next();
-	virtual unique_ptr<DataLoader> Clone() const;
+	virtual DataLoader* Clone() const;
 
 };
 

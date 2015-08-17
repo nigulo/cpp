@@ -85,7 +85,6 @@ bool BinaryDataLoader::Next() {
 	return pageSize > 0;
 }
 
-unique_ptr<DataLoader> BinaryDataLoader::Clone() const {
-	BinaryDataLoader* clone = new BinaryDataLoader(*this);
-	return unique_ptr<DataLoader>(clone);
+DataLoader* BinaryDataLoader::Clone() const {
+	return new BinaryDataLoader(*this);
 }

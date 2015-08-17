@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <memory>
 #include <cassert>
 
 using namespace std;
@@ -20,17 +19,17 @@ typedef float real;
 
 class DataLoader {
 public:
-	DataLoader(const string& fileName, unsigned bufferSize = 0, ios::openmode mode = ios::in,
-			const vector<unsigned>& dims = {1},
-			const vector<unsigned>& mins = {},
-			const vector<unsigned>& maxs = {},
-			unsigned totalNumVars = 1,
-			const vector<unsigned>& varIndices = {0});
+	DataLoader(const string& fileName, unsigned bufferSize, ios::openmode mode,
+			const vector<unsigned>& dims,
+			const vector<unsigned>& mins,
+			const vector<unsigned>& maxs,
+			unsigned totalNumVars,
+			const vector<unsigned>& varIndices);
 	DataLoader(const DataLoader& dataLoader);
 	virtual ~DataLoader();
 
 	virtual bool Next() = 0;
-	virtual unique_ptr<DataLoader> Clone() const = 0;
+	virtual DataLoader* Clone() const = 0;
 
 	void Reset();
 
@@ -38,7 +37,7 @@ public:
 		return fileName;
 	}
 
-	const real GetX(unsigned i) const {
+	real GetX(unsigned i) const {
 		assert(i < pageSize);
 		return data[i * (dim * totalNumVars + 1)];
 	}
@@ -83,7 +82,7 @@ public:
 		return dims;
 	}
 
-	const unsigned GetDim() const {
+	unsigned GetDim() const {
 		return dim;
 	}
 
@@ -99,7 +98,7 @@ public:
 		return pageSize;
 	}
 
-	const unsigned GetNumVars() const {
+	unsigned GetNumVars() const {
 		return totalNumVars;
 	}
 

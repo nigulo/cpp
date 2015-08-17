@@ -8,22 +8,23 @@
 #include "DataLoader.h"
 
 DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmode mode,
-		const vector<unsigned>& dims,
-		const vector<unsigned>& mins,
-		const vector<unsigned>& maxs,
-		unsigned totalNumVars, const vector<unsigned>& varIndices) :
-	fileName(fileName),
-	bufferSize(bufferSize),
-	mode(mode),
-	dims(dims),
-	mins(mins),
-	maxs(maxs),
-	totalNumVars(totalNumVars),
-	varIndices(varIndices),
-	input(fileName, mode),
-	page(-1),
-	data(nullptr),
-	pageSize(0) {
+			const vector<unsigned>& dims,
+			const vector<unsigned>& mins,
+			const vector<unsigned>& maxs,
+			unsigned totalNumVars, const vector<unsigned>& varIndices) :
+		fileName(fileName),
+		bufferSize(bufferSize),
+		mode(mode),
+		dims(dims),
+		mins(mins),
+		maxs(maxs),
+		totalNumVars(totalNumVars),
+		varIndices(varIndices),
+		input(fileName, mode),
+		page(-1),
+		data(nullptr),
+		pageSize(0) {
+	assert(bufferSize > 0);
 	assert(input.is_open());
 	dim = 1;
 	for (auto dimx : dims) {
