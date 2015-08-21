@@ -373,7 +373,6 @@ void D2::Compute2DSpectrum() {
 	}
 
 	cum.assign(lp, 0);
-	vector<vector<double>*> ydiffs(m, 0);
 	vector<double> tty(m, 0);
 	vector<double> tta(m, 0);
 
@@ -410,9 +409,12 @@ void D2::Compute2DSpectrum() {
 		}
 		delete dl2;
 	}
-	//MPI::COMM_WORLD.Barrier();
+	MPI::COMM_WORLD.Barrier();
 	if (procId > 0) {
 		cout << "Sending data from " << procId << "." << endl;
+		//for (unsigned j = 0; j < m; j++) {
+		//	cout << tty[j] << endl;
+		//}
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, TAG_TTY);
 		MPI::COMM_WORLD.Send(tta.data(), tta.size(), MPI::DOUBLE, 0, TAG_TTA);
 	} else {
@@ -420,16 +422,16 @@ void D2::Compute2DSpectrum() {
 			double ttyRecv[m];
 			double ttaRecv[m];
 			MPI::Status status;
-			MPI::COMM_WORLD.Recv (ttyRecv, m,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
+			MPI::COMM_WORLD.Recv(ttyRecv, m,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received square differences from " << status.Get_source() << "." << endl;
-			MPI::COMM_WORLD.Recv (ttaRecv, m,  MPI::DOUBLE, status.Get_source(), TAG_TTA, status);
+			MPI::COMM_WORLD.Recv(ttaRecv, m,  MPI::DOUBLE, status.Get_source(), TAG_TTA, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received weights from " << status.Get_source() << "." << endl;
 			for (unsigned j = 0; j < m; j++) {
 				tty[j] += ttyRecv[j];
 				tta[j] += ttaRecv[j];
-				cout << ttyRecv[j] << endl;
+				//cout << ttyRecv[j] << endl;
 			}
 		}
 		// How many time differences was actually used?
