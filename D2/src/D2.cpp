@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	assert(numProcs.size() == dims.size());
-	assert(numProc == accumulate(numProcs.begin(), numProcs.end(), 0));
+	assert(numProc == accumulate(numProcs.begin(), numProcs.end(), 1, multiplies<unsigned>()));
 
 	vector<unsigned> dimsPerProc;
 	for (unsigned i = 0; i < dims.size(); i++) {
@@ -135,34 +135,35 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	string strRegions = Utils::FindProperty(params, "regions", "");
 	vector<vector<pair<unsigned, unsigned>>> regions;
-	for (string strRegion : Utils::SplitByChars(strRegions, ";")) {
-		vector<pair<unsigned, unsigned>> region;
-		int i = 0;
-		for (string strMinMax : Utils::SplitByChars(strRegion, ",", false)) {
-			vector<string> minMaxStrs = Utils::SplitByChars(strMinMax, "-", false);
-			assert(minMaxStrs.size() == 2);
-			unsigned min = stoi(minMaxStrs[0]);
-			unsigned max = stoi(minMaxStrs[1]);
-			unsigned procMin = procId * dimsPerProc[i];
-			if (min < procMin) {
-				min = procMin;
-			} else {
-				min %= dimsPerProc[i];
+	string strRegions = Utils::FindProperty(params, "regions", "");
+	if (!strRegions.empty()) {
+		for (string strRegion : Utils::SplitByChars(strRegions, ";")) {
+			vector<pair<unsigned, unsigned>> region;
+			int i = 0;
+			for (string strMinMax : Utils::SplitByChars(strRegion, ",", false)) {
+				vector<string> minMaxStrs = Utils::SplitByChars(strMinMax, "-", false);
+				assert(minMaxStrs.size() == 2);
+				unsigned min = stoi(minMaxStrs[0]);
+				unsigned max = stoi(minMaxStrs[1]);
+				unsigned procMin = procId * dimsPerProc[i];
+				if (min < procMin) {
+					min = procMin;
+				} else {
+					min %= dimsPerProc[i];
+				}
+				unsigned procMax = (procId + 1) * dimsPerProc[i];
+				if (max >= procMax) {
+					max = procMax;
+				} else {
+					max %= dimsPerProc[i];
+				}
+				region.push_back({min, max});
 			}
-			unsigned procMax = (procId + 1) * dimsPerProc[i];
-			if (max >= procMax) {
-				max = procMax;
-			} else {
-				max %= dimsPerProc[i];
-			}
-			region.push_back({min, max});
+			assert(region.size() == dims.size());
+			regions.push_back(region);
 		}
-		assert(region.size() == dims.size());
-		regions.push_back(region);
 	}
-
 	/*
 	string strMins = Utils::FindProperty(params, "mins", "0");
 	vector<string> minsStr;
@@ -461,7 +462,6 @@ void D2::CalcDiffNorms() {
 		cout << "Calculating diffnorms..." << endl;
 	}
 
-	cum.assign(lp, 0);
 	vector<double> tty(m, 0);
 	vector<double> tta(m, 0);
 
@@ -609,6 +609,8 @@ void D2::Compute2DSpectrum() {
 		ofstream output_min("phasedisp_min.csv");
 		ofstream output_max("phasedisp_max.csv");
 
+		vector<double> cum(lp);
+		cum.assign(lp, 0);
 		// Basic cycle with printing for GnuPlot
 
 		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (k - 1) : 0;
