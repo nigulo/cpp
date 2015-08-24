@@ -88,6 +88,25 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	string strNumProcs = Utils::FindProperty(params, "numProcs", "1");
+	vector<string> numProcsStr;
+	vector<unsigned> numProcs;
+	boost::split(numProcsStr, strNumProcs, boost::is_any_of(","), boost::token_compress_on);
+	for (vector<string>::iterator it = numProcsStr.begin() ; it != numProcsStr.end(); ++it) {
+		if ((*it).length() != 0) {
+			numProcs.push_back(stoi(*it));
+		}
+	}
+
+	assert(numProcs.size() == dims.size());
+	assert(numProc == accumulate(numProcs.begin(), numProcs.end(), 0));
+
+	vector<unsigned> dimsPerProc;
+	for (unsigned i = 0; i < dims.size(); i++) {
+		assert(dims[i] % numProcs[i] == 0);
+		dimsPerProc.push_back(dims[i] / numProcs[i]);
+	}
+
 	string strMins = Utils::FindProperty(params, "mins", "0");
 	vector<string> minsStr;
 	vector<unsigned> mins;
@@ -98,6 +117,14 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	assert(mins.size() <= dims.size());
+	for (unsigned i = 0; i < mins.size(); i++) {
+		unsigned procMin = procId * dimsPerProc[i];
+		if (mins[i] < procMin) {
+			mins[i] = procMin;
+		} else {
+			mins[i] %= dimsPerProc[i];
+		}
+	}
 
 	string strMaxs = Utils::FindProperty(params, "maxs", to_string(dims[0] - 1));
 	vector<string> maxsStr;
@@ -109,6 +136,15 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	assert(maxs.size() <= dims.size());
+	for (unsigned i = 0; i < maxs.size(); i++) {
+		unsigned procMax = (procId + 1) * dimsPerProc[i];
+		if (maxs[i] >= procMax) {
+			maxs[i] = procMax;
+		} else {
+			maxs[i] %= dimsPerProc[i];
+		}
+	}
+
 
 	unsigned totalNumVars = Utils::FindIntProperty(params, "numVars", 1);
 
@@ -350,13 +386,13 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 	#pragma omp parallel for reduction(+:norm)
 #endif
 	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
-		//if (!mrDataLoader.Skip(i, {true, procId == 0}, {true, procId == numProc - 1})) {
+		if (!mrDataLoader.Skip(i, {true, true}, {true, true})) {
 			auto offset = i * mrDataLoader.GetNumVars();
 			for (unsigned j : mrDataLoader.GetVarIndices()) {
 				auto index = offset + j;
 				norm += square(y1[index] - y2[index]);
 			}
-		//}
+		}
 	}
 	return norm;
 }
