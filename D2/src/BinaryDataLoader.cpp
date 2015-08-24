@@ -4,10 +4,9 @@ using namespace std;
 
 BinaryDataLoader::BinaryDataLoader(const string& fileName, unsigned bufferSize,
 		const vector<unsigned>& dims,
-		const vector<unsigned>& mins,
-		const vector<unsigned>& maxs,
+		const vector<vector<pair<unsigned, unsigned>>>& regions,
 		unsigned totalNumVars, const vector<unsigned>& varIndices) :
-				DataLoader(fileName, bufferSize, ios::in | ios::binary, dims, mins, maxs, totalNumVars, varIndices) {
+				DataLoader(fileName, bufferSize, ios::in | ios::binary, dims, regions, totalNumVars, varIndices) {
 }
 
 BinaryDataLoader::BinaryDataLoader(const BinaryDataLoader& dataLoader) : DataLoader(dataLoader) {

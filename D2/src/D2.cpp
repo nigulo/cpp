@@ -42,6 +42,33 @@ template<typename T> string vecToStr(const vector<T>& vec) {
 	return ss.str();
 }
 
+template<> string vecToStr<pair<unsigned, unsigned>>(const vector<pair<unsigned, unsigned>>& vec) {
+	stringstream ss;
+	bool first = true;
+	for (auto t : vec) {
+		if (!first) {
+			ss << ",";
+		}
+		ss << "{" << get<0>(t) << "," << get<1>(t) << "}";
+		first = false;
+	}
+	return ss.str();
+}
+
+
+template<typename T> string vecVecToStr(const vector<vector<T>>& vec) {
+	stringstream ss;
+	bool first = true;
+	for (auto& v : vec) {
+		if (!first) {
+			ss << ",";
+		}
+		ss << "{" << vecToStr(v) << "}";
+		first = false;
+	}
+	return ss.str();
+}
+
 
 int main(int argc, char *argv[]) {
 
@@ -107,6 +134,36 @@ int main(int argc, char *argv[]) {
 		dimsPerProc.push_back(dims[i] / numProcs[i]);
 	}
 
+
+	string strRegions = Utils::FindProperty(params, "regions", "");
+	vector<vector<pair<unsigned, unsigned>>> regions;
+	for (string strRegion : Utils::SplitByChars(strRegions, ";")) {
+		vector<pair<unsigned, unsigned>> region;
+		int i = 0;
+		for (string strMinMax : Utils::SplitByChars(strRegion, ",", false)) {
+			vector<string> minMaxStrs = Utils::SplitByChars(strMinMax, "-", false);
+			assert(minMaxStrs.size() == 2);
+			unsigned min = stoi(minMaxStrs[0]);
+			unsigned max = stoi(minMaxStrs[1]);
+			unsigned procMin = procId * dimsPerProc[i];
+			if (min < procMin) {
+				min = procMin;
+			} else {
+				min %= dimsPerProc[i];
+			}
+			unsigned procMax = (procId + 1) * dimsPerProc[i];
+			if (max >= procMax) {
+				max = procMax;
+			} else {
+				max %= dimsPerProc[i];
+			}
+			region.push_back({min, max});
+		}
+		assert(region.size() == dims.size());
+		regions.push_back(region);
+	}
+
+	/*
 	string strMins = Utils::FindProperty(params, "mins", "0");
 	vector<string> minsStr;
 	vector<unsigned> mins;
@@ -144,7 +201,7 @@ int main(int argc, char *argv[]) {
 			maxs[i] %= dimsPerProc[i];
 		}
 	}
-
+	*/
 
 	unsigned totalNumVars = Utils::FindIntProperty(params, "numVars", 1);
 
@@ -206,8 +263,7 @@ int main(int argc, char *argv[]) {
 		cout << "binary       " << binary << endl;
 		cout << "bufferSize   " << bufferSize << endl;
 		cout << "dims         " << vecToStr(dims) << endl;
-		cout << "mins         " << vecToStr(mins) << endl;
-		cout << "maxs         " << vecToStr(maxs) << endl;
+		cout << "regions      " << vecVecToStr(regions) << endl;
 		cout << "numVars      " << totalNumVars << endl;
 		cout << "minPeriod    " << minPeriod << endl;
 		cout << "maxPeriod    " << maxPeriod << endl;
@@ -223,9 +279,9 @@ int main(int argc, char *argv[]) {
 	}
 	DataLoader* dl;
 	if (binary) {
-		dl = new BinaryDataLoader(filePath, bufferSize, dims, mins, maxs, totalNumVars, varIndices);
+		dl = new BinaryDataLoader(filePath, bufferSize, dims, regions, totalNumVars, varIndices);
 	} else {
-		dl = new TextDataLoader(filePath, bufferSize, dims, mins, maxs, totalNumVars, varIndices);
+		dl = new TextDataLoader(filePath, bufferSize, dims, regions, totalNumVars, varIndices);
 	}
 	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales);
 	if (!exists(DIFF_NORMS_FILE)) {
@@ -386,7 +442,7 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 	#pragma omp parallel for reduction(+:norm)
 #endif
 	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
-		if (!mrDataLoader.Skip(i, {true, true}, {true, true})) {
+		if (!mrDataLoader.Skip(i)) {
 			auto offset = i * mrDataLoader.GetNumVars();
 			for (unsigned j : mrDataLoader.GetVarIndices()) {
 				auto index = offset + j;
@@ -519,7 +575,7 @@ void D2::LoadDiffNorms() {
 			}
 			if (words.size() > 0 && words[0][0] == '#') {
 				//cout << "Skipping comment line: " << line << endl;
-			} else if (words.size() == 2) {
+			} else if (words.size() == 3) {
 				try {
 					td.push_back(stod(words[0]));
 					ty.push_back(stod(words[1]));

@@ -16,8 +16,7 @@ class BinaryDataLoader: public DataLoader {
 public:
 	BinaryDataLoader(const string& fileName, unsigned bufferSize,
 			const vector<unsigned>& dims,
-			const vector<unsigned>& mins,
-			const vector<unsigned>& maxs,
+			const vector<vector<pair<unsigned, unsigned>>>& regions,
 			unsigned totalNumVars, const vector<unsigned>& varIndices);
 	BinaryDataLoader(const BinaryDataLoader& dataLoader);
 	virtual ~BinaryDataLoader();

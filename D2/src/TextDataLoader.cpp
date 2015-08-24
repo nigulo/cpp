@@ -4,10 +4,9 @@
 
 TextDataLoader::TextDataLoader(const string& fileName, unsigned bufferSize,
 		const vector<unsigned>& dims,
-		const vector<unsigned>& mins,
-		const vector<unsigned>& maxs,
+		const vector<vector<pair<unsigned, unsigned>>>& regions,
 		unsigned totalNumVars, const vector<unsigned>& varIndices) :
-				DataLoader(fileName, bufferSize, ios::in, dims, mins, maxs, totalNumVars, varIndices) {
+				DataLoader(fileName, bufferSize, ios::in, dims, regions, totalNumVars, varIndices) {
 }
 
 TextDataLoader::TextDataLoader(const TextDataLoader& dataLoader) : DataLoader(dataLoader) {

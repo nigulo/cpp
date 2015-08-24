@@ -14,8 +14,7 @@ class TextDataLoader: public DataLoader {
 public:
 	TextDataLoader(const string& fileName, unsigned bufferSize,
 			const vector<unsigned>& dims,
-			const vector<unsigned>& mins,
-			const vector<unsigned>& maxs,
+			const vector<vector<pair<unsigned, unsigned>>>& regions,
 			unsigned totalNumVars, const vector<unsigned>& varIndices);
 	TextDataLoader(const TextDataLoader& dataLoader);
 	virtual ~TextDataLoader();

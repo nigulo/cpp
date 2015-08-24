@@ -12,6 +12,7 @@
 #include <vector>
 #include <fstream>
 #include <cassert>
+#include <utility>
 
 using namespace std;
 
@@ -21,8 +22,7 @@ class DataLoader {
 public:
 	DataLoader(const string& fileName, unsigned bufferSize, ios::openmode mode,
 			const vector<unsigned>& dims,
-			const vector<unsigned>& mins,
-			const vector<unsigned>& maxs,
+			const vector<vector<pair<unsigned, unsigned>>>& regions,
 			unsigned totalNumVars,
 			const vector<unsigned>& varIndices);
 	DataLoader(const DataLoader& dataLoader);
@@ -47,6 +47,7 @@ public:
 		return &data[i * (dim * totalNumVars + 1) + 1];
 	}
 
+	/*
 	unsigned GetAbsoluteIndex(const vector<unsigned>& indices) const {
 		assert(indices.size() == dims.size());
 		assert(mins.empty() || mins[0] <= indices[0]);
@@ -61,15 +62,18 @@ public:
 		}
 		return i;
 	}
+	*/
 
-	bool Skip(unsigned i, const vector<bool> useMin, const vector<bool> useMax) const {
-		for (unsigned j = 0; j < dims.size(); j++) {
-			unsigned d = i % dims[j];
-			if ((useMin[j] && mins.size() > j && d < mins[j]) || (useMax[j] && maxs.size() > j && d > maxs[j])) {
-				return true;
+	bool Skip(unsigned i) const {
+		for (vector<pair<unsigned, unsigned>> region : regions) {
+			for (unsigned j = 0; j < dims.size(); j++) {
+				unsigned d = i % dims[j];
+				if (region.size() > j && (d < get<0>(region[j]) || d > get<1>(region[j]))) {
+					return true;
+				}
+				i -= d;
+				i /= dims[j];
 			}
-			i -= d;
-			i /= dims[j];
 		}
 		return false;
 	}
@@ -86,6 +90,7 @@ public:
 		return dim;
 	}
 
+	/*
 	const vector<unsigned>& GetMins() const {
 		return mins;
 	}
@@ -93,6 +98,7 @@ public:
 	const vector<unsigned>& GetMaxs() const {
 		return maxs;
 	}
+	*/
 
 	unsigned GetPageSize() const {
 		return pageSize;
@@ -111,8 +117,7 @@ protected:
 	const unsigned bufferSize;
 	const ios::openmode mode;
 	const vector<unsigned> dims;
-	const vector<unsigned> mins;
-	const vector<unsigned> maxs;
+	const vector<vector<pair<unsigned /*min*/, unsigned /*max*/>>> regions;
 	const unsigned totalNumVars;
 	const vector<unsigned> varIndices;
 	ifstream input;
