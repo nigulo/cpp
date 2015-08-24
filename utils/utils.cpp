@@ -7,7 +7,7 @@
 
 using namespace boost;
 using namespace boost::filesystem;
-using namespace utils;
+namespace utils {
 
 string Utils::ReadTextFile(const string& rFileName) {
     ifstream is(rFileName, ifstream::binary);
@@ -112,7 +112,7 @@ vector<string> Utils::Split(const string& rStr, const string& rSeparator, bool t
     return ret_val;
 }
 
-vector<string> Utils::SplitByChars(const string& rStr, char separators[], bool ignoreEmpty, bool trim) {
+vector<string> Utils::SplitByChars(const string& rStr, const char separators[], bool ignoreEmpty, bool trim) {
 	vector<string> retVal;
 	boost::split(retVal, rStr, boost::is_any_of(separators), boost::token_compress_on);
 	for (vector<string>::iterator it = retVal.begin() ; it != retVal.end(); ++it) {
@@ -250,5 +250,47 @@ double Utils::FindDoubleProperty(const map<string, string>& rProperties, const s
 	}
 	auto property = rProperties.find(key);
 	return property != rProperties.end() ? stod(property->second) : defaultValue;
+
+}
+
+template<> vector<int> Utils::FromStringVector<>(const vector<string>& rVect) {
+	vector<int> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stoi(s));
+	}
+	return retVal;
+}
+
+template<> vector<unsigned> Utils::FromStringVector<>(const vector<string>& rVect) {
+	vector<unsigned> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stoi(s));
+	}
+	return retVal;
+}
+
+template<> vector<size_t> Utils::FromStringVector<>(const vector<string>& rVect) {
+	vector<size_t> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stoi(s));
+	}
+	return retVal;
+}
+
+template<> vector<float> Utils::FromStringVector<>(const vector<string>& rVect) {
+	vector<float> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stof(s));
+	}
+	return retVal;
+}
+
+template<> vector<double> Utils::FromStringVector<>(const vector<string>& rVect) {
+	vector<double> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stod(s));
+	}
+	return retVal;
+}
 
 }

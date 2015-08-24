@@ -65,7 +65,7 @@ public:
      * @param trim specifies whether to trim the chunks after splitting
      * @return list of chunks
      **/
-    static vector<string> SplitByChars(const string& rStr, char separators[], bool ignoreEmpty = true, bool trim = true);
+    static vector<string> SplitByChars(const string& rStr, const char separators[], bool ignoreEmpty = true, bool trim = true);
 
     template<typename T> static vector<T> FromStringVector(const vector<string> & rVect);
 
@@ -105,47 +105,7 @@ public:
     }
 
 };
-/*
-template<> vector<int> Utils::FromStringVector(const vector<string>& rVect) {
-	vector<int> retVal(rVect.size());
-	for (auto s : rVect) {
-		retVal.push_back(stoi(s));
-	}
-	return retVal;
-}
 
-template<> vector<unsigned> Utils::FromStringVector(const vector<string>& rVect) {
-	vector<unsigned> retVal(rVect.size());
-	for (auto s : rVect) {
-		retVal.push_back(stoi(s));
-	}
-	return retVal;
-}
-
-template<> vector<size_t> Utils::FromStringVector(const vector<string>& rVect) {
-	vector<size_t> retVal(rVect.size());
-	for (auto s : rVect) {
-		retVal.push_back(stoi(s));
-	}
-	return retVal;
-}
-
-template<> vector<float> Utils::FromStringVector(const vector<string>& rVect) {
-	vector<float> retVal(rVect.size());
-	for (auto s : rVect) {
-		retVal.push_back(stof(s));
-	}
-	return retVal;
-}
-
-template<> vector<double> Utils::FromStringVector(const vector<string>& rVect) {
-	vector<double> retVal(rVect.size());
-	for (auto s : rVect) {
-		retVal.push_back(stod(s));
-	}
-	return retVal;
-}
-*/
 } /* namespace utils */
 
 #endif /* UTILS_H_ */
