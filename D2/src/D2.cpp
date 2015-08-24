@@ -27,6 +27,8 @@ using namespace utils;
 int procId;
 int numProc;
 
+#define DIFF_NORMS_FILE "diffnorms.csv"
+
 template<typename T> string vecToStr(const vector<T>& vec) {
 	stringstream ss;
 	bool first = true;
@@ -190,6 +192,11 @@ int main(int argc, char *argv[]) {
 		dl = new TextDataLoader(filePath, bufferSize, dims, mins, maxs, totalNumVars, varIndices);
 	}
 	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales);
+	if (!exists(DIFF_NORMS_FILE)) {
+		d2.CalcDiffNorms();
+	} else {
+		d2.LoadDiffNorms();
+	}
 	d2.Compute2DSpectrum();
 	delete dl;
 	if (procId == 0) {
@@ -343,13 +350,13 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 	#pragma omp parallel for reduction(+:norm)
 #endif
 	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
-		if (!mrDataLoader.Skip(i, {true, procId == 0}, {true, procId == numProc - 1})) {
+		//if (!mrDataLoader.Skip(i, {true, procId == 0}, {true, procId == numProc - 1})) {
 			auto offset = i * mrDataLoader.GetNumVars();
 			for (unsigned j : mrDataLoader.GetVarIndices()) {
 				auto index = offset + j;
 				norm += square(y1[index] - y2[index]);
 			}
-		}
+		//}
 	}
 	return norm;
 }
@@ -357,19 +364,9 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 #define TAG_TTY 1
 #define TAG_TTA 2
 
-void D2::Compute2DSpectrum() {
-
+void D2::CalcDiffNorms() {
 	if (procId == 0) {
-		cout << "lp= " << lp << endl;
-		cout << "k= " << k << endl;
-		cout << "m= " << m << endl;
-		cout << "a= " << a << endl;
-		cout << "b= " << b << endl;
-		cout << "dmin= " << dmin << endl;
-		cout << "dmax= " << dmax << endl;
-		cout << "wmin= " << wmin << endl;
-		cout << "delta= " << delta << endl;
-		cout << "step= " << step << endl;
+		cout << "Calculating diffnorms..." << endl;
 	}
 
 	cum.assign(lp, 0);
@@ -408,6 +405,9 @@ void D2::Compute2DSpectrum() {
 			cout << "Page " << mrDataLoader.GetPage() << " loaded." << endl;
 		}
 		delete dl2;
+	}
+	if (procId == 0) {
+		cout << "Waiting for data from other processes..." << endl;
 	}
 	MPI::COMM_WORLD.Barrier();
 	if (procId > 0) {
@@ -451,15 +451,68 @@ void D2::Compute2DSpectrum() {
 		// Build final grids for periodicity search.
 
 		j = 0;
+		ofstream output(DIFF_NORMS_FILE);
 		for (unsigned i = 0; i < m; i++) {
 			if (tta[i] > 0.5) {
-				ta[j] = tta[i];
-				ty[j] = tty[i];
 				td[j] = d;
+				ty[j] = tty[i];
+				ta[j] = tta[i];
+				output << d << " " << ty[j] << " " << ta[j] << endl;
 				j++;
 			}
 			d = d + delta;
 		}
+		output.close();
+	}
+
+}
+
+void D2::LoadDiffNorms() {
+	if (procId == 0) {
+		cout << "Loading diffnorms..." << endl;
+		ifstream input(DIFF_NORMS_FILE);
+		for (string line; getline(input, line);) {
+			std::vector<std::string> words;
+			boost::split(words, line, boost::is_any_of("\t "), boost::token_compress_on);
+			for (vector<string>::iterator it = words.begin(); it != words.end();) {
+				if ((*it).length() == 0) {
+					it = words.erase(it);
+				} else {
+					it++;
+				}
+			}
+			if (words.size() > 0 && words[0][0] == '#') {
+				//cout << "Skipping comment line: " << line << endl;
+			} else if (words.size() == 2) {
+				try {
+					td.push_back(stod(words[0]));
+					ty.push_back(stod(words[1]));
+					ta.push_back(stod(words[2]));
+				} catch (invalid_argument& ex) {
+					cout << "Skipping line, invalid number: " << line << endl;
+				}
+			} else {
+				cout << "Skipping line, invalid number of columns: " << line << endl;
+			}
+		}
+		input.close();
+	}
+}
+
+void D2::Compute2DSpectrum() {
+
+	if (procId == 0) {
+		cout << "lp = " << lp << endl;
+		cout << "k = " << k << endl;
+		cout << "m = " << m << endl;
+		cout << "a = " << a << endl;
+		cout << "b = " << b << endl;
+		cout << "dmin = " << dmin << endl;
+		cout << "dmax = " << dmax << endl;
+		cout << "wmin = " << wmin << endl;
+		cout << "delta = " << delta << endl;
+		cout << "step = " << step << endl;
+
 		ofstream output("phasedisp.csv");
 		ofstream output_min("phasedisp_min.csv");
 		ofstream output_max("phasedisp_max.csv");
@@ -468,8 +521,8 @@ void D2::Compute2DSpectrum() {
 
 		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (k - 1) : 0;
 		for (unsigned i = 0; i < k; i++) {
-			d = minCoherence + i * deltac;
-			for (j = 0; j < lp; j++) {
+			double d = minCoherence + i * deltac;
+			for (unsigned j = 0; j < lp; j++) {
 				double w = wmin + j * step;
 				double d1 = d;
 				if (relative) {
@@ -487,7 +540,7 @@ void D2::Compute2DSpectrum() {
 
 			vector<int> minima(0);
 			unsigned dk = lp / 20;
-			for (j = 0; j < lp; j++) {
+			for (unsigned j = 0; j < lp; j++) {
 				output << d << " " << (wmin + j * step) << " " << cum[j] << endl;
 				if (d == minCoherence) {
 					output_min << (wmin + j * step) << " " << cum[j] << endl;

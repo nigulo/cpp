@@ -54,6 +54,8 @@ public:
     		double minCoherence, double maxCoherence,
 			Mode mode, bool normalize, bool relative,
 			double tScale, const vector<double>& varScales);
+    void CalcDiffNorms();
+    void LoadDiffNorms();
     void Compute2DSpectrum();
 
 private:
