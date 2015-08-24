@@ -145,20 +145,21 @@ int main(int argc, char *argv[]) {
 				vector<string> minMaxStrs = Utils::SplitByChars(strMinMax, "-", false);
 				assert(minMaxStrs.size() == 2);
 				unsigned min = stoi(minMaxStrs[0]);
-				unsigned max = stoi(minMaxStrs[1]);
 				unsigned procMin = procId * dimsPerProc[i];
 				if (min < procMin) {
 					min = procMin;
 				} else {
 					min %= dimsPerProc[i];
 				}
-				unsigned procMax = (procId + 1) * dimsPerProc[i];
-				if (max >= procMax) {
+				unsigned max = stoi(minMaxStrs[1]);
+				unsigned procMax = (procId + 1) * dimsPerProc[i] - 1;
+				if (max > procMax) {
 					max = procMax;
 				} else {
 					max %= dimsPerProc[i];
 				}
 				region.push_back({min, max});
+				i++;
 			}
 			assert(region.size() == dims.size());
 			regions.push_back(region);
