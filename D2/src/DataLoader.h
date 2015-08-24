@@ -64,15 +64,23 @@ public:
 	}
 	*/
 
-	bool Skip(unsigned i) const {
+	bool InRegion(unsigned i) const {
+		if (regions.empty()) {
+			return true;
+		}
 		for (vector<pair<unsigned, unsigned>> region : regions) {
+			bool inRegion = true;
 			for (unsigned j = 0; j < dims.size(); j++) {
 				unsigned d = i % dims[j];
 				if (region.size() > j && (d < get<0>(region[j]) || d > get<1>(region[j]))) {
-					return true;
+					inRegion = false;
+					break;
 				}
 				i -= d;
 				i /= dims[j];
+			}
+			if (inRegion) {
+				return true;
 			}
 		}
 		return false;

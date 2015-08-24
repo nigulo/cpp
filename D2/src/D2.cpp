@@ -442,7 +442,7 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 	#pragma omp parallel for reduction(+:norm)
 #endif
 	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
-		if (!mrDataLoader.Skip(i)) {
+		if (mrDataLoader.InRegion(i)) {
 			auto offset = i * mrDataLoader.GetNumVars();
 			for (unsigned j : mrDataLoader.GetVarIndices()) {
 				auto index = offset + j;
