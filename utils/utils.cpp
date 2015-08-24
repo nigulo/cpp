@@ -53,7 +53,7 @@ bool Utils::IsWhitespace(char ch) {
 }
 
 int Utils::Find(const string& rStr, const string& rStrToFind, int startIndex) {
-    assert(startIndex >= 0 && startIndex < rStr.length());
+    assert(startIndex >= 0 && startIndex < (int) rStr.length());
     return rStr.find(rStrToFind, startIndex);
 }
 
@@ -127,7 +127,7 @@ vector<string> Utils::SplitByChars(const string& rStr, const char separators[], 
 }
 
 string Utils::GetProperty(const string& rStr, const string& rPropertyName) {
-    int index = rStr.find(rPropertyName);
+    size_t index = rStr.find(rPropertyName);
     //Object::Dbg((string) "GetProperty index: " + index);
 
     if (index >= rStr.length()) {
