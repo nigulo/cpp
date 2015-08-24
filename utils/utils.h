@@ -20,13 +20,6 @@ public:
     static bool IsWhitespace(char ch);
 
     /**
-     * Removes all leading and trailing whitespaces from this string
-     * @param rStr string to trim
-     * @return reference to this string
-     **/
-    static string& Trim(string& rStr);
-
-    /**
      * Searches for a substring in this string from the
      * given start index.
      * @param rStr string to search from
@@ -66,6 +59,17 @@ public:
     static vector<string> Split(const string& rStr, const string& rSeparator, bool trim = true);
 
     /**
+     * Splits the string to an array using the separator chars
+     * @param rStr string to split
+     * @param separators separator chars
+     * @param trim specifies whether to trim the chunks after splitting
+     * @return list of chunks
+     **/
+    static vector<string> SplitByChars(const string& rStr, char separators[], bool ignoreEmpty = true, bool trim = true);
+
+    template<typename T> static vector<T> FromStringVector(const vector<string> & rVect);
+
+    /**
      * Returns the property with the given name cointained in the
      * string. Properties are defined in the string as "name = value"
      * pairs. The value may be put between quotation marks to allow
@@ -101,7 +105,47 @@ public:
     }
 
 };
+/*
+template<> vector<int> Utils::FromStringVector(const vector<string>& rVect) {
+	vector<int> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stoi(s));
+	}
+	return retVal;
+}
 
+template<> vector<unsigned> Utils::FromStringVector(const vector<string>& rVect) {
+	vector<unsigned> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stoi(s));
+	}
+	return retVal;
+}
+
+template<> vector<size_t> Utils::FromStringVector(const vector<string>& rVect) {
+	vector<size_t> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stoi(s));
+	}
+	return retVal;
+}
+
+template<> vector<float> Utils::FromStringVector(const vector<string>& rVect) {
+	vector<float> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stof(s));
+	}
+	return retVal;
+}
+
+template<> vector<double> Utils::FromStringVector(const vector<string>& rVect) {
+	vector<double> retVal(rVect.size());
+	for (auto s : rVect) {
+		retVal.push_back(stod(s));
+	}
+	return retVal;
+}
+*/
 } /* namespace utils */
 
 #endif /* UTILS_H_ */

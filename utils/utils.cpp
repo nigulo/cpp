@@ -64,24 +64,6 @@ void Utils::FindAll(const string& rStr, vector<int>& rIndices, const string& rSt
     }
 }
 
-string& Utils::Trim(string& rStr) {
-    int startIndex = 0;
-    while (startIndex < rStr.length() && IsWhitespace(rStr[startIndex])) {
-        startIndex++;
-    }
-    int endIndex = rStr.length() - 1;
-    while (endIndex > 0 && IsWhitespace(rStr[endIndex])) {
-        endIndex--;
-    }
-    if (endIndex < startIndex) {
-    	rStr.clear();
-    }
-    else {
-    	rStr.assign(rStr.substr(startIndex, endIndex - startIndex + 1));
-    }
-    return rStr;
-}
-
 int Utils::FindWhitespace(const string& rStr, int startIndex) {
     int index1 = rStr.find('\t', startIndex);
     int index2 = rStr.find(' ', startIndex);
@@ -121,13 +103,27 @@ vector<string> Utils::Split(const string& rStr, const string& rSeparator, bool t
         }
         //Object::Dbg(string("SplitA ") + i + ": " + s);
         if (trim) {
-            Trim(s);
+            boost::trim(s);
         }
         //Object::Dbg(string("SplitB ") + i + ": " + s);
         ret_val.push_back(s);
         index = new_index + 1;
     }
     return ret_val;
+}
+
+vector<string> Utils::SplitByChars(const string& rStr, char separators[], bool ignoreEmpty, bool trim) {
+	vector<string> retVal;
+	boost::split(retVal, rStr, boost::is_any_of(separators), boost::token_compress_on);
+	for (vector<string>::iterator it = retVal.begin() ; it != retVal.end(); ++it) {
+		if (trim) {
+			boost::trim(*it);
+		}
+		if (ignoreEmpty && (*it).empty()) {
+			it->erase();
+		}
+	}
+	return retVal;
 }
 
 string Utils::GetProperty(const string& rStr, const string& rPropertyName) {
@@ -143,14 +139,14 @@ string Utils::GetProperty(const string& rStr, const string& rPropertyName) {
         return string();
     }
     string str = rStr.substr(index);
-    Trim(str);
+    trim(str);
     //Object::Dbg((string) "GetProperty str: " + str);
 
     if (str[0] != '=') {
         return string();
     }
     str = str.substr(1);
-    Trim(str);
+    trim(str);
     //Object::Dbg((string) "GetProperty str: " + str);
 
     if (str[0] == '"') {
