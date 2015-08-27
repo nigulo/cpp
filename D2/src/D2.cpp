@@ -1,3 +1,5 @@
+#define BOOST_NO_CXX11_SCOPED_ENUMS
+
 #include "D2.h"
 #include "BinaryDataLoader.h"
 #include "TextDataLoader.h"
@@ -9,6 +11,7 @@
 #include <cmath>
 #include <math.h>
 #include <sstream>
+#include <ctime>
 #include <memory>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -26,8 +29,14 @@ using namespace utils;
 
 int procId;
 int numProc;
+time_t currentTime;
 
-#define DIFF_NORMS_FILE "diffnorms.csv"
+#define DIFF_NORMS_FILE_PREFIX "diffnorms"
+#define DIFF_NORMS_FILE_SUFFIX ".csv"
+#define DIFF_NORMS_FILE (DIFF_NORMS_FILE_PREFIX DIFF_NORMS_FILE_SUFFIX)
+#define PARAMETERS_FILE_PREFIX "parameters"
+#define PARAMETERS_FILE_SUFFIX ".txt"
+#define PARAMETERS_FILE (PARAMETERS_FILE_PREFIX PARAMETERS_FILE_SUFFIX)
 
 template<typename T> string vecToStr(const vector<T>& vec) {
 	stringstream ss;
@@ -83,16 +92,16 @@ int main(int argc, char *argv[]) {
 
 	if (procId == 0) {
 		if (argc == 2 && string("-h") == argv[1]) {
-			cout << "Usage: ./D2 [paramfile]\nparamfile defaults to parameters.txt" << endl;
+			cout << "Usage: ./D2 [paramfile]\nparamfile defaults to " << PARAMETERS_FILE << endl;
 			return EXIT_FAILURE;
 		}
 	}
-
-	string paramFileName = argc > 1 ? argv[1] : "parameters.txt";
+	currentTime = time(nullptr);
+	string paramFileName = argc > 1 ? argv[1] : PARAMETERS_FILE;
 
 	if (procId == 0) {
-		if (!exists("parameters.txt")) {
-			cout << "Cannot find parameters.txt" << endl;
+		if (!exists(PARAMETERS_FILE)) {
+			cout << "Cannot find " << PARAMETERS_FILE << endl;
 			return EXIT_FAILURE;
 		}
 	}
@@ -544,7 +553,7 @@ void D2::CalcDiffNorms() {
 		// Build final grids for periodicity search.
 
 		j = 0;
-		ofstream output(DIFF_NORMS_FILE);
+		ofstream output(string(DIFF_NORMS_FILE_PREFIX) + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
 		for (unsigned i = 0; i < m; i++) {
 			if (tta[i] > 0.5) {
 				td[j] = d;
@@ -556,6 +565,7 @@ void D2::CalcDiffNorms() {
 			d = d + delta;
 		}
 		output.close();
+		copy_file(PARAMETERS_FILE, string(PARAMETERS_FILE_PREFIX) + "_" + to_string(currentTime) + PARAMETERS_FILE_SUFFIX);
 	}
 
 }
