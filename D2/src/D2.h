@@ -33,7 +33,9 @@ private:
 	const double tScale;
 	const vector<double> varScales;
 
-	vector<double> ty, ta, td;
+	vector<double> ty;
+	vector<double> td;
+	vector<int> ta;
 
     unsigned lp;
     unsigned k;

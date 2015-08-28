@@ -349,38 +349,35 @@ D2::D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod,
 }
 
 double D2::Criterion(double d, double w) {
-
-	unsigned j;
-	double tyv, tav, dd, ww, wp, ph;
-
-	tyv = 0.0;
-	tav = 0.0;
+	double tyv = 0;
+	int tav = 0;
 	switch (mode) {
 	case Box:
-		for (j = 0; j < td.size(); j++) {// to jj-1 do begin
-			dd = td[j];
+		for (unsigned j = 0; j < td.size(); j++) {
+			double dd = td[j];
 			if (dd <= d) {
-				ph = dd * w - floor(dd * w);//Frac(dd*w);
+				double ph = dd * w - floor(dd * w);
 				if (ph < 0.0) {
 					ph = ph + 1;
 				}
-				if (ph<eps || ph>epslim) {
-					tyv = tyv + ty[j];
-					tav = tav + ta[j];
+				if (ph < eps || ph > epslim) {
+					tyv += ty[j];
+					tav += ta[j];
 				}
 			}
 		}
 		break;
 	case Gauss: //This is important, in td[] are precomputed sums of squares and counts.
 	case GaussWithCosine:
-		for (j = 0; j < td.size(); j++) {// to jj-1 do begin
-			dd = td[j];
+		for (unsigned j = 0; j < td.size(); j++) {// to jj-1 do begin
+			double dd = td[j];
+			double ww;
 			if (d > 0.0) {
 				ww = exp(-square(ln2 * dd / d));
 			} else {
 				ww = 0.0;
 			}
-			ph = dd * w - floor(dd * w);//Frac(dd*w);
+			double ph = dd * w - floor(dd * w);//Frac(dd*w);
 			if (ph < 0.0) {
 				ph = ph + 1;
 			}
@@ -388,6 +385,7 @@ double D2::Criterion(double d, double w) {
 				ph = 1.0 - ph;
 			}
 			bool closeInPhase = true;
+			double wp;
 			if (mode == Gauss) {
 				closeInPhase = ph < eps || ph > epslim;
 				wp = exp(-square(lnp*ph));
@@ -405,13 +403,13 @@ double D2::Criterion(double d, double w) {
 				}
 			}
 			if (closeInPhase) {
-				tyv=tyv + ww * wp * ty[j];
-				tav=tav + ww * wp * ta[j];
+				tyv += ww * wp * ty[j];
+				tav += ww * wp * ta[j];
 			}
 		}
 		break;
 	}
-	if (tav > 0.0) {
+	if (tav > 0) {
 		return 0.5 * tyv / tav;
 	} else {
 		return 0.0;
@@ -473,7 +471,7 @@ void D2::CalcDiffNorms() {
 	}
 
 	vector<double> tty(m, 0);
-	vector<double> tta(m, 0);
+	vector<int> tta(m, 0);
 
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
 	if (procId == 0) {
@@ -521,7 +519,7 @@ void D2::CalcDiffNorms() {
 							}
 							if (take) {
 								tty[kk] += DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
-								tta[kk] += 1.0;
+								tta[kk]++;
 								countTaken++;
 							}
 							if (!bootstrap) {
@@ -547,7 +545,7 @@ void D2::CalcDiffNorms() {
 		//	cout << tty[j] << endl;
 		//}
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, TAG_TTY);
-		MPI::COMM_WORLD.Send(tta.data(), tta.size(), MPI::DOUBLE, 0, TAG_TTA);
+		MPI::COMM_WORLD.Send(tta.data(), tta.size(), MPI::INT, 0, TAG_TTA);
 	} else {
 		for (int i = 1; i < numProc; i++) {
 			double ttyRecv[m];
@@ -561,14 +559,15 @@ void D2::CalcDiffNorms() {
 			cout << "Received weights from " << status.Get_source() << "." << endl;
 			for (unsigned j = 0; j < m; j++) {
 				tty[j] += ttyRecv[j];
-				tta[j] += ttaRecv[j];
+				assert(tta[j] == ttaRecv[j]);
+				//tta[j] += ttaRecv[j];
 				//cout << ttyRecv[j] << endl;
 			}
 		}
 		// How many time differences was actually used?
 		unsigned j = 0;
 		for (unsigned i = 0; i < m; i++) {
-			if (tta[i] > 0.5) {
+			if (tta[i] > 0) {
 				j++;
 			}
 		}
@@ -584,7 +583,7 @@ void D2::CalcDiffNorms() {
 		j = 0;
 		ofstream output(string(DIFF_NORMS_FILE_PREFIX) + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
 		for (unsigned i = 0; i < m; i++) {
-			if (tta[i] > 0.5) {
+			if (tta[i] > 0) {
 				td[j] = d;
 				ty[j] = tty[i];
 				ta[j] = tta[i];
@@ -619,7 +618,7 @@ void D2::LoadDiffNorms() {
 				try {
 					td.push_back(stod(words[0]));
 					ty.push_back(stod(words[1]));
-					ta.push_back(stod(words[2]));
+					ta.push_back(stoi(words[2]));
 				} catch (invalid_argument& ex) {
 					cout << "Skipping line, invalid number: " << line << endl;
 				}
