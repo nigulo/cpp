@@ -479,6 +479,8 @@ void D2::CalcDiffNorms() {
 	if (procId == 0) {
 		cout << "Loading data..." << endl;
 	}
+	default_random_engine e1(rd());
+	bool bootstrap = false;
 	while (mrDataLoader.Next()) {
 		DataLoader* dl2 = mrDataLoader.Clone();
 		do {
@@ -490,15 +492,42 @@ void D2::CalcDiffNorms() {
 				if (mrDataLoader.GetPage() == dl2->GetPage()) {
 					j = i + 1;
 				}
+				int countNeeded = 0;
+				int countTaken = 0;
+				if (bootstrap) {
+					for (; j < dl2->GetPageSize(); j++) {
+						real d = (dl2->GetX(j) - mrDataLoader.GetX(i)) * tScale;
+						if (d > dmax) {
+							break;
+						}
+						countNeeded++;
+					}
+
+				} else {
+					countNeeded  = dl2->GetPageSize() - j;
+				}
+				uniform_int_distribution<int> uniform_dist(0, countNeeded - 1);
 				for (; j < dl2->GetPageSize(); j++) {
 					real d = (dl2->GetX(j) - mrDataLoader.GetX(i)) * tScale;
-					if (d > dmax) {
+					if (d > dmax || (bootstrap && countTaken >= countNeeded)) {
 						break;
 					}
 					if (d >= dmin) {
 						int kk = round(a * d + b);
-						tty[kk] += DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
-						tta[kk] += 1.0;
+						for (int counter = 0; counter < countNeeded; counter++) {
+							bool take = true;
+							if (bootstrap) {
+								take = uniform_dist(e1) == counter;
+							}
+							if (take) {
+								tty[kk] += DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
+								tta[kk] += 1.0;
+								countTaken++;
+							}
+							if (!bootstrap) {
+								break;
+							}
+						}
 					}
 				}
 			}
