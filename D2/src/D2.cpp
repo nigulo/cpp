@@ -388,7 +388,7 @@ double D2::Criterion(double d, double w) {
 			double wp;
 			if (mode == Gauss) {
 				closeInPhase = ph < eps || ph > epslim;
-				wp = exp(-square(lnp*ph));
+				wp = exp(-square(lnp * ph));
 			} else {
 				if (ph == 0.5) {
 					wp = 0;
@@ -549,12 +549,12 @@ void D2::CalcDiffNorms() {
 	} else {
 		for (int i = 1; i < numProc; i++) {
 			double ttyRecv[m];
-			double ttaRecv[m];
+			int ttaRecv[m];
 			MPI::Status status;
 			MPI::COMM_WORLD.Recv(ttyRecv, m,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received square differences from " << status.Get_source() << "." << endl;
-			MPI::COMM_WORLD.Recv(ttaRecv, m,  MPI::DOUBLE, status.Get_source(), TAG_TTA, status);
+			MPI::COMM_WORLD.Recv(ttaRecv, m,  MPI::INT, status.Get_source(), TAG_TTA, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received weights from " << status.Get_source() << "." << endl;
 			for (unsigned j = 0; j < m; j++) {
