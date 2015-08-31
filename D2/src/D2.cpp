@@ -155,15 +155,19 @@ int main(int argc, char *argv[]) {
 				assert(minMaxStrs.size() == 2);
 				unsigned min = stoi(minMaxStrs[0]);
 				unsigned procMin = procId * dimsPerProc[i];
+				unsigned max = stoi(minMaxStrs[1]);
+				unsigned procMax = (procId + 1) * dimsPerProc[i] - 1;
 				if (min < procMin) {
 					min = procMin;
+				} else if (min > procMax) {
+					min = procMax;
 				} else {
 					min %= dimsPerProc[i];
 				}
-				unsigned max = stoi(minMaxStrs[1]);
-				unsigned procMax = (procId + 1) * dimsPerProc[i] - 1;
 				if (max > procMax) {
 					max = procMax;
+				} else if (max < procMin) {
+					max = procMin;
 				} else {
 					max %= dimsPerProc[i];
 				}
@@ -290,9 +294,9 @@ int main(int argc, char *argv[]) {
 	}
 	DataLoader* dl;
 	if (binary) {
-		dl = new BinaryDataLoader(filePath, bufferSize, dims, regions, totalNumVars, varIndices);
+		dl = new BinaryDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
 	} else {
-		dl = new TextDataLoader(filePath, bufferSize, dims, regions, totalNumVars, varIndices);
+		dl = new TextDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
 	}
 	D2 d2(*dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales);
 	if (!exists(DIFF_NORMS_FILE)) {
@@ -322,7 +326,8 @@ D2::D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod,
 			normalize(normalize),
 			relative(relative),
 			tScale(tScale),
-			varScales(varScales) {
+			varScales(varScales),
+			e1(rd()) {
 	assert(varScales.size() == rDataLoader.GetVarIndices().size());
 
 	double wmax = 1.0 / minPeriod;
@@ -330,6 +335,7 @@ D2::D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod,
 
 	dmin = minCoherence * (relative ? minPeriod : 1);
 	dmax = maxCoherence * (relative ? maxPeriod : 1);
+	dmaxUnscaled = dmax / tScale;
 
 	if (dmax < dmin || minPeriod > maxPeriod) {
 		throw "Check Arguments";
@@ -346,6 +352,8 @@ D2::D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod,
 	epslim = 1.0 - eps;
 	ln2 = sqrt(log(2.0));
 	lnp = ln2 / eps;
+
+
 }
 
 double D2::Criterion(double d, double w) {
@@ -465,6 +473,59 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 #define TAG_TTY 1
 #define TAG_TTA 2
 
+bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vector<int>& tta) {
+	bool bootstrap = false;
+	if (dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
+		return false;
+	}
+	for (unsigned i = 0; i < dl1.GetPageSize(); i++) {
+		unsigned j = 0;
+		if (dl1.GetPage() == dl2.GetPage()) {
+			j = i + 1;
+		}
+		int countNeeded = 0;
+		int countTaken = 0;
+		if (bootstrap) {
+			for (; j < dl2.GetPageSize(); j++) {
+				real d = (dl2.GetX(j) - dl1.GetX(i)) * tScale;
+				if (d > dmax) {
+					break;
+				}
+				countNeeded++;
+			}
+
+		} else {
+			countNeeded  = dl2.GetPageSize() - j;
+		}
+		uniform_int_distribution<int> uniform_dist(0, countNeeded - 1);
+		for (; j < dl2.GetPageSize(); j++) {
+			real d = (dl2.GetX(j) - dl1.GetX(i)) * tScale;
+			if (d > dmax || (bootstrap && countTaken >= countNeeded)) {
+				break;
+			}
+			if (d >= dmin) {
+				int kk = round(a * d + b);
+				for (int counter = 0; counter < countNeeded; counter++) {
+					bool take = true;
+					if (bootstrap) {
+						take = uniform_dist(e1) == counter;
+					}
+					if (take) {
+						tty[kk] += DiffNorm(dl2.GetY(j), dl1.GetY(i));
+						tta[kk]++;
+						countTaken++;
+					}
+					if (!bootstrap) {
+						break;
+					}
+				}
+			}
+		}
+	}
+	return true;
+}
+
+
 void D2::CalcDiffNorms() {
 	if (procId == 0) {
 		cout << "Calculating diffnorms..." << endl;
@@ -477,59 +538,18 @@ void D2::CalcDiffNorms() {
 	if (procId == 0) {
 		cout << "Loading data..." << endl;
 	}
-	default_random_engine e1(rd());
-	bool bootstrap = false;
 	while (mrDataLoader.Next()) {
+		if (!ProcessPage(mrDataLoader, mrDataLoader, tty, tta)) {
+			break;
+		}
 		DataLoader* dl2 = mrDataLoader.Clone();
-		do {
-			if ((dl2->GetX(0) - mrDataLoader.GetX(mrDataLoader.GetPageSize() - 1)) * tScale > dmax) {
-				break;
-			}
-			for (unsigned i = 0; i < mrDataLoader.GetPageSize(); i++) {
-				unsigned j = 0;
-				if (mrDataLoader.GetPage() == dl2->GetPage()) {
-					j = i + 1;
+		if (dl2) {
+			do {
+				if (!ProcessPage(mrDataLoader, *dl2, tty, tta)) {
+					break;
 				}
-				int countNeeded = 0;
-				int countTaken = 0;
-				if (bootstrap) {
-					for (; j < dl2->GetPageSize(); j++) {
-						real d = (dl2->GetX(j) - mrDataLoader.GetX(i)) * tScale;
-						if (d > dmax) {
-							break;
-						}
-						countNeeded++;
-					}
-
-				} else {
-					countNeeded  = dl2->GetPageSize() - j;
-				}
-				uniform_int_distribution<int> uniform_dist(0, countNeeded - 1);
-				for (; j < dl2->GetPageSize(); j++) {
-					real d = (dl2->GetX(j) - mrDataLoader.GetX(i)) * tScale;
-					if (d > dmax || (bootstrap && countTaken >= countNeeded)) {
-						break;
-					}
-					if (d >= dmin) {
-						int kk = round(a * d + b);
-						for (int counter = 0; counter < countNeeded; counter++) {
-							bool take = true;
-							if (bootstrap) {
-								take = uniform_dist(e1) == counter;
-							}
-							if (take) {
-								tty[kk] += DiffNorm(dl2->GetY(j), mrDataLoader.GetY(i));
-								tta[kk]++;
-								countTaken++;
-							}
-							if (!bootstrap) {
-								break;
-							}
-						}
-					}
-				}
-			}
-		} while (dl2->Next());
+			} while (dl2->Next());
+		}
 		if (procId == 0) {
 			cout << "Page " << mrDataLoader.GetPage() << " loaded." << endl;
 		}

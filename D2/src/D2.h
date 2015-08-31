@@ -44,12 +44,14 @@ private:
     double b;
     double dmin;
     double dmax;
+    double dmaxUnscaled;
     double wmin;
     double delta;
     double step;
     // For bootstrap resampling
     // Seed with a real random value, if available
     random_device rd;
+    default_random_engine e1;
 
 public:
     D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod,
@@ -65,6 +67,7 @@ private:
 
     // The norm of the difference of two datasets
     double DiffNorm(const real y1[], const real y2[]);
+    bool ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vector<int>& tta);
 };
 
 

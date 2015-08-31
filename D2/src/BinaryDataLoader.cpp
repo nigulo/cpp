@@ -9,12 +9,13 @@ BinaryDataLoader::BinaryDataLoader(const string& fileName, unsigned bufferSize,
 				DataLoader(fileName, bufferSize, ios::in | ios::binary, dims, regions, totalNumVars, varIndices) {
 }
 
+// Creates new DataLoader with the current page set to the next page of input DataLoader
 BinaryDataLoader::BinaryDataLoader(const BinaryDataLoader& dataLoader) : DataLoader(dataLoader) {
-	if (dataLoader.page > 1) {
+	if (dataLoader.page > 0) {
 		if (RECORDHEADER) {
-			input.seekg((dataLoader.page - 1) * bufferSize * ((dim * totalNumVars + 1) * sizeof (real) + 16), ios::cur);
+			input.seekg(dataLoader.page * bufferSize * ((dim * totalNumVars + 1) * sizeof (real) + 16), ios::cur);
 		} else {
-			input.seekg((dataLoader.page - 1) * bufferSize * (dim * totalNumVars + 1) * sizeof (real), ios::cur);
+			input.seekg(dataLoader.page * bufferSize * (dim * totalNumVars + 1) * sizeof (real), ios::cur);
 		}
 		page = dataLoader.page - 1;
 	}
@@ -44,10 +45,17 @@ bool BinaryDataLoader::Next() {
 			unsigned recordSize;
 			input.read((char*) &recordSize, 4);
 			unsigned numBytesRead = input.gcount();
+#ifdef TEST
+			if (page > 3 || input.eof()) {
+				input.close();
+				break;
+			}
+#else
 			if (input.eof()) {
 				input.close();
 				break;
 			}
+#endif
 			assert(numBytesRead == 4);
 			assert(recordSize == 4);
 			input.read((char*) (data + dataOffset), recordSize);
@@ -85,5 +93,10 @@ bool BinaryDataLoader::Next() {
 }
 
 DataLoader* BinaryDataLoader::Clone() const {
-	return new BinaryDataLoader(*this);
+	BinaryDataLoader* dl = new BinaryDataLoader(*this);
+	if (dl->GetPageSize() == 0) {
+		delete dl;
+		return nullptr;
+	}
+	return dl;
 }

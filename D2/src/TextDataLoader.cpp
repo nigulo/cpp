@@ -10,7 +10,7 @@ TextDataLoader::TextDataLoader(const string& fileName, unsigned bufferSize,
 }
 
 TextDataLoader::TextDataLoader(const TextDataLoader& dataLoader) : DataLoader(dataLoader) {
-	for (int i = 0; i <= dataLoader.page; i++) {
+	for (int i = 0; i <= dataLoader.page + 1; i++) {
 		Next();
 	}
 }
@@ -62,5 +62,10 @@ bool TextDataLoader::Next() {
 }
 
 DataLoader* TextDataLoader::Clone() const {
-	return new TextDataLoader(*this);
+	DataLoader* dl = new TextDataLoader(*this);
+	if (dl->GetPageSize() == 0) {
+		delete dl;
+		return nullptr;
+	}
+	return dl;
 }
