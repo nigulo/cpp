@@ -30,6 +30,7 @@ public:
 
 	virtual bool Next() = 0;
 	virtual DataLoader* Clone() const = 0;
+	virtual bool RowMajor() const = 0;
 
 	void Reset();
 

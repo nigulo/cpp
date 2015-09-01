@@ -46,7 +46,7 @@ bool BinaryDataLoader::Next() {
 			input.read((char*) &recordSize, 4);
 			unsigned numBytesRead = input.gcount();
 #ifdef TEST
-			if (page > 3 || input.eof()) {
+			if (page > 1 || input.eof()) {
 				input.close();
 				break;
 			}

@@ -460,9 +460,8 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 #endif
 	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
 		if (mrDataLoader.InRegion(i)) {
-			auto offset = i * mrDataLoader.GetNumVars();
 			for (unsigned j : mrDataLoader.GetVarIndices()) {
-				auto index = offset + j;
+				auto index = mrDataLoader.RowMajor() ? i * mrDataLoader.GetNumVars() + j : j * mrDataLoader.GetDim() + i;
 				norm += square(y1[index] - y2[index]);
 			}
 		}
@@ -538,7 +537,17 @@ void D2::CalcDiffNorms() {
 	if (procId == 0) {
 		cout << "Loading data..." << endl;
 	}
+	//ofstream testoutput("test.txt");
 	while (mrDataLoader.Next()) {
+		//////////////////////////////////////////
+		//for (unsigned i = 0; i < mrDataLoader.GetPageSize(); i++) {
+		//	testoutput << mrDataLoader.GetX(i);
+		//	for (unsigned k = 0; k < 42; k++) {
+		//		testoutput << " " << mrDataLoader.GetY(i)[k * mrDataLoader.GetDim() + 128 * 25 + 99];
+		//	}
+		//	testoutput << endl;
+		//}
+		//////////////////////////////////////////
 		if (!ProcessPage(mrDataLoader, mrDataLoader, tty, tta)) {
 			break;
 		}
@@ -555,6 +564,7 @@ void D2::CalcDiffNorms() {
 		}
 		delete dl2;
 	}
+	//testoutput.close();
 	if (procId == 0) {
 		cout << "Waiting for data from other processes..." << endl;
 	}

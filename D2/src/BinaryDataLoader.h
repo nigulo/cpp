@@ -24,6 +24,10 @@ public:
 	virtual bool Next();
 	virtual DataLoader* Clone() const;
 
+	virtual bool RowMajor() const {
+		return false;
+	}
+
 };
 
 #endif /* SRC_BINARYDATALOADER_H_ */
