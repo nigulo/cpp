@@ -30,7 +30,6 @@ public:
 
 	virtual bool Next() = 0;
 	virtual DataLoader* Clone() const = 0;
-	virtual bool RowMajor() const = 0;
 
 	void Reset();
 
@@ -40,12 +39,12 @@ public:
 
 	real GetX(unsigned i) const {
 		assert(i < pageSize);
-		return data[i * (dim * totalNumVars + 1)];
+		return data[i * (dim * GetNumVars() + 1)];
 	}
 
 	const real* GetY(unsigned i) const {
 		assert(i < pageSize);
-		return &data[i * (dim * totalNumVars + 1) + 1];
+		return &data[i * (dim * GetNumVars() + 1) + 1];
 	}
 
 	/*
@@ -64,28 +63,6 @@ public:
 		return i;
 	}
 	*/
-
-	bool InRegion(unsigned i) const {
-		if (regions.empty()) {
-			return true;
-		}
-		for (vector<pair<unsigned, unsigned>> region : regions) {
-			bool inRegion = true;
-			for (unsigned j = 0; j < dims.size(); j++) {
-				unsigned d = i % dims[j];
-				if (region.size() > j && (d < get<0>(region[j]) || d > get<1>(region[j]))) {
-					inRegion = false;
-					break;
-				}
-				i -= d;
-				i /= dims[j];
-			}
-			if (inRegion) {
-				return true;
-			}
-		}
-		return false;
-	}
 
 	int GetPage() const {
 		return page;
@@ -113,12 +90,47 @@ public:
 		return pageSize;
 	}
 
-	unsigned GetNumVars() const {
+	unsigned GetTotalNumVars() const {
 		return totalNumVars;
+	}
+
+	unsigned GetNumVars() const {
+		if (varIndices.size() > 0) {
+			return varIndices.size();
+		} else {
+			return totalNumVars;
+		}
 	}
 
 	const vector<unsigned>& GetVarIndices() const {
 		return varIndices;
+	}
+
+	bool IsInRegion(unsigned i) const {
+		return inRegion[i];
+	}
+
+private:
+	bool InRegion(unsigned i) const {
+		if (regions.empty()) {
+			return true;
+		}
+		for (vector<pair<unsigned, unsigned>> region : regions) {
+			bool inRegion = true;
+			for (unsigned j = 0; j < dims.size(); j++) {
+				unsigned d = i % dims[j];
+				if (region.size() > j && (d < get<0>(region[j]) || d > get<1>(region[j]))) {
+					inRegion = false;
+					break;
+				}
+				i -= d;
+				i /= dims[j];
+			}
+			if (inRegion) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 protected:
@@ -134,6 +146,7 @@ protected:
 	real* data;
 	unsigned pageSize;
 	unsigned dim;
+	bool* inRegion;
 
 };
 

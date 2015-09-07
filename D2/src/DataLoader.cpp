@@ -29,7 +29,11 @@ DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmod
 		dim *= dimx;
 	}
 	for (unsigned varIndex : varIndices) {
-		assert(varIndex < GetNumVars());
+		assert(varIndex < GetTotalNumVars());
+	}
+	inRegion = new bool[dim];
+	for (unsigned i = 0; i < dim; i++) {
+		inRegion[i] = InRegion(i);
 	}
 }
 
@@ -47,11 +51,18 @@ DataLoader::DataLoader(const DataLoader& dataLoader) :
 	pageSize(0),
 	dim(dataLoader.dim) {
 	assert(input.is_open());
+	inRegion = new bool[dim];
+	for (unsigned i = 0; i < dim; i++) {
+		inRegion[i] = dataLoader.inRegion[i];
+	}
 }
 
 DataLoader::~DataLoader() {
 	if (input.is_open()) {
 		input.close();
+	}
+	if (inRegion) {
+		delete[] inRegion;
 	}
 }
 

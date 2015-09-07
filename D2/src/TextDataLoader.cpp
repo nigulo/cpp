@@ -24,7 +24,7 @@ bool TextDataLoader::Next() {
 	}
 	page++;
 	delete[] data;
-	data = new real[bufferSize * (dim * totalNumVars + 1)];
+	data = new real[bufferSize * (dim * GetNumVars() + 1)];
 	unsigned i = 0;
 	while (bufferSize == 0 || i < bufferSize) {
 		string line;
@@ -41,9 +41,13 @@ bool TextDataLoader::Next() {
 				//cout << "Skipping comment line: " << line << endl;
 			} else if (words.size() >= dim * totalNumVars + 1) {
 				try {
-					data[i * (dim * totalNumVars + 1)] = stod(words[0]); // x
-					for (unsigned j = 0; j < dim * totalNumVars; j++) {
-						data[i * (dim * totalNumVars + 1) + j + 1] = stod(words[j + 1]);
+					data[i * (dim * GetNumVars() + 1)] = stod(words[0]); // x
+					unsigned j = 0;
+					for (unsigned varIndex : varIndices) {
+						for (unsigned k = 0; k < dim; k++) {
+							data[i * (dim * GetNumVars() + 1) + dim * j + k + 1] = stod(words[varIndex * dim + k + 1]);
+						}
+						j++;
 					}
 				} catch (std::invalid_argument& ex) {
 					cout << "Skipping line, invalid number: " << line << endl;

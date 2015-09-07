@@ -22,9 +22,6 @@ public:
 	virtual bool Next();
 	virtual DataLoader* Clone() const;
 
-	virtual bool RowMajor() const {
-		return true;
-	}
 };
 
 

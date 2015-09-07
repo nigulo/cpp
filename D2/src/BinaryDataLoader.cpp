@@ -34,7 +34,7 @@ bool BinaryDataLoader::Next() {
 	}
 	page++;
 	delete[] data;
-	unsigned varSize = dim * totalNumVars + 1;
+	unsigned varSize = dim * GetNumVars() + 1;
 	unsigned dataPageSize = bufferSize * varSize;
 	data = new real[dataPageSize];
 	if (RECORDHEADER) {
@@ -45,20 +45,13 @@ bool BinaryDataLoader::Next() {
 			unsigned recordSize;
 			input.read((char*) &recordSize, 4);
 			unsigned numBytesRead = input.gcount();
-#ifdef TEST
-			if (page > 1 || input.eof()) {
-				input.close();
-				break;
-			}
-#else
 			if (input.eof()) {
 				input.close();
 				break;
 			}
-#endif
 			assert(numBytesRead == 4);
 			assert(recordSize == 4);
-			input.read((char*) (data + dataOffset), recordSize);
+			input.read((char*) (data + dataOffset++), recordSize);
 			numBytesRead = input.gcount();
 			assert(numBytesRead == 4);
 			input.read((char*) &recordSize, 4);
@@ -67,14 +60,30 @@ bool BinaryDataLoader::Next() {
 			input.read((char*) &recordSize, 4);
 			numBytesRead = input.gcount();
 			assert(numBytesRead == 4);
-			assert(recordSize == (sizeof (real) * (varSize - 1)));
-			input.read((char*) (data + dataOffset + 1), recordSize);
-			numBytesRead = input.gcount();
-			assert(numBytesRead == recordSize);
+			assert(recordSize == (sizeof (real) * (dim * totalNumVars)));
+			//input.read((char*) (data + dataOffset + 1), recordSize);
+			//numBytesRead = input.gcount();
+			//assert(numBytesRead == recordSize);
+			unsigned lastVarIndex = 0;
+			for (unsigned varIndex : GetVarIndices()) {
+				assert(varIndex >= lastVarIndex);
+				if (varIndex - lastVarIndex != 0) {
+					input.seekg((varIndex - lastVarIndex) * dim * sizeof (real), ios::cur);
+				}
+				input.read((char*) (data + dataOffset), dim * sizeof (real));
+				numBytesRead = input.gcount();
+				assert(numBytesRead == dim * sizeof (real));
+				lastVarIndex = varIndex + 1;
+				dataOffset += dim;
+			}
+			assert(recordSize >= lastVarIndex * dim * sizeof (real));
+			if (recordSize - lastVarIndex * dim * sizeof (real) != 0) {
+				input.seekg(recordSize - lastVarIndex * dim * sizeof (real), ios::cur);
+			}
 			input.read((char*) &recordSize, 4);
 			numBytesRead = input.gcount();
 			assert(numBytesRead == 4);
-			dataOffset += varSize;
+			//dataOffset += varSize;
 			i++;
 		}
 		pageSize = i;

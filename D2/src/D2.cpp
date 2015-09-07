@@ -158,16 +158,16 @@ int main(int argc, char *argv[]) {
 				unsigned max = stoi(minMaxStrs[1]);
 				unsigned procMax = (procId + 1) * dimsPerProc[i] - 1;
 				if (min < procMin) {
-					min = procMin;
+					min = 0;
 				} else if (min > procMax) {
-					min = procMax;
+					min = dimsPerProc[i] - 1;
 				} else {
 					min %= dimsPerProc[i];
 				}
 				if (max > procMax) {
-					max = procMax;
+					max = dimsPerProc[i] - 1;
 				} else if (max < procMin) {
-					max = procMin;
+					max = 0;
 				} else {
 					max %= dimsPerProc[i];
 				}
@@ -458,11 +458,11 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 #else
 	#pragma omp parallel for reduction(+:norm)
 #endif
-	for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
-		if (mrDataLoader.InRegion(i)) {
-			for (unsigned j : mrDataLoader.GetVarIndices()) {
-				auto index = mrDataLoader.RowMajor() ? i * mrDataLoader.GetNumVars() + j : j * mrDataLoader.GetDim() + i;
-				norm += square(y1[index] - y2[index]);
+	for (unsigned j = 0; j < mrDataLoader.GetNumVars(); j++) {
+		for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
+			if (mrDataLoader.IsInRegion(i)) {
+				auto index = j * mrDataLoader.GetDim() + i;
+				norm += square((y1[index] - y2[index]) * varScales[j]);
 			}
 		}
 	}
@@ -606,13 +606,13 @@ void D2::CalcDiffNorms() {
 		ty.assign(j, 0);
 		td.assign(j, 0);
 		cout << "td.size()=" << td.size() << endl;
-		double d = dmin;
 
 		// Build final grids for periodicity search.
 
 		j = 0;
 		ofstream output(string(DIFF_NORMS_FILE_PREFIX) + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
 		for (unsigned i = 0; i < m; i++) {
+			double d = dmin + i * delta;
 			if (tta[i] > 0) {
 				td[j] = d;
 				ty[j] = tty[i];
@@ -620,7 +620,6 @@ void D2::CalcDiffNorms() {
 				output << d << " " << ty[j] << " " << ta[j] << endl;
 				j++;
 			}
-			d = d + delta;
 		}
 		output.close();
 		copy_file(PARAMETERS_FILE, string(PARAMETERS_FILE_PREFIX) + "_" + to_string(currentTime) + PARAMETERS_FILE_SUFFIX);
