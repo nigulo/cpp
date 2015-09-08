@@ -138,9 +138,11 @@ int main(int argc, char *argv[]) {
 	assert(numProc == accumulate(numProcs.begin(), numProcs.end(), 1, multiplies<unsigned>()));
 
 	vector<unsigned> dimsPerProc;
+	vector<unsigned> procIds;
 	for (unsigned i = 0; i < dims.size(); i++) {
 		assert(dims[i] % numProcs[i] == 0);
 		dimsPerProc.push_back(dims[i] / numProcs[i]);
+		procIds.push_back(procId % numProcs[i]);
 	}
 
 
@@ -154,28 +156,32 @@ int main(int argc, char *argv[]) {
 				vector<string> minMaxStrs = Utils::SplitByChars(strMinMax, "-", false);
 				assert(minMaxStrs.size() == 2);
 				unsigned min = stoi(minMaxStrs[0]);
-				unsigned procMin = procId * dimsPerProc[i];
+				unsigned procMin = procIds[i] * dimsPerProc[i];
 				unsigned max = stoi(minMaxStrs[1]);
-				unsigned procMax = (procId + 1) * dimsPerProc[i] - 1;
-				if (min < procMin) {
-					min = 0;
-				} else if (min > procMax) {
-					min = dimsPerProc[i] - 1;
+				unsigned procMax = (procIds[i] + 1) * dimsPerProc[i] - 1;
+				//cout << procId << " min, max, procMin, procMax: " << min << ", " << max << ", " << procMin << ", " << procMax << endl;
+				if (min <= procMax && max >= procMin) {
+					if (min < procMin) {
+						min = 0;
+					} else {
+						min %= dimsPerProc[i];
+					}
+					if (max > procMax) {
+						max = dimsPerProc[i] - 1;
+					} else {
+						max %= dimsPerProc[i];
+					}
+					region.push_back({min, max});
 				} else {
-					min %= dimsPerProc[i];
+					region.clear();
+					break;
 				}
-				if (max > procMax) {
-					max = dimsPerProc[i] - 1;
-				} else if (max < procMin) {
-					max = 0;
-				} else {
-					max %= dimsPerProc[i];
-				}
-				region.push_back({min, max});
 				i++;
 			}
-			assert(region.size() == dims.size());
-			regions.push_back(region);
+			if (region.size() == dims.size()) {
+				//cout << procId << " region" << endl;
+				regions.push_back(region);
+			}
 		}
 	}
 	/*
@@ -497,6 +503,9 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vect
 			countNeeded  = dl2.GetPageSize() - j;
 		}
 		uniform_int_distribution<int> uniform_dist(0, countNeeded - 1);
+		//if (procId == 0) {
+		//	cout << "Time :" << dl1.GetX(i) << endl;
+		//}
 		for (; j < dl2.GetPageSize(); j++) {
 			real d = (dl2.GetX(j) - dl1.GetX(i)) * tScale;
 			if (d > dmax || (bootstrap && countTaken >= countNeeded)) {
@@ -537,17 +546,7 @@ void D2::CalcDiffNorms() {
 	if (procId == 0) {
 		cout << "Loading data..." << endl;
 	}
-	//ofstream testoutput("test.txt");
 	while (mrDataLoader.Next()) {
-		//////////////////////////////////////////
-		//for (unsigned i = 0; i < mrDataLoader.GetPageSize(); i++) {
-		//	testoutput << mrDataLoader.GetX(i);
-		//	for (unsigned k = 0; k < 42; k++) {
-		//		testoutput << " " << mrDataLoader.GetY(i)[k * mrDataLoader.GetDim() + 128 * 25 + 99];
-		//	}
-		//	testoutput << endl;
-		//}
-		//////////////////////////////////////////
 		if (!ProcessPage(mrDataLoader, mrDataLoader, tty, tta)) {
 			break;
 		}
@@ -564,7 +563,6 @@ void D2::CalcDiffNorms() {
 		}
 		delete dl2;
 	}
-	//testoutput.close();
 	if (procId == 0) {
 		cout << "Waiting for data from other processes..." << endl;
 	}
@@ -591,7 +589,7 @@ void D2::CalcDiffNorms() {
 				tty[j] += ttyRecv[j];
 				assert(tta[j] == ttaRecv[j]);
 				//tta[j] += ttaRecv[j];
-				//cout << ttyRecv[j] << endl;
+				cout << ttyRecv[j] << endl;
 			}
 		}
 		// How many time differences was actually used?

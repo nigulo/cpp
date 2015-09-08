@@ -19,11 +19,12 @@ TextDataLoader::~TextDataLoader() {
 }
 
 bool TextDataLoader::Next() {
+	delete[] data;
 	if (!input.is_open()) {
+		pageSize = 0;
 		return false;
 	}
 	page++;
-	delete[] data;
 	data = new real[bufferSize * (dim * GetNumVars() + 1)];
 	unsigned i = 0;
 	while (bufferSize == 0 || i < bufferSize) {

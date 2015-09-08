@@ -11,17 +11,15 @@ BinaryDataLoader::BinaryDataLoader(const string& fileName, unsigned bufferSize,
 
 // Creates new DataLoader with the current page set to the next page of input DataLoader
 BinaryDataLoader::BinaryDataLoader(const BinaryDataLoader& dataLoader) : DataLoader(dataLoader) {
-	if (dataLoader.page > 0) {
-		if (RECORDHEADER) {
-			input.seekg(dataLoader.page * bufferSize * ((dim * totalNumVars + 1) * sizeof (real) + 16), ios::cur);
-		} else {
-			input.seekg(dataLoader.page * bufferSize * (dim * totalNumVars + 1) * sizeof (real), ios::cur);
-		}
-		page = dataLoader.page - 1;
-	}
 	if (dataLoader.page >= 0) {
-		Next();
+		if (RECORDHEADER) {
+			input.seekg((dataLoader.page + 1) * bufferSize * ((dim * totalNumVars + 1) * sizeof (real) + 16), ios::cur);
+		} else {
+			input.seekg((dataLoader.page + 1) * bufferSize * (dim * totalNumVars + 1) * sizeof (real), ios::cur);
+		}
 	}
+	page = dataLoader.page;
+	Next();
 }
 
 BinaryDataLoader::~BinaryDataLoader() {
@@ -29,11 +27,12 @@ BinaryDataLoader::~BinaryDataLoader() {
 
 
 bool BinaryDataLoader::Next() {
+	delete[] data;
 	if (!input.is_open()) {
+		pageSize = 0;
 		return false;
 	}
 	page++;
-	delete[] data;
 	unsigned varSize = dim * GetNumVars() + 1;
 	unsigned dataPageSize = bufferSize * varSize;
 	data = new real[dataPageSize];

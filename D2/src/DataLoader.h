@@ -113,7 +113,7 @@ public:
 private:
 	bool InRegion(unsigned i) const {
 		if (regions.empty()) {
-			return true;
+			return false;
 		}
 		for (vector<pair<unsigned, unsigned>> region : regions) {
 			bool inRegion = true;
