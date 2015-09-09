@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 	if (procId == 0) {
 		if (argc == 2 && string("-h") == argv[1]) {
 			cout << "Usage: ./D2 [paramfile]\nparamfile defaults to " << PARAMETERS_FILE << endl;
-			return EXIT_FAILURE;
+			return EXIT_SUCCESS;
 		}
 	}
 	currentTime = time(nullptr);
@@ -465,10 +465,21 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 	#pragma omp parallel for reduction(+:norm)
 #endif
 	for (unsigned j = 0; j < mrDataLoader.GetNumVars(); j++) {
-		for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
-			if (mrDataLoader.IsInRegion(i)) {
-				auto index = j * mrDataLoader.GetDim() + i;
-				norm += square((y1[index] - y2[index]) * varScales[j]);
+		auto offset = j * mrDataLoader.GetDim();
+		auto varScale = varScales[j];
+		if (varScale != 1.0f) {
+			for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
+				if (mrDataLoader.IsInRegion(i)) {
+					auto index = offset + i;
+					norm += square((y1[index] - y2[index]) * varScale);
+				}
+			}
+		} else {
+			for (unsigned i = 0; i < mrDataLoader.GetDim(); i++) {
+				if (mrDataLoader.IsInRegion(i)) {
+					auto index = offset + i;
+					norm += square(y1[index] - y2[index]);
+				}
 			}
 		}
 	}
@@ -589,7 +600,7 @@ void D2::CalcDiffNorms() {
 				tty[j] += ttyRecv[j];
 				assert(tta[j] == ttaRecv[j]);
 				//tta[j] += ttaRecv[j];
-				cout << ttyRecv[j] << endl;
+				//cout << ttyRecv[j] << endl;
 			}
 		}
 		// How many time differences was actually used?
