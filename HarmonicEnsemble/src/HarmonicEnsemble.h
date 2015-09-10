@@ -20,28 +20,26 @@ public:
 			double ampMean, double ampStdDev,
 			double durationMean,
 			double durationStdDev,
-			double timeStep) :
+			double timeStepMean,
+			double timeStepStdDev) :
 		size(size),
-		timeStep(timeStep),
 		time(0),
-		no(0),
 		gen(rd()),
 		freqDist(freqMean, freqStdDev),
 		ampDist(ampMean, ampStdDev),
 		durationDist(durationMean, durationStdDev),
-		phaseDist(0, 1)
+		phaseDist(0, 1),
+		timeStepDist(timeStepMean, timeStepStdDev)
 		{
 	}
 
 	virtual ~HarmonicEnsemble() {}
-	double NextStep();
+	pair<double, double> NextStep();
 
 
 	const size_t size;
-	const double timeStep;
 
 	double time;
-	size_t no;
 
 private:
 
@@ -52,6 +50,7 @@ private:
 	normal_distribution<> ampDist;
 	normal_distribution<> durationDist;
 	uniform_real_distribution<> phaseDist;
+	normal_distribution<> timeStepDist;
 
     vector<pair<Harmonic, double /*endTime*/>> ensemble;
 

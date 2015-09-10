@@ -44,29 +44,30 @@ int main(int argc, char *argv[]) {
 
 	map<string, string> params = Utils::ReadProperties(paramFileName);
 
-	double freqMean = Utils::FindIntProperty(params, "freqMean", 1);
-	double freqStdDev = Utils::FindIntProperty(params, "freqStdDev", 0.1);
-	double ampMean = Utils::FindIntProperty(params, "ampMean", 1);
-	double ampStdDev = Utils::FindIntProperty(params, "ampStdDev", 0.1);
-	double durationMean = Utils::FindIntProperty(params, "durationMean", 0); // 0 is infinite
-	double durationStdDev = Utils::FindIntProperty(params, "durationStdDev", 0.1);
+	double freqMean = Utils::FindDoubleProperty(params, "freqMean", 1);
+	double freqStdDev = Utils::FindDoubleProperty(params, "freqStdDev", 0.1);
+	double ampMean = Utils::FindDoubleProperty(params, "ampMean", 1);
+	double ampStdDev = Utils::FindDoubleProperty(params, "ampStdDev", 0.1);
+	double durationMean = Utils::FindDoubleProperty(params, "durationMean", 10);
+	double durationStdDev = Utils::FindDoubleProperty(params, "durationStdDev", 1);
 	size_t ensembleSize = Utils::FindIntProperty(params, "ensembleSize", 10);
 	double timeSpan = Utils::FindDoubleProperty(params, "timeSpan", 1000);
-	double timeStep = Utils::FindDoubleProperty(params, "timeStep", 1);
+	double timeStepMean = Utils::FindDoubleProperty(params, "timeStep", 0.1);
+	double timeStepStdDev = Utils::FindDoubleProperty(params, "timeStepStdDev", 0);
 
 	HarmonicEnsemble he(ensembleSize,
 			freqMean, freqStdDev,
 			ampMean, ampStdDev,
 			durationMean,
 			durationStdDev,
-			timeStep);
+			timeStepMean,
+			timeStepStdDev);
 
-	size_t count = timeSpan / timeStep;
-
+	size_t count = timeSpan / timeStepMean;
 	ofstream output("output.txt");
 	for (size_t i = 0; i < count; i++) {
-		double val = he.NextStep();
-		output << timeStep * i  << " " << val << endl;
+		pair<double, double> val = he.NextStep();
+		output << val.first  << " " << val.second << endl;
 
 	}
 	output.close();
@@ -74,11 +75,13 @@ int main(int argc, char *argv[]) {
 	return EXIT_SUCCESS;
 }
 
-double HarmonicEnsemble::NextStep() {
-	time = timeStep * no++;
-	for (auto i = ensemble.begin(); i != ensemble.end(); i++) {
+pair<double, double> HarmonicEnsemble::NextStep() {
+	auto i = ensemble.begin();
+	while (i != ensemble.end()) {
 		if (i->second < time) {
 			ensemble.erase(i);
+		} else {
+			i++;
 		}
 	}
 	auto currentSize = ensemble.size();
@@ -86,10 +89,28 @@ double HarmonicEnsemble::NextStep() {
 		double freq = freqDist(gen);
 		double amp = ampDist(gen);
 		double duration = durationDist(gen);
-		double phase = phaseDist(gen);
-		ensemble.push_back(pair<Harmonic, double>(Harmonic(freq, amp, phase), time + duration));
+		if (freq > 0 && amp > 0 && duration > 0) {
+			double phase = phaseDist(gen);
+			cout << "Adding harmonic: ";
+			cout << "freq=" << freq;
+			cout << ", amp=" << amp;
+			cout << ", duration=" << duration;
+			cout << ", phase=" << phase;
+			cout << endl;
+			ensemble.push_back(pair<Harmonic, double>(Harmonic(freq, amp, phase), time + duration));
+		}
 	}
-	return 0;
+	double val = 0;
+	for (auto& element : ensemble) {
+		val += element.first.GetValue(time);
+	}
+	pair<double, double> retVal(time, val);
+	double dt;
+	do {
+		dt = timeStepDist(gen);
+	} while (dt <= 0);
+	time += dt;
+	return retVal;
 }
 
 
