@@ -17,11 +17,11 @@ public:
 		freq(freq), amp(amp), phase(phase) {
 	}
 
-	virtual ~Harmonic();
+	virtual ~Harmonic() {}
 
-	const double freq;
-	const double amp;
-	const double phase;
+	double freq;
+	double amp;
+	double phase;
 
 	double GetValue(double time) {
 		return amp * sin((freq * time + phase) * 2 * M_PI);
