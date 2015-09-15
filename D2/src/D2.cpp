@@ -38,6 +38,8 @@ time_t currentTime;
 #define PARAMETERS_FILE_SUFFIX ".txt"
 #define PARAMETERS_FILE (PARAMETERS_FILE_PREFIX PARAMETERS_FILE_SUFFIX)
 
+string paramFileName;
+
 template<typename T> string vecToStr(const vector<T>& vec) {
 	stringstream ss;
 	bool first = true;
@@ -97,11 +99,11 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	currentTime = time(nullptr);
-	string paramFileName = argc > 1 ? argv[1] : PARAMETERS_FILE;
+	paramFileName = argc > 1 ? argv[1] : PARAMETERS_FILE;
 
 	if (procId == 0) {
-		if (!exists(PARAMETERS_FILE)) {
-			cout << "Cannot find " << PARAMETERS_FILE << endl;
+		if (!exists(paramFileName)) {
+			cout << "Cannot find " << paramFileName << endl;
 			return EXIT_FAILURE;
 		}
 	}
@@ -244,8 +246,9 @@ int main(int argc, char *argv[]) {
 	to_upper(modeStr);
 	Mode mode;
 	if (modeStr == "BOX") {
-
+		mode = Mode::Box;
 	} else if (modeStr == "GAUSS") {
+		mode = Mode::Gauss;
 	} else if (modeStr == "GAUSSWITHCOSINE") {
 		mode = Mode::GaussWithCosine;
 	} else {
@@ -631,7 +634,7 @@ void D2::CalcDiffNorms() {
 			}
 		}
 		output.close();
-		copy_file(PARAMETERS_FILE, string(PARAMETERS_FILE_PREFIX) + "_" + to_string(currentTime) + PARAMETERS_FILE_SUFFIX);
+		copy_file(paramFileName, string(PARAMETERS_FILE_PREFIX) + "_" + to_string(currentTime) + PARAMETERS_FILE_SUFFIX);
 	}
 
 }
@@ -711,6 +714,7 @@ void D2::Compute2DSpectrum() {
 
 			vector<int> minima(0);
 			unsigned dk = lp / 20;
+			ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 			for (unsigned j = 0; j < lp; j++) {
 				output << d << " " << (wmin + j * step) << " " << cum[j] << endl;
 				if (d == minCoherence) {
@@ -718,6 +722,7 @@ void D2::Compute2DSpectrum() {
 				} else if (d == maxCoherence) {
 					output_max << (wmin + j * step) << " " << cum[j] << endl;
 				}
+				output_mid << (wmin + j * step) << " " << cum[j] << endl;
 
 				if (j > dk - 1 && j < lp - dk - 1) {
 					bool isMinimum = true;
@@ -745,6 +750,7 @@ void D2::Compute2DSpectrum() {
 				//cout << wmin + minima[k1] * step;
 			}
 			//cout << endl;
+			output_mid.close();
 		}
 		output.close();
 		output_min.close();
