@@ -17,7 +17,7 @@ class HarmonicEnsemble {
 public:
 	HarmonicEnsemble(size_t size,
 			double freqMean, double freqStdDev,
-			double ampMean, double ampStdDev,
+			double ampMax, double ampMaxFreq,
 			double durationMean,
 			double durationStdDev,
 			double timeStepMean,
@@ -25,8 +25,11 @@ public:
 		size(size),
 		time(0),
 		gen(rd()),
+		freqMean(freqMean),
+		freqStdDev(freqStdDev),
+		ampMax(ampMax),
+		ampMaxFreq(ampMaxFreq),
 		freqDist(freqMean, freqStdDev),
-		ampDist(ampMean, ampStdDev),
 		durationDist(durationMean, durationStdDev),
 		phaseDist(0, 1),
 		timeStepDist(timeStepMean, timeStepStdDev)
@@ -37,17 +40,21 @@ public:
 	pair<double, double> NextStep();
 
 
+
+private:
+
 	const size_t size;
 
 	double time;
 
-private:
-
     random_device rd;
     mt19937 gen;
 
+	const double freqMean;
+	const double freqStdDev;
+	const double ampMax;
+	const double ampMaxFreq;
 	normal_distribution<> freqDist;
-	normal_distribution<> ampDist;
 	normal_distribution<> durationDist;
 	uniform_real_distribution<> phaseDist;
 	normal_distribution<> timeStepDist;

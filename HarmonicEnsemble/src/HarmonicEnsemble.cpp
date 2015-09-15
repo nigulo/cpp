@@ -28,6 +28,9 @@ using namespace utils;
 
 #define PARAMETERS_FILE "parameters.txt"
 
+#define SQUARE(x) ((x) * (x))
+#define GAUSS(x, mean, stdev) (1 / ((stdev) * sqrt(2 * M_PI)) * exp(-SQUARE(x - mean) / (2 * SQUARE(stdev))))
+#define NGAUSS(x, mean, stdev) (exp(-SQUARE(x - mean) / (2 * SQUARE(stdev))))
 
 int main(int argc, char *argv[]) {
 	if (argc == 2 && string("-h") == argv[1]) {
@@ -37,8 +40,8 @@ int main(int argc, char *argv[]) {
 
 	string paramFileName = argc > 1 ? argv[1] : PARAMETERS_FILE;
 
-	if (!exists(PARAMETERS_FILE)) {
-		cout << "Cannot find " << PARAMETERS_FILE << endl;
+	if (!exists(paramFileName)) {
+		cout << "Cannot find " << paramFileName << endl;
 		return EXIT_FAILURE;
 	}
 
@@ -46,8 +49,8 @@ int main(int argc, char *argv[]) {
 
 	double freqMean = Utils::FindDoubleProperty(params, "freqMean", 1);
 	double freqStdDev = Utils::FindDoubleProperty(params, "freqStdDev", 0.1);
-	double ampMean = Utils::FindDoubleProperty(params, "ampMean", 1);
-	double ampStdDev = Utils::FindDoubleProperty(params, "ampStdDev", 0.1);
+	double ampMax = Utils::FindDoubleProperty(params, "ampMax", 1);
+	double ampMaxFreq = Utils::FindDoubleProperty(params, "ampMaxFreq", 0); // equal amplitudes
 	double durationMean = Utils::FindDoubleProperty(params, "durationMean", 10);
 	double durationStdDev = Utils::FindDoubleProperty(params, "durationStdDev", 1);
 	size_t ensembleSize = Utils::FindIntProperty(params, "ensembleSize", 10);
@@ -57,7 +60,7 @@ int main(int argc, char *argv[]) {
 
 	HarmonicEnsemble he(ensembleSize,
 			freqMean, freqStdDev,
-			ampMean, ampStdDev,
+			ampMax, ampMaxFreq,
 			durationMean,
 			durationStdDev,
 			timeStepMean,
@@ -87,15 +90,24 @@ pair<double, double> HarmonicEnsemble::NextStep() {
 	auto currentSize = ensemble.size();
 	for (size_t i = 0; i < size - currentSize; i++) {
 		double freq = freqDist(gen);
-		double amp = ampDist(gen);
+		double amp = ampMax;
+		if (ampMaxFreq > 0) {
+			double ampStDev1 = (3 * freqStdDev + ampMaxFreq - freqMean) / 3;
+			double ampStDev2 = 2 * freqStdDev - ampStDev1;
+			if (freq < ampMaxFreq) {
+				amp *= NGAUSS(freq, ampMaxFreq, ampStDev1);
+			} else {
+				amp *= NGAUSS(freq, ampMaxFreq, ampStDev2);
+			}
+		}
 		double duration = durationDist(gen);
 		if (freq > 0 && amp > 0 && duration > 0) {
 			double phase = phaseDist(gen);
 			cout << "Adding harmonic: ";
-			cout << "freq=" << freq;
-			cout << ", amp=" << amp;
-			cout << ", duration=" << duration;
-			cout << ", phase=" << phase;
+			cout << freq;
+			cout << " " << amp;
+			cout << " " << phase;
+			cout << " " << duration;
 			cout << endl;
 			ensemble.push_back(pair<Harmonic, double>(Harmonic(freq, amp, phase), time + duration));
 		}

@@ -23,7 +23,7 @@ public:
 	double amp;
 	double phase;
 
-	double GetValue(double time) {
+	double GetValue(double time) const {
 		return amp * sin((freq * time + phase) * 2 * M_PI);
 	}
 
