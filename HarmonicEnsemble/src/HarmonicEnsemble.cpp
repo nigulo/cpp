@@ -96,7 +96,7 @@ pair<double, double> HarmonicEnsemble::NextStep() {
 			double ampStDev2 = 2 * freqStdDev - ampStDev1;
 			if (freq < ampMaxFreq) {
 				amp *= NGAUSS(freq, ampMaxFreq, ampStDev1);
-			} else {
+			} else if (freq > ampMaxFreq) {
 				amp *= NGAUSS(freq, ampMaxFreq, ampStDev2);
 			}
 		}
