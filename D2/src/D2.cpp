@@ -433,7 +433,7 @@ double D2::Criterion(double d, double w) {
 	}
 }
 
-void MapTo01D(vector<double>& cum) {
+void Normalize(vector<double>& cum) {
 
 	unique_ptr<double> min;
 	unique_ptr<double> max;
@@ -689,10 +689,14 @@ void D2::Compute2DSpectrum() {
 		ofstream output_min("phasedisp_min.csv");
 		ofstream output_max("phasedisp_max.csv");
 
-		vector<double> cum(lp);
-		cum.assign(lp, 0);
+		vector<double> spec(lp);
+		vector<double> specInt;
+		vector<double> specMinima;
+		double intMax = -1;
+		double intMin = -1;
+		double minimaMin = -1;
+		spec.assign(lp, 0);
 		// Basic cycle with printing for GnuPlot
-
 		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (k - 1) : 0;
 		for (unsigned i = 0; i < k; i++) {
 			double d = minCoherence + i * deltac;
@@ -702,32 +706,37 @@ void D2::Compute2DSpectrum() {
 				if (relative) {
 					d1 = d / w;
 				}
-				double res=Criterion(d1, w);
-				cum[j] = res;
+				double res = Criterion(d1, w);
+				spec[j] = res;
 			}
 
 			// Spectrum in cum can be normalized
 
 			if (normalize) {
-				MapTo01D(cum);
+				Normalize(spec);
 			}
 
 			vector<int> minima(0);
 			unsigned dk = lp / 20;
 			ofstream output_mid("phasedisp" + to_string(i) + ".csv");
+			double integral = 0;
+			double minimum = -1;
 			for (unsigned j = 0; j < lp; j++) {
-				output << d << " " << (wmin + j * step) << " " << cum[j] << endl;
-				if (d == minCoherence) {
-					output_min << (wmin + j * step) << " " << cum[j] << endl;
-				} else if (d == maxCoherence) {
-					output_max << (wmin + j * step) << " " << cum[j] << endl;
+				output << d << " " << (wmin + j * step) << " " << spec[j] << endl;
+				if (i == 0) {
+					output_min << (wmin + j * step) << " " << spec[j] << endl;
+				} else if (i == k - 1) {
+					output_max << (wmin + j * step) << " " << spec[j] << endl;
 				}
-				output_mid << (wmin + j * step) << " " << cum[j] << endl;
-
+				output_mid << (wmin + j * step) << " " << spec[j] << endl;
+				integral += spec[j];
+				if (minimum < 0 || spec[j] < minimum) {
+					minimum = spec[j];
+				}
 				if (j > dk - 1 && j < lp - dk - 1) {
 					bool isMinimum = true;
 					for (unsigned k1 = j - dk; k1 <= j + dk; k1++) {
-						if (cum[j] > cum[k1]) {
+						if (spec[j] > spec[k1]) {
 							isMinimum = false;
 							break;
 						}
@@ -735,7 +744,7 @@ void D2::Compute2DSpectrum() {
 					if (isMinimum) {
 						vector<int>::iterator it = minima.begin();
 						for (; it != minima.end(); ++it) {
-							if (cum[j] < cum[(*it)]) {
+							if (spec[j] < spec[(*it)]) {
 								break;
 							}
 						}
@@ -743,6 +752,18 @@ void D2::Compute2DSpectrum() {
 					}
 				}
 			}
+			specInt.push_back(integral);
+			specMinima.push_back(minimum);
+			if (minimaMin < 0 || minimum < minimaMin) {
+				minimaMin = minimum;
+			}
+			if (intMax < 0 || integral > intMax) {
+				intMax = integral;
+			}
+			if (intMin < 0 || integral < intMin) {
+				intMin = integral;
+			}
+
 			for (unsigned k1 = 0; k1 < minima.size(); k1++) {
 				if (k1 > 0) {
 					//cout << " ";
@@ -755,6 +776,16 @@ void D2::Compute2DSpectrum() {
 		output.close();
 		output_min.close();
 		output_max.close();
+
+		// print normalized integral
+		ofstream output_stats("stats.csv");
+		//assert(intMin >=0 && intMax >= 0 && intMin < intMax);
+		//double norm = 1 / (intMax - intMin);
+		for (unsigned i = 0; i < specInt.size(); i++) {
+			double d = minCoherence + i * deltac;
+			output_stats << d << " " << specInt[i] / intMin << " " << specMinima[i] / minimaMin  << " " << (i > 0 ? (specMinima[i] - specMinima[i - 1]) : (specMinima[1] - specMinima[0])) << endl;
+		}
+		output_stats.close();
 	}
 }
 
