@@ -23,7 +23,7 @@ private:
 
 	double epslim, eps, ln2, lnp;
 
-	DataLoader& mrDataLoader;
+	DataLoader* mpDataLoader;
 	const double minCoherence;
 	const double maxCoherence;
 	const Mode mode;
@@ -54,7 +54,7 @@ private:
     default_random_engine e1;
 
 public:
-    D2(DataLoader& rDataLoader, double minPeriod, double maxPeriod,
+    D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
     		double minCoherence, double maxCoherence,
 			Mode mode, bool normalize, bool relative,
 			double tScale, const vector<double>& varScales);
