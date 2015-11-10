@@ -17,8 +17,8 @@ class D2 {
 private:
 
 	const unsigned coherenceGrid = 200;
+    const unsigned numFreqs = 100;
 	const unsigned phaseBins = 50;
-	const double deltaPhi = 0.05;
 	const double epsilon = 0.1;
 
 	double epslim, eps, ln2, lnp;
@@ -37,17 +37,16 @@ private:
 	vector<double> td;
 	vector<int> ta;
 
-    unsigned lp;
-    unsigned k;
-    unsigned m;
+    unsigned numCoherences;
+    unsigned numCoherenceBins;
     double a;
     double b;
     double dmin;
     double dmax;
     double dmaxUnscaled;
     double wmin;
-    double delta;
-    double step;
+    double coherenceBinSize;
+    double freqStep;
     // For bootstrap resampling
     // Seed with a real random value, if available
     random_device rd;

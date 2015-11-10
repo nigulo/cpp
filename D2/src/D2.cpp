@@ -319,14 +319,13 @@ D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 	if (dmax < dmin || minPeriod > maxPeriod) {
 		throw "Check Arguments";
 	}
-	k = dmax > dmin ? coherenceGrid : 1;
-	m = round(phaseBins * (dmax - dmin) * wmax);
-	a = (m - 1.0) / (dmax - dmin);
+	numCoherences = dmax > dmin ? coherenceGrid : 1; // output precision in coherence
+	numCoherenceBins = round(phaseBins * (dmax - dmin) * wmax);
+	coherenceBinSize = (dmax - dmin) / (numCoherenceBins - 1);
+	a = (numCoherenceBins - 1.0) / (dmax - dmin);
 	b = -dmin * a;
-	delta = (dmax - dmin) / (m - 1);
 
-	lp = round((wmax - wmin) * (dmax - dmin) / deltaPhi);
-	step = (wmax - wmin) / (lp - 1);
+	freqStep = (wmax - wmin) / (numFreqs - 1);
 	eps = epsilon;
 	epslim = 1.0 - eps;
 	ln2 = sqrt(log(2.0));
@@ -524,8 +523,8 @@ void D2::CalcDiffNorms() {
 		cout << "Calculating diffnorms..." << endl;
 	}
 
-	vector<double> tty(m, 0);
-	vector<int> tta(m, 0);
+	vector<double> tty(numCoherenceBins, 0);
+	vector<int> tta(numCoherenceBins, 0);
 
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
 	if (procId == 0) {
@@ -561,16 +560,16 @@ void D2::CalcDiffNorms() {
 		MPI::COMM_WORLD.Send(tta.data(), tta.size(), MPI::INT, 0, TAG_TTA);
 	} else {
 		for (int i = 1; i < numProc; i++) {
-			double ttyRecv[m];
-			int ttaRecv[m];
+			double ttyRecv[numCoherenceBins];
+			int ttaRecv[numCoherenceBins];
 			MPI::Status status;
-			MPI::COMM_WORLD.Recv(ttyRecv, m,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
+			MPI::COMM_WORLD.Recv(ttyRecv, numCoherenceBins,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received square differences from " << status.Get_source() << "." << endl;
-			MPI::COMM_WORLD.Recv(ttaRecv, m,  MPI::INT, status.Get_source(), TAG_TTA, status);
+			MPI::COMM_WORLD.Recv(ttaRecv, numCoherenceBins,  MPI::INT, status.Get_source(), TAG_TTA, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received weights from " << status.Get_source() << "." << endl;
-			for (unsigned j = 0; j < m; j++) {
+			for (unsigned j = 0; j < numCoherenceBins; j++) {
 				tty[j] += ttyRecv[j];
 				assert(tta[j] == ttaRecv[j]);
 				//tta[j] += ttaRecv[j];
@@ -579,7 +578,7 @@ void D2::CalcDiffNorms() {
 		}
 		// How many time differences was actually used?
 		unsigned j = 0;
-		for (unsigned i = 0; i < m; i++) {
+		for (unsigned i = 0; i < numCoherenceBins; i++) {
 			if (tta[i] > 0) {
 				j++;
 			}
@@ -594,8 +593,8 @@ void D2::CalcDiffNorms() {
 
 		j = 0;
 		ofstream output(string(DIFF_NORMS_FILE_PREFIX) + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
-		for (unsigned i = 0; i < m; i++) {
-			double d = dmin + i * delta;
+		for (unsigned i = 0; i < numCoherenceBins; i++) {
+			double d = dmin + i * coherenceBinSize;
 			if (tta[i] > 0) {
 				td[j] = d;
 				ty[j] = tty[i];
@@ -645,34 +644,34 @@ void D2::LoadDiffNorms() {
 void D2::Compute2DSpectrum() {
 
 	if (procId == 0) {
-		cout << "lp = " << lp << endl;
-		cout << "k = " << k << endl;
-		cout << "m = " << m << endl;
-		cout << "a = " << a << endl;
-		cout << "b = " << b << endl;
 		cout << "dmin = " << dmin << endl;
 		cout << "dmax = " << dmax << endl;
 		cout << "wmin = " << wmin << endl;
-		cout << "delta = " << delta << endl;
-		cout << "step = " << step << endl;
+		cout << "numFreqs = " << numFreqs << endl;
+		cout << "freqStep = " << freqStep << endl;
+		cout << "numCoherenceBins = " << numCoherenceBins << endl;
+		cout << "numCoherences = " << numCoherences << endl;
+		cout << "a = " << a << endl;
+		cout << "b = " << b << endl;
+		cout << "coherenceBinSize = " << coherenceBinSize << endl;
 
 		ofstream output("phasedisp.csv");
 		ofstream output_min("phasedisp_min.csv");
 		ofstream output_max("phasedisp_max.csv");
 
-		vector<double> spec(lp);
+		vector<double> spec(numFreqs);
 		vector<double> specInt;
 		vector<double> specMinima;
 		double intMax = -1;
 		double intMin = -1;
 		double minimaMin = -1;
-		spec.assign(lp, 0);
+		spec.assign(numFreqs, 0);
 		// Basic cycle with printing for GnuPlot
-		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (k - 1) : 0;
-		for (unsigned i = 0; i < k; i++) {
+		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
+		for (unsigned i = 0; i < numCoherences; i++) {
 			double d = minCoherence + i * deltac;
-			for (unsigned j = 0; j < lp; j++) {
-				double w = wmin + j * step;
+			for (unsigned j = 0; j < numFreqs; j++) {
+				double w = wmin + j * freqStep;
 				double d1 = d;
 				if (relative) {
 					d1 = d / w;
@@ -681,30 +680,29 @@ void D2::Compute2DSpectrum() {
 				spec[j] = res;
 			}
 
-			// Spectrum in cum can be normalized
-
+			// Normalize locally if needed
 			if (normalize) {
 				Normalize(spec);
 			}
 
 			vector<int> minima(0);
-			unsigned dk = lp / 20;
-			ofstream output_mid("phasedisp" + to_string(i) + ".csv");
+			unsigned dk = numFreqs / 20;
+			//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 			double integral = 0;
 			double minimum = -1;
-			for (unsigned j = 0; j < lp; j++) {
-				output << d << " " << (wmin + j * step) << " " << spec[j] << endl;
+			for (unsigned j = 0; j < numFreqs; j++) {
+				output << d << " " << (wmin + j * freqStep) << " " << spec[j] << endl;
 				if (i == 0) {
-					output_min << (wmin + j * step) << " " << spec[j] << endl;
-				} else if (i == k - 1) {
-					output_max << (wmin + j * step) << " " << spec[j] << endl;
+					output_min << (wmin + j * freqStep) << " " << spec[j] << endl;
+				} else if (i == numCoherences - 1) {
+					output_max << (wmin + j * freqStep) << " " << spec[j] << endl;
 				}
-				output_mid << (wmin + j * step) << " " << spec[j] << endl;
+				//output_mid << (wmin + j * step) << " " << spec[j] << endl;
 				integral += spec[j];
 				if (minimum < 0 || spec[j] < minimum) {
 					minimum = spec[j];
 				}
-				if (j > dk - 1 && j < lp - dk - 1) {
+				if (j > dk - 1 && j < numFreqs - dk - 1) {
 					bool isMinimum = true;
 					for (unsigned k1 = j - dk; k1 <= j + dk; k1++) {
 						if (spec[j] > spec[k1]) {
@@ -742,13 +740,14 @@ void D2::Compute2DSpectrum() {
 				//cout << wmin + minima[k1] * step;
 			}
 			//cout << endl;
-			output_mid.close();
+			//output_mid.close();
 		}
 		output.close();
 		output_min.close();
 		output_max.close();
 
 		// print normalized integral
+		/*
 		ofstream output_stats("stats.csv");
 		//assert(intMin >=0 && intMax >= 0 && intMin < intMax);
 		//double norm = 1 / (intMax - intMin);
@@ -757,6 +756,7 @@ void D2::Compute2DSpectrum() {
 			output_stats << d << " " << specInt[i] / intMin << " " << specMinima[i] / minimaMin  << " " << (i > 0 ? (specMinima[i] - specMinima[i - 1]) : (specMinima[1] - specMinima[0])) << endl;
 		}
 		output_stats.close();
+		*/
 	}
 }
 
