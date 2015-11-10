@@ -17,7 +17,7 @@ class D2 {
 private:
 
 	const unsigned coherenceGrid = 200;
-    const unsigned numFreqs = 100;
+    const unsigned numFreqs = 200;
 	const unsigned phaseBins = 50;
 	const double epsilon = 0.1;
 

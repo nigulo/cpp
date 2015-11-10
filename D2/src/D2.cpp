@@ -402,23 +402,23 @@ double D2::Criterion(double d, double w) {
 	}
 }
 
-void Normalize(vector<double>& cum) {
+void Normalize(vector<double>& spec) {
 
 	unique_ptr<double> min;
 	unique_ptr<double> max;
 
-	for (auto& val : cum) {
-		if (!min.get() || val < *min.get()) {
+	for (auto& val : spec) {
+		if (!min || val < *min) {
 			min.reset(new double(val));
 		}
-		if (!max.get() || val > *max.get()) {
+		if (!max || val > *max) {
 			max.reset(new double(val));
 		}
 	}
-	if (max.get() && min.get() && *max.get() > *min.get()) {
-		double range = *max.get() - *min.get();
-		for (auto& val: cum) {
-			val = (val - *min.get()) / range;
+	if (max && min && *max > *min) {
+		double range = *max - *min;
+		for (auto& val : spec) {
+			val = (val - *min) / range;
 		}
 
 	} else {
@@ -659,17 +659,16 @@ void D2::Compute2DSpectrum() {
 		ofstream output_min("phasedisp_min.csv");
 		ofstream output_max("phasedisp_max.csv");
 
-		vector<double> spec(numFreqs);
 		vector<double> specInt;
 		vector<double> specMinima;
 		double intMax = -1;
 		double intMin = -1;
 		double minimaMin = -1;
-		spec.assign(numFreqs, 0);
 		// Basic cycle with printing for GnuPlot
 		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
 		for (unsigned i = 0; i < numCoherences; i++) {
 			double d = minCoherence + i * deltac;
+			vector<double> spec(numFreqs);
 			for (unsigned j = 0; j < numFreqs; j++) {
 				double w = wmin + j * freqStep;
 				double d1 = d;
