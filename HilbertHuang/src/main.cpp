@@ -262,10 +262,11 @@ int main(int argc, char** argv) {
 	if (exists(prefix + ".log")) {
 		cout << "Loading IMF-s" << endl;
 		//return EXIT_SUCCESS;
-		int imfNo = 0;
+		int modeNo = 0;
 		for (;;) {
-			string imfFileName(string("imf") + to_string(imfNo++) + ".cvs");
+			string imfFileName(prefix + "_imf_" + to_string(++modeNo) + ".csv");
 			if (!exists(imfFileName)) {
+				cout << to_string(modeNo - 1) << " IMF-s loaded" << endl;
 				break;
 			}
 			ensemble.push_back(*loadTimeSeries(imfFileName));
