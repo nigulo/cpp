@@ -101,7 +101,11 @@ void collect() {
 				}
 				double freq = stod(words[1]);
 				double en = stod(words[2]);
-				double var = stod(words[3]);
+				double var = 0;
+				// this fix is needed for log files generated with older version only
+				if (words[3] != "nan" && words[3] == "-nan") {
+					var = stod(words[3]);
+				}
 				totalEnergy += en;
 				totalVar += var;
 				if (abs(r - BOT) < DELTA_R) {
@@ -124,6 +128,10 @@ void collect() {
 	}
 	cout << "Mode energies (total bot mid surf)" << endl;
 	for (unsigned i = 0; i < allModes.size(); i++) {
+		size_t numModes = allModes[i].size();
+		size_t numModesBot = 0;
+		size_t numModesMid = 0;
+		size_t numModesSurf = 0;
 		double modeEnergy = 0;
 		double modeEnergyBot = 0;
 		double modeEnergyMid = 0;
@@ -143,7 +151,7 @@ void collect() {
 		string modeNo = to_string(i + 1);
 		ofstream enStream(string("ens") + modeNo + ".csv");
 		ofstream freqStream(string("freqs") + modeNo + ".csv");
-		for (unsigned j = 0; j < allModes[i].size(); j++) {
+		for (unsigned j = 0; j < numModes; j++) {
 			auto dat = allModes[i][j];
 			double lat = get<0>(dat);
 			double r = get<1>(dat);
@@ -155,14 +163,17 @@ void collect() {
 			modeFreqSum += en * freq;
 			modeWeightSum += en;
 			if (abs(r - BOT) < DELTA_R) {
+				numModesBot++;
 				modeEnergyBot += en;
 				modeVarBot += var;
 			}
 			if (abs(r - MID) < DELTA_R) {
+				numModesMid++;
 				modeEnergyMid += en;
 				modeVarMid += var;
 			}
 			if (abs(r - SURF) < DELTA_R) {
+				numModesSurf++;
 				modeEnergySurf += en;
 				modeVarSurf += var;
 			}
@@ -186,24 +197,21 @@ void collect() {
 		freqStream.close();
 		double modeFreqMean = modeFreqSum / modeWeightSum;
 		double modeFreqVar = 0;
-		for (unsigned j = 0; j < allModes[i].size(); j++) {
+		for (unsigned j = 0; j < numModes; j++) {
 			auto dat = allModes[i][j];
 			double freq = get<2>(dat);
 			double en = get<3>(dat);
 			modeFreqVar += en * (freq - modeFreqMean) * (freq - modeFreqMean);
 		}
 		modeFreqVar /= modeWeightSum;
-		cout << modeNo << ": " << modeFreqMean << " " << sqrt(modeFreqVar) << " "
-				<< (modeEnergy / totalEnergy) << " "
-				<< (modeEnergyBot / totalEnergyBot)  << " "
-				<< (modeEnergyMid / totalEnergyMid) << " "
-				<< (modeEnergySurf / totalEnergySurf)
-				<< (modeVar / totalVar) << " "
-				<< (modeVarBot / totalVarBot)  << " "
-				<< (modeVarMid / totalVarMid) << " "
-				<< (modeVarSurf / totalVarSurf)
-				<< " (" << maxEnergyLatN << ", " << maxEnergyRN  << " - "
-				<< maxEnergyLatS << ", " << maxEnergyRS << ")" << endl;
+		cout << modeNo << ": " << modeFreqMean << " " << sqrt(modeFreqVar)
+				<< " " << (modeVar / numModes > 0.05 ? (modeEnergy / totalEnergy) : -1)
+				<< " " << (modeVarBot / numModesBot > 0.05 ? (modeEnergyBot / totalEnergyBot) : -1)
+				<< " " << (modeVarMid / numModesMid > 0.05 ? (modeEnergyMid / totalEnergyMid) : -1)
+				<< " " << (modeVarSurf / numModesSurf > 0.05 ? (modeEnergySurf / totalEnergySurf) : -1)
+				<< " " << maxEnergyLatN << " " << maxEnergyRN
+				<< " " << maxEnergyLatS << " " << maxEnergyRS
+				<< endl;
 	}
 }
 
@@ -312,7 +320,8 @@ int main(int argc, char** argv) {
 	}
 	stringstream logText;
 	int modeNo = 1;
-	double var = ts2.meanVariance().second;
+	double initVar = ts2.meanVariance().second;
+	double var = initVar;
 	for (auto i = ensemble.begin(); i != ensemble.end(); i++) {
 		TimeSeries& imf = (*i) / numBootstrapRuns;
 		int numZeroCrossings = imf.findNumZeroCrossings();
@@ -321,7 +330,7 @@ int main(int argc, char** argv) {
 		double meanEnergy = AnalyticSignal::calculate(imf, modeNo, prefix);
 		ts2 - imf;
 		double newVar = ts2.meanVariance().second;
-        logText << modeNo << ": " << meanFreq << " " << meanEnergy << " " << (var - newVar) << endl;
+        logText << modeNo << ": " << meanFreq << " " << meanEnergy << " " << (initVar > 0 ? (var - newVar) / initVar : initVar) << endl;
         var = newVar;
         modeNo++;
 	}
