@@ -16,6 +16,8 @@ enum Mode {
 class D2 {
 private:
 
+	double maxX = -1; // little hack
+
 	const unsigned coherenceGrid = 200;
     const unsigned numFreqs = 200;
 	const unsigned phaseBins = 50;

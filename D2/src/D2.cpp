@@ -159,6 +159,7 @@ int main(int argc, char *argv[]) {
 	}
 	DataLoader* dl = nullptr;
 	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId) , "");
+        cout << "Rank: " << procId << " searching " << filePath << endl;
 	assert(filePath.size() > 0);
 	if (exists(filePath)) {
 		cout << "Rank: " << procId << " file: " << filePath << endl;
@@ -490,6 +491,9 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vect
 		//	cout << "Time :" << dl1.GetX(i) << endl;
 		//}
 		for (; j < dl2.GetPageSize(); j++) {
+			if (dl2.GetX(j) * tScale > maxX) {
+				maxX = dl2.GetX(j) * tScale;
+			}
 			real d = (dl2.GetX(j) - dl1.GetX(i)) * tScale;
 			if (d > dmax || (bootstrap && countTaken >= countNeeded)) {
 				break;
@@ -669,14 +673,22 @@ void D2::Compute2DSpectrum() {
 		for (unsigned i = 0; i < numCoherences; i++) {
 			double d = minCoherence + i * deltac;
 			vector<double> spec(numFreqs);
+			bool maxXReached = false;
 			for (unsigned j = 0; j < numFreqs; j++) {
 				double w = wmin + j * freqStep;
 				double d1 = d;
 				if (relative) {
 					d1 = d / w;
 				}
+				if (d1 > maxX) {
+					maxXReached = true;
+					break;
+				}
 				double res = Criterion(d1, w);
 				spec[j] = res;
+			}
+			if (maxXReached) {
+				break;
 			}
 
 			// Normalize locally if needed
