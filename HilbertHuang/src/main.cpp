@@ -103,7 +103,7 @@ void collect() {
 				double en = stod(words[2]);
 				double var = 0;
 				// this fix is needed for log files generated with older version only
-				if (words[3] != "nan" && words[3] == "-nan") {
+				if (words[3] != "nan" && words[3] != "-nan") {
 					var = stod(words[3]);
 				}
 				totalEnergy += en;
@@ -205,10 +205,10 @@ void collect() {
 		}
 		modeFreqVar /= modeWeightSum;
 		cout << modeNo << ": " << modeFreqMean << " " << sqrt(modeFreqVar)
-				<< " " << (modeVar / numModes > 0.05 ? (modeEnergy / totalEnergy) : -1)
-				<< " " << (modeVarBot / numModesBot > 0.05 ? (modeEnergyBot / totalEnergyBot) : -1)
-				<< " " << (modeVarMid / numModesMid > 0.05 ? (modeEnergyMid / totalEnergyMid) : -1)
-				<< " " << (modeVarSurf / numModesSurf > 0.05 ? (modeEnergySurf / totalEnergySurf) : -1)
+				<< " " << (modeVar / numModes > 0.1 ? (modeEnergy / totalEnergy) : -1)
+				<< " " << (modeVarBot / numModesBot > 0.1 ? (modeEnergyBot / totalEnergyBot) : -1)
+				<< " " << (modeVarMid / numModesMid > 0.1 ? (modeEnergyMid / totalEnergyMid) : -1)
+				<< " " << (modeVarSurf / numModesSurf > 0.1 ? (modeEnergySurf / totalEnergySurf) : -1)
 				<< " " << maxEnergyLatN << " " << maxEnergyRN
 				<< " " << maxEnergyLatS << " " << maxEnergyRS
 				<< endl;
