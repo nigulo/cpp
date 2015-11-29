@@ -133,6 +133,7 @@ void collect(double depth, const string& fileNamePattern, unsigned sampling) {
  */
 void parity(uint8_t mode) {
 	double equator = 127.5;
+	vector<double> ts;
 	vector<pair<double /*even*/, double/*odd*/ >> parity;
 	directory_iterator end_itr; // default construction yields past-the-end
 	string fileNamePattern=string("imf_") + to_string(mode) + ".csv";
@@ -165,8 +166,9 @@ void parity(uint8_t mode) {
 						words.erase(it);
 					}
 				}
-				//double x = stod(words[0]);
+				double x = stod(words[0]);
 				double zNorth = stod(words[1]);
+				ts.push_back(x);
 				zsNorth.push_back(zNorth);
 		    }
 			inputNorth.close();
@@ -189,28 +191,29 @@ void parity(uint8_t mode) {
 				//double x = stod(words[0]);
 				double zSouth = stod(words[1]);
 				double zNorth = zsNorth[i];
-				double squareSum = zSouth * zSouth + zNorth * zNorth;
-				if (sgn(zSouth) == sgn(zNorth)) {
-					parity[i].first += squareSum;
-				} else {
-					parity[i].second += squareSum;
-				}
+				double even = 0.5 * (zNorth + zSouth);
+				double odd = 0.5 * (zNorth - zSouth);
+				parity[i].first += even * even;
+				parity[i].second += odd * odd;
 				//cout << parity[i].first << ", " << parity[i].second << endl;
 				i++;
 		    }
 			inputSouth.close();
 		}
 	}
-	ofstream output(string("parity.csv"));
+	ofstream output(string("parity_") + to_string((int) mode) + ".csv");
 	double total = 0;
+	size_t i = 0;
 	for (auto p : parity) {
 		double val = (p.first - p.second) / (p.first + p.second);
 		total += val;
-		output << val << endl;
+		output << ts[i++] << " " << val << endl;
 	}
 	output.close();
 	cout << "Mean parity for mode " << ((int) mode) << ": " << total / parity.size() << endl;
 }
+
+//#define LATITUDE_FILTER
 
 /**
  * Calculates the mean spectral entropy of the mode
@@ -227,12 +230,14 @@ void entropy(uint8_t mode) {
 			if (Utils::Find(fileName, fileNamePattern) < 0) {
 				continue;
 			}
-			auto latR = getLatR(fileName);
 			string prefix = getPrefix(fileName);
+#ifdef LATITUDE_FILTER
+			auto latR = getLatR(fileName);
 			int lat = latR.first;
 			if (lat < 15 || lat > 240) { // If we want to omit boundary regions
 				continue;
 			}
+#endif
 		    //cout << "Processing " << fileName << endl;
 			//int r = latR.second;
 			vector<double> zs;
