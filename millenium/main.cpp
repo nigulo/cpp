@@ -45,6 +45,11 @@ string getPrefix(const string& fileName) {
 	return prefix;
 }
 
+#define EQUATOR 127.5f
+#define R_GRID 128
+#define LAT_GRID 256
+#define LAT_SPAN 150.0f
+
 pair<double, double> getLatR(const string& fileName) {
 	int index = fileName.find('_');
 	string latStr = fileName.substr(0, index);
@@ -64,6 +69,11 @@ pair<double, double> getLatR(const string& fileName) {
 		}
 	}
 	return {lat, r};
+}
+
+// returns co-latitude and radius in physical coordinates
+pair<double, double> simToPhysCoord(const pair<double, double>& latR) {
+	return {90 - (EQUATOR - latR.first) * LAT_SPAN / LAT_GRID, 0.7 * latR.second * 0.3 / R_GRID};
 }
 
 /**
@@ -132,7 +142,6 @@ void collect(double depth, const string& fileNamePattern, unsigned sampling) {
  * Calculates the mean parity of the mode
  */
 void parity(uint8_t mode) {
-	double equator = 127.5;
 	vector<double> ts;
 	vector<pair<double /*even*/, double/*odd*/ >> parity;
 	directory_iterator end_itr; // default construction yields past-the-end
@@ -146,15 +155,18 @@ void parity(uint8_t mode) {
 			}
 			auto latR = getLatR(fileName);
 			string prefix = getPrefix(fileName);
-			int lat = latR.first;
-			if (lat < 15 || lat > 240) { // If we want to omit boundary regions
+			int latSim = latR.first;
+			if (latSim < 15 || latSim > 240) { // If we want to omit boundary regions
 				continue;
 			}
-			if (lat > equator) {
+			if (latSim > EQUATOR) {
 				continue;
 			}
 		    //cout << "Processing " << fileName << endl;
-			int r = latR.second;
+			int rSim = latR.second;
+			auto latRPhys = simToPhysCoord(latR);
+			double th = latRPhys.first * M_PI / 180;
+			double r = latRPhys.second;
 			vector<double> zsNorth;
 			ifstream inputNorth(fileName);
 			for (string line; getline(inputNorth, line);) {
@@ -175,8 +187,8 @@ void parity(uint8_t mode) {
 			if (parity.size() < zsNorth.size()) {
 				parity.resize(zsNorth.size(), {0, 0});
 			}
-			int oppositeLat = 2 * equator - lat;
-			ifstream inputSouth(prefix + to_string(oppositeLat) + "_" + to_string(r) + "_imf_" + to_string(mode) + ".csv");
+			int oppositeLat = 2 * EQUATOR - latSim;
+			ifstream inputSouth(prefix + to_string(oppositeLat) + "_" + to_string(rSim) + "_imf_" + to_string(mode) + ".csv");
 			//cout << (prefix + to_string(oppositeLat) + "_" + to_string(r) + "_imf_" + to_string(mode) + ".csv") << endl;
 			int i = 0;
 			for (string line; getline(inputSouth, line);) {
@@ -193,8 +205,9 @@ void parity(uint8_t mode) {
 				double zNorth = zsNorth[i];
 				double even = 0.5 * (zNorth + zSouth);
 				double odd = 0.5 * (zNorth - zSouth);
-				parity[i].first += even * even;
-				parity[i].second += odd * odd;
+				double r2sinth = r * r * sin(th);
+				parity[i].first += r2sinth * even * even;
+				parity[i].second += r2sinth * odd * odd;
 				//cout << parity[i].first << ", " << parity[i].second << endl;
 				i++;
 		    }
