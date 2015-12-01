@@ -73,7 +73,7 @@ pair<double, double> getLatR(const string& fileName) {
 
 // returns co-latitude and radius in physical coordinates
 pair<double, double> simToPhysCoord(const pair<double, double>& latR) {
-	return {90 - (EQUATOR - latR.first) * LAT_SPAN / LAT_GRID, 0.7 * latR.second * 0.3 / R_GRID};
+	return {90 - (EQUATOR - latR.first) * LAT_SPAN / LAT_GRID, 0.7 + latR.second * 0.3 / R_GRID};
 }
 
 /**
@@ -167,6 +167,7 @@ void parity(uint8_t mode) {
 			auto latRPhys = simToPhysCoord(latR);
 			double th = latRPhys.first * M_PI / 180;
 			double r = latRPhys.second;
+			//cout << "r, th: " << rSim << " " << r << ", " << latSim << " " << th * 180 / M_PI << endl;
 			vector<double> zsNorth;
 			ifstream inputNorth(fileName);
 			for (string line; getline(inputNorth, line);) {
@@ -232,7 +233,8 @@ void parity(uint8_t mode) {
  * Calculates the mean spectral entropy of the mode
  */
 void entropy(uint8_t mode) {
-	double total = 0;
+	double totalEntropy = 0;
+	double totalEnergy = 0;
 	size_t count = 0;
 	directory_iterator end_itr; // default construction yields past-the-end
 	string fileNamePattern=string("imf_") + to_string(mode) + ".csv";
@@ -278,9 +280,11 @@ void entropy(uint8_t mode) {
 			fft(true, n, data);
 			double powerSpec[n];
 			double norm = 0;
+		    double energy = 0;
 		    for (size_t i = 0; i < n; i++) {
 		    	powerSpec[i] = data[i][0] * data[i][0] + data[i][1] * data[i][1];
 		    	norm += powerSpec[i] + 1e-12;
+		    	energy += powerSpec[i];
 		    }
 		    free(data);
 		    double entropy = 0;
@@ -288,12 +292,13 @@ void entropy(uint8_t mode) {
 		    	double d = powerSpec[i] /= norm;
 		    	entropy -= d * log2(d + 1e-12);
 		    }
-		    entropy /= log2(n); // here wi divide
-		    total += entropy;
+		    entropy /= log2(n);
+		    totalEntropy += entropy;
+		    totalEnergy += energy;
 		    count++;
 		}
 	}
-	cout << "Mean entropy for mode " << ((int) mode) << ": " << total / count << endl;
+	cout << "Mean entropy, energy for mode " << ((int) mode) << ": " << totalEntropy / count << ", " << totalEnergy / count << endl;
 }
 
 double getLat(const string& fileName) {
