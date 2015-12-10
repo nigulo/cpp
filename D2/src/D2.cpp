@@ -108,7 +108,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	map<string, string> params = Utils::ReadProperties(paramFileName);
-
 	double minPeriod = Utils::FindDoubleProperty(params, "minPeriod", 2);
 	double maxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
@@ -544,11 +543,10 @@ void D2::CalcDiffNorms() {
 		y2Sum[i] = 0;
 	}
 	while (mpDataLoader->Next()) {
-		for (unsigned i = 0; i < mpDataLoader.GetPageSize(); i++) {
+		for (unsigned i = 0; i < mpDataLoader->GetPageSize(); i++) {
 			n++;
-			real y[] = mpDataLoader->GetY(i);
+			auto y = mpDataLoader->GetY(i);
 			for (unsigned j = 0; j < size; j++) {
-				double delta = y[j] - mean[j];
 				ySum[j] += y[j];
 				y2Sum[j] += y[j] * y[j];
 			}
@@ -571,7 +569,7 @@ void D2::CalcDiffNorms() {
 	}
 	varSum = 0;
 	for (unsigned i = 0; i < size; i++) {
-		varSum += (y2Sums[i] + (ySums[i] * ySums[i]) / n) / (n -1);
+		varSum += (y2Sum[i] + (ySum[i] * ySum[i]) / n) / (n -1);
 	}
 	if (procId == 0) {
 		cout << "Waiting for data from other processes..." << endl;
@@ -584,7 +582,7 @@ void D2::CalcDiffNorms() {
 		//}
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, TAG_TTY);
 		MPI::COMM_WORLD.Send(tta.data(), tta.size(), MPI::INT, 0, TAG_TTA);
-		MPI::COMM_WORLD.Send(varSum, 1, MPI::DOUBLE, 0, TAG_VAR);
+		MPI::COMM_WORLD.Send(&varSum, 1, MPI::DOUBLE, 0, TAG_VAR);
 	} else {
 		for (int i = 1; i < numProc; i++) {
 			double ttyRecv[numCoherenceBins];
@@ -604,7 +602,7 @@ void D2::CalcDiffNorms() {
 			}
 
 			double varSumRecv;
-			MPI::COMM_WORLD.Recv(varSumRecv, 1,  MPI::DOUBLE, status.Get_source(), TAG_VAR, status);
+			MPI::COMM_WORLD.Recv(&varSumRecv, 1,  MPI::DOUBLE, status.Get_source(), TAG_VAR, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received variance sum " << status.Get_source() << "." << endl;
 			for (unsigned j = 0; j < numCoherenceBins; j++) {
