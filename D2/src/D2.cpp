@@ -108,7 +108,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	map<string, string> params = Utils::ReadProperties(paramFileName);
-
 	double minPeriod = Utils::FindDoubleProperty(params, "minPeriod", 2);
 	double maxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
@@ -382,7 +381,7 @@ double D2::Criterion(double d, double w) {
 				} else if (ph == 0) {
 					wp = 1;
 				} else {
-					wp = 0.5 * (cos(4 * M_PI * ph) + 1);
+					wp = 0.5 * (cos(2 * M_PI * ph) + 1);
 				}
 				if (std::isnan(wp)) {
 					wp = 0;
@@ -397,7 +396,7 @@ double D2::Criterion(double d, double w) {
 		break;
 	}
 	if (tav > 0) {
-		return 0.5 * tyv / tav;
+		return 0.5 * tyv / tav / varSum;
 	} else {
 		return 0.0;
 	}
@@ -461,6 +460,7 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 
 #define TAG_TTY 1
 #define TAG_TTA 2
+#define TAG_VAR 3
 
 bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vector<int>& tta) {
 	bool bootstrap = false;
@@ -534,7 +534,23 @@ void D2::CalcDiffNorms() {
 	if (procId == 0) {
 		cout << "Loading data..." << endl;
 	}
+	unsigned size = mpDataLoader->GetNumVars() * mpDataLoader->GetDim();
+	double ySum[size];
+	double y2Sum[size];
+	int n = 0;
+	for (unsigned i = 0; i < size; i++) {
+		ySum[i] = 0;
+		y2Sum[i] = 0;
+	}
 	while (mpDataLoader->Next()) {
+		for (unsigned i = 0; i < mpDataLoader->GetPageSize(); i++) {
+			n++;
+			auto y = mpDataLoader->GetY(i);
+			for (unsigned j = 0; j < size; j++) {
+				ySum[j] += y[j];
+				y2Sum[j] += y[j] * y[j];
+			}
+		}
 		if (!ProcessPage(*mpDataLoader, *mpDataLoader, tty, tta)) {
 			break;
 		}
@@ -551,6 +567,10 @@ void D2::CalcDiffNorms() {
 		}
 		delete dl2;
 	}
+	varSum = 0;
+	for (unsigned i = 0; i < size; i++) {
+		varSum += (y2Sum[i] + (ySum[i] * ySum[i]) / n) / (n -1);
+	}
 	if (procId == 0) {
 		cout << "Waiting for data from other processes..." << endl;
 	}
@@ -562,6 +582,7 @@ void D2::CalcDiffNorms() {
 		//}
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, TAG_TTY);
 		MPI::COMM_WORLD.Send(tta.data(), tta.size(), MPI::INT, 0, TAG_TTA);
+		MPI::COMM_WORLD.Send(&varSum, 1, MPI::DOUBLE, 0, TAG_VAR);
 	} else {
 		for (int i = 1; i < numProc; i++) {
 			double ttyRecv[numCoherenceBins];
@@ -579,6 +600,15 @@ void D2::CalcDiffNorms() {
 				//tta[j] += ttaRecv[j];
 				//cout << ttyRecv[j] << endl;
 			}
+
+			double varSumRecv;
+			MPI::COMM_WORLD.Recv(&varSumRecv, 1,  MPI::DOUBLE, status.Get_source(), TAG_VAR, status);
+			assert(status.Get_error() == MPI::SUCCESS);
+			cout << "Received variance sum " << status.Get_source() << "." << endl;
+			for (unsigned j = 0; j < numCoherenceBins; j++) {
+				varSum += varSumRecv;
+			}
+
 		}
 		// How many time differences was actually used?
 		unsigned j = 0;
@@ -597,6 +627,7 @@ void D2::CalcDiffNorms() {
 
 		j = 0;
 		ofstream output(string(DIFF_NORMS_FILE_PREFIX) + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
+		output << varSum << endl;
 		for (unsigned i = 0; i < numCoherenceBins; i++) {
 			double d = dmin + i * coherenceBinSize;
 			if (tta[i] > 0) {
@@ -615,6 +646,7 @@ void D2::CalcDiffNorms() {
 
 void D2::LoadDiffNorms() {
 	if (procId == 0) {
+		varSum = 1; // Assumingt unit variance by default
 		cout << "Loading diffnorms..." << endl;
 		ifstream input(DIFF_NORMS_FILE);
 		for (string line; getline(input, line);) {
@@ -629,6 +661,9 @@ void D2::LoadDiffNorms() {
 			}
 			if (words.size() > 0 && words[0][0] == '#') {
 				//cout << "Skipping comment line: " << line << endl;
+			} else if (words.size() == 1) {
+				// loading varSum
+				varSum = stod(words[0]);
 			} else if (words.size() == 3) {
 				try {
 					td.push_back(stod(words[0]));

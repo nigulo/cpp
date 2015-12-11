@@ -38,6 +38,7 @@ private:
 	vector<double> ty;
 	vector<double> td;
 	vector<int> ta;
+	double varSum;
 
     unsigned numCoherences;
     unsigned numCoherenceBins;
