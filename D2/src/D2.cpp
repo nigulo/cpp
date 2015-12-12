@@ -434,7 +434,7 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 	#pragma acc data copyin(y1[0:mpDataLoader->GetDim() * mpDataLoader->GetNumVars()], y2[0:mpDataLoader->GetDim() * mpDataLoader->GetNumVars()])
 	#pragma acc parallel loop reduction(+:norm)
 #else
-	#pragma omp parallel for reduction(+:norm)
+//	#pragma omp parallel for reduction(+:norm)
 #endif
 	for (unsigned j = 0; j < mpDataLoader->GetNumVars(); j++) {
 		auto offset = j * mpDataLoader->GetDim();
@@ -457,6 +457,8 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 	}
 	return norm;
 }
+
+
 
 #define TAG_TTY 1
 #define TAG_TTA 2
@@ -506,8 +508,10 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vect
 						take = uniform_dist(e1) == counter;
 					}
 					if (take) {
-						tty[kk] += DiffNorm(dl2.GetY(j), dl1.GetY(i));
+						auto dy2 = DiffNorm(dl2.GetY(j), dl1.GetY(i));
+						tty[kk] += dy2;
 						tta[kk]++;
+						//cout << "tta[" << kk << "]=" << tta[kk] << endl;
 						countTaken++;
 					}
 					if (!bootstrap) {
@@ -546,10 +550,31 @@ void D2::CalcDiffNorms() {
 		for (unsigned i = 0; i < mpDataLoader->GetPageSize(); i++) {
 			n++;
 			auto y = mpDataLoader->GetY(i);
-			for (unsigned j = 0; j < size; j++) {
-				ySum[j] += y[j];
-				y2Sum[j] += y[j] * y[j];
+			// ------------------------------------------
+			// This calculation must be joined redesigned
+			for (unsigned j = 0; j < mpDataLoader->GetNumVars(); j++) {
+				auto offset = j * mpDataLoader->GetDim();
+				auto varScale = varScales[j];
+				if (varScale != 1.0f) {
+					for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
+						if (mpDataLoader->IsInRegion(i)) {
+							auto index = offset + i;
+							auto yScaled = y[index] * varScale;
+							ySum[index] += yScaled;
+							y2Sum[index] += yScaled * yScaled;
+						}
+					}
+				} else {
+					for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
+						if (mpDataLoader->IsInRegion(i)) {
+							auto index = offset + i;
+							ySum[index] += y[index];
+							y2Sum[index] += y[index] * y[index];
+						}
+					}
+				}
 			}
+			// ------------------------------------------
 		}
 		if (!ProcessPage(*mpDataLoader, *mpDataLoader, tty, tta)) {
 			break;
@@ -608,8 +633,8 @@ void D2::CalcDiffNorms() {
 			for (unsigned j = 0; j < numCoherenceBins; j++) {
 				varSum += varSumRecv;
 			}
-
 		}
+		cout << "varSum: " << varSum << endl;
 		// How many time differences was actually used?
 		unsigned j = 0;
 		for (unsigned i = 0; i < numCoherenceBins; i++) {
