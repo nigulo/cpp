@@ -60,9 +60,9 @@ public:
     		double minCoherence, double maxCoherence,
 			Mode mode, bool normalize, bool relative,
 			double tScale, const vector<double>& varScales);
-    void CalcDiffNorms();
-    void LoadDiffNorms();
-    void Compute2DSpectrum();
+    void CalcDiffNorms(int filePathIndex);
+    void LoadDiffNorms(int filePathIndex);
+    void Compute2DSpectrum(const string& outputFilePrefix);
 
 private:
     double Criterion(double d, double w);

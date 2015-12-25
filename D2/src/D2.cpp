@@ -15,7 +15,9 @@
 #include <memory>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#ifndef _NOMPI
 #include "mpi.h"
+#endif
 #ifdef _OPENACC
 #include <openacc.h>
 #else
@@ -32,6 +34,8 @@ using namespace utils;
 int procId;
 int numProc;
 time_t currentTime;
+bool saveDiffNorms;
+bool saveParameters;
 
 #define DIFF_NORMS_FILE_PREFIX "diffnorms"
 #define DIFF_NORMS_FILE_SUFFIX ".csv"
@@ -85,10 +89,14 @@ template<typename T> string vecVecToStr(const vector<vector<T>>& vec) {
 
 int main(int argc, char *argv[]) {
 
-	MPI::Init (argc, argv);
+#ifdef _NOMPI
+	numProc = 1;
+	procId = 0;
+#else
+	MPI::Init(argc, argv);
 	numProc = MPI::COMM_WORLD.Get_size();
 	procId = MPI::COMM_WORLD.Get_rank();
-
+#endif
 #ifdef _OPENACC
 	// It's recommended to perform one-off initialization of GPU-devices before any OpenACC regions
 	acc_init(acc_get_device_type()) ; // from openacc.h
@@ -159,136 +167,162 @@ int main(int argc, char *argv[]) {
 		cout << "----------------" << endl;
 	}
 	DataLoader* dl = nullptr;
-	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId) , "");
-        cout << "Rank: " << procId << " searching " << filePath << endl;
-	assert(filePath.size() > 0);
-	if (exists(filePath)) {
-		cout << "Rank: " << procId << " file: " << filePath << endl;
+	string filePathsStr = Utils::FindProperty(params, string("filePath") + to_string(procId), "");
+	vector<string> filePaths;
+	boost::split(filePaths, filePathsStr, boost::is_any_of(","), boost::token_compress_on);
 
-		bool binary = Utils::FindIntProperty(params, "binary", 0);
-		unsigned bufferSize = Utils::FindIntProperty(params, "bufferSize", 0);
+	string outputFilePrefixesStr = Utils::FindProperty(params, string("outputFilePath"), "");
+	vector<string> outputFilePrefixes;
+	if (outputFilePrefixesStr.length() > 0) {
+		boost::split(outputFilePrefixes, outputFilePrefixesStr, boost::is_any_of(","), boost::token_compress_on);
+	}
+	saveDiffNorms = Utils::FindIntProperty(params, "saveDiffNorms", 1);
+	saveParameters = Utils::FindIntProperty(params, "saveParameters", 1);
 
-		string strDims = Utils::FindProperty(params, "dims", "1");
-		vector<string> dimsStr;
-		vector<unsigned> dims;
-		boost::split(dimsStr, strDims, boost::is_any_of(","), boost::token_compress_on);
-		for (vector<string>::iterator it = dimsStr.begin() ; it != dimsStr.end(); ++it) {
-			if ((*it).length() != 0) {
-				dims.push_back(stoi(*it));
+	int filePathIndex = 0;
+	for (auto& filePath : filePaths) {
+		assert(filePath.size() > 0);
+		if (exists(filePath)) {
+			cout << "Rank: " << procId << " file: " << filePath << endl;
+
+			bool binary = Utils::FindIntProperty(params, "binary", 0);
+			unsigned bufferSize = Utils::FindIntProperty(params, "bufferSize", 0);
+
+			string strDims = Utils::FindProperty(params, "dims", "1");
+			vector<string> dimsStr;
+			vector<unsigned> dims;
+			boost::split(dimsStr, strDims, boost::is_any_of(","), boost::token_compress_on);
+			for (vector<string>::iterator it = dimsStr.begin() ; it != dimsStr.end(); ++it) {
+				if ((*it).length() != 0) {
+					dims.push_back(stoi(*it));
+				}
 			}
-		}
 
-		string strNumProcs = Utils::FindProperty(params, "numProcs", "1");
-		vector<string> numProcsStr;
-		vector<unsigned> numProcs;
-		boost::split(numProcsStr, strNumProcs, boost::is_any_of(","), boost::token_compress_on);
-		for (vector<string>::iterator it = numProcsStr.begin() ; it != numProcsStr.end(); ++it) {
-			if ((*it).length() != 0) {
-				numProcs.push_back(stoi(*it));
+			string strNumProcs = Utils::FindProperty(params, "numProcs", "1");
+			vector<string> numProcsStr;
+			vector<unsigned> numProcs;
+			boost::split(numProcsStr, strNumProcs, boost::is_any_of(","), boost::token_compress_on);
+			for (vector<string>::iterator it = numProcsStr.begin() ; it != numProcsStr.end(); ++it) {
+				if ((*it).length() != 0) {
+					numProcs.push_back(stoi(*it));
+				}
 			}
-		}
 
-		assert(numProcs.size() == dims.size());
-		assert(numProc == accumulate(numProcs.begin(), numProcs.end(), 1, multiplies<unsigned>()));
+			assert(numProcs.size() == dims.size());
+			assert(numProc == accumulate(numProcs.begin(), numProcs.end(), 1, multiplies<unsigned>()));
 
-		vector<unsigned> dimsPerProc;
-		vector<unsigned> procIds;
-		for (unsigned i = 0; i < dims.size(); i++) {
-			assert(dims[i] % numProcs[i] == 0);
-			dimsPerProc.push_back(dims[i] / numProcs[i]);
-			procIds.push_back(procId % numProcs[i]);
-		}
+			vector<unsigned> dimsPerProc;
+			vector<unsigned> procIds;
+			for (unsigned i = 0; i < dims.size(); i++) {
+				assert(dims[i] % numProcs[i] == 0);
+				dimsPerProc.push_back(dims[i] / numProcs[i]);
+				procIds.push_back(procId % numProcs[i]);
+			}
 
 
-		vector<vector<pair<unsigned, unsigned>>> regions;
-		string strRegions = Utils::FindProperty(params, "regions", "");
-		if (!strRegions.empty()) {
-			for (string strRegion : Utils::SplitByChars(strRegions, ";")) {
-				vector<pair<unsigned, unsigned>> region;
-				int i = 0;
-				for (string strMinMax : Utils::SplitByChars(strRegion, ",", false)) {
-					vector<string> minMaxStrs = Utils::SplitByChars(strMinMax, "-", false);
-					assert(minMaxStrs.size() == 2);
-					unsigned min = stoi(minMaxStrs[0]);
-					unsigned procMin = procIds[i] * dimsPerProc[i];
-					unsigned max = stoi(minMaxStrs[1]);
-					unsigned procMax = (procIds[i] + 1) * dimsPerProc[i] - 1;
-					//cout << procId << " min, max, procMin, procMax: " << min << ", " << max << ", " << procMin << ", " << procMax << endl;
-					if (min <= procMax && max >= procMin) {
-						if (min < procMin) {
-							min = 0;
+			vector<vector<pair<unsigned, unsigned>>> regions;
+			string strRegions = Utils::FindProperty(params, "regions", "");
+			if (!strRegions.empty()) {
+				for (string strRegion : Utils::SplitByChars(strRegions, ";")) {
+					vector<pair<unsigned, unsigned>> region;
+					int i = 0;
+					for (string strMinMax : Utils::SplitByChars(strRegion, ",", false)) {
+						vector<string> minMaxStrs = Utils::SplitByChars(strMinMax, "-", false);
+						assert(minMaxStrs.size() == 2);
+						unsigned min = stoi(minMaxStrs[0]);
+						unsigned procMin = procIds[i] * dimsPerProc[i];
+						unsigned max = stoi(minMaxStrs[1]);
+						unsigned procMax = (procIds[i] + 1) * dimsPerProc[i] - 1;
+						//cout << procId << " min, max, procMin, procMax: " << min << ", " << max << ", " << procMin << ", " << procMax << endl;
+						if (min <= procMax && max >= procMin) {
+							if (min < procMin) {
+								min = 0;
+							} else {
+								min %= dimsPerProc[i];
+							}
+							if (max > procMax) {
+								max = dimsPerProc[i] - 1;
+							} else {
+								max %= dimsPerProc[i];
+							}
+							region.push_back({min, max});
 						} else {
-							min %= dimsPerProc[i];
+							region.clear();
+							break;
 						}
-						if (max > procMax) {
-							max = dimsPerProc[i] - 1;
-						} else {
-							max %= dimsPerProc[i];
-						}
-						region.push_back({min, max});
-					} else {
-						region.clear();
-						break;
+						i++;
 					}
-					i++;
-				}
-				if (region.size() == dims.size()) {
-					//cout << procId << " region" << endl;
-					regions.push_back(region);
+					if (region.size() == dims.size()) {
+						//cout << procId << " region" << endl;
+						regions.push_back(region);
+					}
 				}
 			}
-		}
 
-		unsigned totalNumVars = Utils::FindIntProperty(params, "numVars", 1);
+			unsigned totalNumVars = Utils::FindIntProperty(params, "numVars", 1);
 
-		string strVarIndices = Utils::FindProperty(params, "varIndices", "0");
-		vector<string> varIndicesStr;
-		vector<unsigned> varIndices;
-		boost::split(varIndicesStr, strVarIndices, boost::is_any_of(","), boost::token_compress_on);
-		for (vector<string>::iterator it = varIndicesStr.begin() ; it != varIndicesStr.end(); ++it) {
-			if ((*it).length() != 0) {
-				varIndices.push_back(stoi(*it));
+			string strVarIndices = Utils::FindProperty(params, "varIndices", "0");
+			vector<string> varIndicesStr;
+			vector<unsigned> varIndices;
+			boost::split(varIndicesStr, strVarIndices, boost::is_any_of(","), boost::token_compress_on);
+			for (vector<string>::iterator it = varIndicesStr.begin() ; it != varIndicesStr.end(); ++it) {
+				if ((*it).length() != 0) {
+					varIndices.push_back(stoi(*it));
+				}
 			}
-		}
-		if (binary) {
-			dl = new BinaryDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
-		} else {
-			dl = new TextDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
-		}
-		if (procId == 0) {
-			cout << "binary       " << binary << endl;
-			cout << "bufferSize   " << bufferSize << endl;
-			cout << "dims         " << vecToStr(dims) << endl;
-			cout << "regions      " << vecVecToStr(regions) << endl;
-			cout << "numVars      " << totalNumVars << endl;
-			cout << "varIndices   " << vecToStr(varIndices) << endl;
-			cout << "----------------" << endl;
-		}
-		assert(varScales.size() <= varIndices.size());
-		if (varScales.size() < varIndices.size()) {
+			if (binary) {
+				dl = new BinaryDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
+			} else {
+				dl = new TextDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
+			}
 			if (procId == 0) {
-				cout << "Replacing missing variable scales with 1" << endl;
+				cout << "binary       " << binary << endl;
+				cout << "bufferSize   " << bufferSize << endl;
+				cout << "dims         " << vecToStr(dims) << endl;
+				cout << "regions      " << vecVecToStr(regions) << endl;
+				cout << "numVars      " << totalNumVars << endl;
+				cout << "varIndices   " << vecToStr(varIndices) << endl;
+				cout << "----------------" << endl;
 			}
-			while (varScales.size() < varIndices.size()) {
-				varScales.push_back(1.0f);
+			assert(varScales.size() <= varIndices.size());
+			if (varScales.size() < varIndices.size()) {
+				if (procId == 0) {
+					cout << "Replacing missing variable scales with 1" << endl;
+				}
+				while (varScales.size() < varIndices.size()) {
+					varScales.push_back(1.0f);
+				}
 			}
+
 		}
 
+		D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales);
+		if (!exists(DIFF_NORMS_FILE)) {
+			assert(dl); // dataLoader must be present in case diffnorms are not calculated yet
+			d2.CalcDiffNorms(filePathIndex);
+		} else {
+			d2.LoadDiffNorms(filePathIndex);
+		}
+		string outputFilePrefix = "phasedisp";
+		if (filePathIndex > 0) {
+			outputFilePrefix += to_string(filePathIndex);
+		}
+		if (outputFilePrefixes.size() > filePathIndex) {
+			outputFilePrefix = outputFilePrefixes[filePathIndex];
+		}
+		d2.Compute2DSpectrum(outputFilePrefix);
+		delete dl;
+		filePathIndex++;
+#ifndef _NOMPI
+		MPI::COMM_WORLD.Barrier();
+#endif
 	}
-
-	D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales);
-	if (!exists(DIFF_NORMS_FILE)) {
-		assert(dl); // dataLoader must be present in case diffnorms are not calculated yet
-		d2.CalcDiffNorms();
-	} else {
-		d2.LoadDiffNorms();
-	}
-	d2.Compute2DSpectrum();
-	delete dl;
 	if (procId == 0) {
 		cout << "done!" << endl;
 	}
+#ifndef _NOMPI
 	MPI::Finalize();
+#endif
 	return EXIT_SUCCESS;
 }
 
@@ -529,7 +563,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vect
 }
 
 
-void D2::CalcDiffNorms() {
+void D2::CalcDiffNorms(int filePathIndex) {
 	assert(mpDataLoader);
 	if (procId == 0) {
 		cout << "Calculating diffnorms..." << endl;
@@ -603,16 +637,21 @@ void D2::CalcDiffNorms() {
 	if (procId == 0) {
 		cout << "Waiting for data from other processes..." << endl;
 	}
+#ifndef _NOMPI
 	MPI::COMM_WORLD.Barrier();
+#endif
 	if (procId > 0) {
 		cout << "Sending data from " << procId << "." << endl;
 		//for (unsigned j = 0; j < m; j++) {
 		//	cout << tty[j] << endl;
 		//}
+#ifndef _NOMPI
 		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, TAG_TTY);
 		MPI::COMM_WORLD.Send(tta.data(), tta.size(), MPI::INT, 0, TAG_TTA);
 		MPI::COMM_WORLD.Send(&varSum, 1, MPI::DOUBLE, 0, TAG_VAR);
+#endif
 	} else {
+#ifndef _NOMPI
 		for (int i = 1; i < numProc; i++) {
 			double ttyRecv[numCoherenceBins];
 			int ttaRecv[numCoherenceBins];
@@ -638,6 +677,7 @@ void D2::CalcDiffNorms() {
 				varSum += varSumRecv;
 			}
 		}
+#endif
 		cout << "varSum: " << varSum << endl;
 		// How many time differences was actually used?
 		unsigned j = 0;
@@ -655,29 +695,41 @@ void D2::CalcDiffNorms() {
 		// Build final grids for periodicity search.
 
 		j = 0;
-		ofstream output(string(DIFF_NORMS_FILE_PREFIX) + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
-		output << varSum << endl;
-		for (unsigned i = 0; i < numCoherenceBins; i++) {
-			double d = dmin + i * coherenceBinSize;
-			if (tta[i] > 0) {
-				td[j] = d;
-				ty[j] = tty[i];
-				ta[j] = tta[i];
-				output << d << " " << ty[j] << " " << ta[j] << endl;
-				j++;
+		if (saveDiffNorms) {
+			string diffNormsFilePrefix = string(DIFF_NORMS_FILE_PREFIX);
+			if (filePathIndex > 0) {
+				diffNormsFilePrefix += to_string(filePathIndex);
 			}
+			ofstream output(diffNormsFilePrefix + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
+			output << varSum << endl;
+			for (unsigned i = 0; i < numCoherenceBins; i++) {
+				double d = dmin + i * coherenceBinSize;
+				if (tta[i] > 0) {
+					td[j] = d;
+					ty[j] = tty[i];
+					ta[j] = tta[i];
+					output << d << " " << ty[j] << " " << ta[j] << endl;
+					j++;
+				}
+			}
+			output.close();
 		}
-		output.close();
-		copy_file(paramFileName, string(PARAMETERS_FILE_PREFIX) + "_" + to_string(currentTime) + PARAMETERS_FILE_SUFFIX);
+		if (saveParameters && filePathIndex == 0) {
+			copy_file(paramFileName, string(PARAMETERS_FILE_PREFIX) + "_" + to_string(currentTime) + PARAMETERS_FILE_SUFFIX);
+		}
 	}
 
 }
 
-void D2::LoadDiffNorms() {
+void D2::LoadDiffNorms(int filePathIndex) {
 	if (procId == 0) {
 		varSum = 1; // Assumingt unit variance by default
 		cout << "Loading diffnorms..." << endl;
-		ifstream input(DIFF_NORMS_FILE);
+		string diffNormsFile = DIFF_NORMS_FILE;
+		if (filePathIndex > 0) {
+			diffNormsFile = string(DIFF_NORMS_FILE_PREFIX) + to_string(filePathIndex)  + DIFF_NORMS_FILE_SUFFIX;
+		}
+		ifstream input(diffNormsFile);
 		for (string line; getline(input, line);) {
 			std::vector<std::string> words;
 			boost::split(words, line, boost::is_any_of("\t "), boost::token_compress_on);
@@ -709,7 +761,7 @@ void D2::LoadDiffNorms() {
 	}
 }
 
-void D2::Compute2DSpectrum() {
+void D2::Compute2DSpectrum(const string& outputFilePrefix) {
 
 	if (procId == 0) {
 		cout << "dmin = " << dmin << endl;
@@ -723,9 +775,9 @@ void D2::Compute2DSpectrum() {
 		cout << "b = " << b << endl;
 		cout << "coherenceBinSize = " << coherenceBinSize << endl;
 
-		ofstream output("phasedisp.csv");
-		ofstream output_min("phasedisp_min.csv");
-		ofstream output_max("phasedisp_max.csv");
+		ofstream output(outputFilePrefix + ".csv");
+		ofstream output_min(outputFilePrefix + "_min.csv");
+		ofstream output_max(outputFilePrefix + "_max.csv");
 
 		vector<double> specInt;
 		vector<double> specMinima;
