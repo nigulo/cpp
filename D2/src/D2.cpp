@@ -3,7 +3,7 @@
 #include "D2.h"
 #include "BinaryDataLoader.h"
 #include "TextDataLoader.h"
-#include "utils.h"
+#include "utils/utils.h"
 
 #include <iostream>
 #include <cstdlib>
