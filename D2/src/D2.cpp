@@ -19,7 +19,9 @@
 #ifdef _OPENACC
 #include <openacc.h>
 #else
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #endif
 
 using namespace std;
@@ -434,7 +436,9 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 	#pragma acc data copyin(y1[0:mpDataLoader->GetDim() * mpDataLoader->GetNumVars()], y2[0:mpDataLoader->GetDim() * mpDataLoader->GetNumVars()])
 	#pragma acc parallel loop reduction(+:norm)
 #else
-//	#pragma omp parallel for reduction(+:norm)
+#ifdef _OPENMP
+	#pragma omp parallel for reduction(+:norm)
+#endif
 #endif
 	for (unsigned j = 0; j < mpDataLoader->GetNumVars(); j++) {
 		auto offset = j * mpDataLoader->GetDim();
