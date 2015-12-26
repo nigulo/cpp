@@ -34,6 +34,7 @@ private:
 
 	const double tScale;
 	const vector<double> varScales;
+	const vector<pair<double, double>> varRanges;
 
 	vector<double> ty;
 	vector<double> td;
@@ -59,7 +60,7 @@ public:
     D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
     		double minCoherence, double maxCoherence,
 			Mode mode, bool normalize, bool relative,
-			double tScale, const vector<double>& varScales);
+			double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges);
     void CalcDiffNorms(int filePathIndex);
     void LoadDiffNorms(int filePathIndex);
     void Compute2DSpectrum(const string& outputFilePrefix);
