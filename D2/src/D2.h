@@ -39,7 +39,7 @@ private:
 	vector<double> ty;
 	vector<double> td;
 	vector<int> ta;
-	double varSum;
+	double varSum = 0;
 
     unsigned numCoherences;
     unsigned numCoherenceBins;
