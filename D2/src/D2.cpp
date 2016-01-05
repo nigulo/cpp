@@ -863,17 +863,20 @@ void D2::Compute2DSpectrum(const string& outputFilePrefix) {
 			//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 			double integral = 0;
 			double minimum = -1;
+			double minimumFreq = 0;
 			for (unsigned j = 0; j < numFreqs; j++) {
-				output << d << " " << (wmin + j * freqStep) << " " << spec[j] << endl;
+				double w = wmin + j * freqStep;
+				output << d << " " << w << " " << spec[j] << endl;
 				if (i == 0) {
-					output_min << (wmin + j * freqStep) << " " << spec[j] << endl;
+					output_min << w << " " << spec[j] << endl;
 				} else if (i == numCoherences - 1) {
-					output_max << (wmin + j * freqStep) << " " << spec[j] << endl;
+					output_max << w << " " << spec[j] << endl;
 				}
 				//output_mid << (wmin + j * step) << " " << spec[j] << endl;
 				integral += spec[j];
 				if (minimum < 0 || spec[j] < minimum) {
 					minimum = spec[j];
+					minimumFreq = w;
 				}
 				if (j > dk - 1 && j < numFreqs - dk - 1) {
 					bool isMinimum = true;
