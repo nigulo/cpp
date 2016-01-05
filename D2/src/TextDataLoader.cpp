@@ -33,9 +33,12 @@ bool TextDataLoader::Next() {
 			//cout << line << endl;
 			std::vector<std::string> words;
 			boost::split(words, line, boost::is_any_of("\t "), boost::token_compress_on);
-			for (vector<string>::iterator it = words.begin() ; it != words.end(); ++it) {
-				if ((*it).length() == 0) {
+			for (vector<string>::iterator it = words.begin(); it != words.end();) {
+				boost::trim(*it);
+				if ((*it).empty()) {
 					words.erase(it);
+				} else {
+					it++;
 				}
 			}
 			if (words.size() > 0 && words[0][0] == '#') {

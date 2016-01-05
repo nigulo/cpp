@@ -47,6 +47,7 @@ private:
     double b;
     double dmin;
     double dmax;
+    double dbase;
     double dmaxUnscaled;
     double wmin;
     double coherenceBinSize;

@@ -377,16 +377,17 @@ D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 
 	dmin = minCoherence * (relative ? minPeriod : 1);
 	dmax = maxCoherence * (relative ? maxPeriod : 1);
+	dbase = dmin / 10;
 	dmaxUnscaled = dmax / tScale;
 
 	if (dmax < dmin || minPeriod > maxPeriod) {
 		throw "Check Arguments";
 	}
 	numCoherences = dmax > dmin ? coherenceGrid : 1; // output precision in coherence
-	numCoherenceBins = round(phaseBins * (dmax - dmin) * wmax);
-	coherenceBinSize = (dmax - dmin) / (numCoherenceBins - 1);
-	a = (numCoherenceBins - 1.0) / (dmax - dmin);
-	b = -dmin * a;
+	numCoherenceBins = round(phaseBins * (dmax - dbase) * wmax);
+	coherenceBinSize = (dmax - dbase) / (numCoherenceBins - 1);
+	a = (numCoherenceBins - 1.0) / (dmax - dbase);
+	b = -dbase * a;
 
 	freqStep = (wmax - wmin) / (numFreqs - 1);
 	eps = epsilon;
@@ -406,8 +407,11 @@ double D2::Criterion(double d, double w) {
 			double dd = td[j];
 			if (dd <= d) {
 				double ph = dd * w - floor(dd * w);
-				if (ph < 0.0) {
+				if (ph < 0) {
 					ph = ph + 1;
+				}
+				if (d == 50) {
+					cout << "ph = " << ph << endl;
 				}
 				if (ph < eps || ph > epslim) {
 					tyv += ty[j];
@@ -458,9 +462,10 @@ double D2::Criterion(double d, double w) {
 		}
 		break;
 	}
-	if (tav > 0) {
+	if (tav > 0 && varSum > 0) {
 		return 0.5 * tyv / tav / varSum;
 	} else {
+		cout << "tav=" << tav << endl;
 		return 0.0;
 	}
 }
@@ -572,7 +577,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vect
 			if (d > dmax || (bootstrap && countTaken >= countNeeded)) {
 				break;
 			}
-			if (d >= dmin) {
+			if (d >= dbase) {
 				int kk = round(a * d + b);
 				for (int counter = 0; counter < countNeeded; counter++) {
 					bool take = true;
@@ -584,6 +589,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vect
 						tty[kk] += dy2;
 						tta[kk]++;
 						//cout << "tta[" << kk << "]=" << tta[kk] << endl;
+						//cout << "tty[" << kk << "]=" << tty[kk] << endl;
 						countTaken++;
 					}
 					if (!bootstrap) {
@@ -613,14 +619,14 @@ void D2::CalcDiffNorms(int filePathIndex) {
 	unsigned size = mpDataLoader->GetNumVars() * mpDataLoader->GetDim();
 	double ySum[size];
 	double y2Sum[size];
-	int n = 0;
+	int n[size];
 	for (unsigned i = 0; i < size; i++) {
 		ySum[i] = 0;
 		y2Sum[i] = 0;
+		n[i] = 0;
 	}
 	while (mpDataLoader->Next()) {
 		for (unsigned i = 0; i < mpDataLoader->GetPageSize(); i++) {
-			n++;
 			auto y = mpDataLoader->GetY(i);
 			// ------------------------------------------
 			// This calculation must be redesigned
@@ -636,6 +642,7 @@ void D2::CalcDiffNorms(int filePathIndex) {
 							if (yScaled >= varRange.first && yScaled <= varRange.second) {
 								ySum[index] += yScaled;
 								y2Sum[index] += yScaled * yScaled;
+								n[index]++;
 							}
 						}
 					}
@@ -646,6 +653,7 @@ void D2::CalcDiffNorms(int filePathIndex) {
 							if (y[index] >= varRange.first && y[index] <= varRange.second) {
 								ySum[index] += y[index];
 								y2Sum[index] += y[index] * y[index];
+								n[index]++;
 							}
 						}
 					}
@@ -671,7 +679,7 @@ void D2::CalcDiffNorms(int filePathIndex) {
 	}
 	varSum = 0;
 	for (unsigned i = 0; i < size; i++) {
-		varSum += (y2Sum[i] + (ySum[i] * ySum[i]) / n) / (n -1);
+		varSum += (y2Sum[i] - (ySum[i] * ySum[i]) / n[i]) / (n[i] - 1);
 	}
 	if (procId == 0) {
 		cout << "Waiting for data from other processes..." << endl;
@@ -734,6 +742,15 @@ void D2::CalcDiffNorms(int filePathIndex) {
 		// Build final grids for periodicity search.
 
 		j = 0;
+		for (unsigned i = 0; i < numCoherenceBins; i++) {
+			double d = dbase + i * coherenceBinSize;
+			if (tta[i] > 0) {
+				td[j] = d;
+				ty[j] = tty[i];
+				ta[j] = tta[i];
+				j++;
+			}
+		}
 		if (saveDiffNorms) {
 			string diffNormsFilePrefix = string(DIFF_NORMS_FILE_PREFIX);
 			if (filePathIndex > 0) {
@@ -741,15 +758,8 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			}
 			ofstream output(diffNormsFilePrefix + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
 			output << varSum << endl;
-			for (unsigned i = 0; i < numCoherenceBins; i++) {
-				double d = dmin + i * coherenceBinSize;
-				if (tta[i] > 0) {
-					td[j] = d;
-					ty[j] = tty[i];
-					ta[j] = tta[i];
-					output << d << " " << ty[j] << " " << ta[j] << endl;
-					j++;
-				}
+			for (unsigned i = 0; i < j; i++) {
+				output << td[i] << " " << ty[i] << " " << ta[i] << endl;
 			}
 			output.close();
 		}
@@ -762,7 +772,7 @@ void D2::CalcDiffNorms(int filePathIndex) {
 
 void D2::LoadDiffNorms(int filePathIndex) {
 	if (procId == 0) {
-		varSum = 1; // Assumingt unit variance by default
+		varSum = 1; // Assuming unit variance by default
 		cout << "Loading diffnorms..." << endl;
 		string diffNormsFile = DIFF_NORMS_FILE;
 		if (filePathIndex > 0) {
