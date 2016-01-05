@@ -410,9 +410,6 @@ double D2::Criterion(double d, double w) {
 				if (ph < 0) {
 					ph = ph + 1;
 				}
-				if (d == 50) {
-					cout << "ph = " << ph << endl;
-				}
 				if (ph < eps || ph > epslim) {
 					tyv += ty[j];
 					tav += ta[j];
