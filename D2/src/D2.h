@@ -64,7 +64,7 @@ public:
 			double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges);
     void CalcDiffNorms(int filePathIndex);
     void LoadDiffNorms(int filePathIndex);
-    void Compute2DSpectrum(const string& outputFilePrefix);
+    double Compute2DSpectrum(const string& outputFilePrefix);
 
 private:
     double Criterion(double d, double w);

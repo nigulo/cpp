@@ -164,21 +164,28 @@ int main(int argc, char *argv[]) {
 		varRanges.push_back({min, max});
 	}
 
+	int numIterations = Utils::FindIntProperty(params, "numIterations", 1);
+	double zoomFactor = Utils::FindDoubleProperty(params, "zoomFactor", 10);
+
+	assert(numIterations >= 1);
+	assert(zoomFactor >= 1);
 
 	if (procId == 0) {
 		cout << "----------------" << endl;
 		cout << "Parameter values" << endl;
 		cout << "----------------" << endl;
-		cout << "numProc      " << numProc << endl;
-		cout << "minPeriod    " << minPeriod << endl;
-		cout << "maxPeriod    " << maxPeriod << endl;
-		cout << "minCoherence " << minCoherence << endl;
-		cout << "maxCoherence " << maxCoherence << endl;
-		cout << "mode         " << mode << endl;
-		cout << "normalize    " << normalize << endl;
-		cout << "relative     " << relative << endl;
-		cout << "tScale       " << tScale << endl;
-		cout << "varScales    " << vecToStr(varScales) << endl;
+		cout << "numProc       " << numProc << endl;
+		cout << "minPeriod     " << minPeriod << endl;
+		cout << "maxPeriod     " << maxPeriod << endl;
+		cout << "minCoherence  " << minCoherence << endl;
+		cout << "maxCoherence  " << maxCoherence << endl;
+		cout << "mode          " << mode << endl;
+		cout << "normalize     " << normalize << endl;
+		cout << "relative      " << relative << endl;
+		cout << "tScale        " << tScale << endl;
+		cout << "varScales     " << vecToStr(varScales) << endl;
+		cout << "numIterations " << numIterations << endl;
+		cout << "zoomFactor    " << zoomFactor << endl;
 		cout << "----------------" << endl;
 	}
 	string filePathsStr = Utils::FindProperty(params, string("filePath") + to_string(procId), "");
@@ -308,35 +315,41 @@ int main(int argc, char *argv[]) {
 	int filePathIndex = 0;
 	for (auto& filePath : filePaths) {
 		assert(filePath.size() > 0);
-		DataLoader* dl = nullptr;
-		if (exists(filePath)) {
-			cout << "Rank: " << procId << " file: " << filePath << endl;
+		for (int i = 0; i < numIterations; i++) {
+			DataLoader* dl = nullptr;
+			if (exists(filePath)) {
+				cout << "Rank: " << procId << " file: " << filePath << endl;
 
-			if (binary) {
-				dl = new BinaryDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
-			} else {
-				dl = new TextDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
+				if (binary) {
+					dl = new BinaryDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
+				} else {
+					dl = new TextDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
+				}
+
 			}
 
-		}
-
-		D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales, varRanges);
-		if (!exists(DIFF_NORMS_FILE)) {
-			assert(dl); // dataLoader must be present in case diffnorms are not calculated yet
-			d2.CalcDiffNorms(filePathIndex);
-		} else {
-			d2.LoadDiffNorms(filePathIndex);
-		}
-		string outputFilePrefix = "phasedisp";
-		if (filePathIndex > 0) {
-			outputFilePrefix += to_string(filePathIndex);
-		}
-		if (outputFilePrefixes.size() > filePathIndex) {
-			outputFilePrefix = outputFilePrefixes[filePathIndex];
-		}
-		d2.Compute2DSpectrum(outputFilePrefix);
-		if (dl) {
-			delete dl;
+			D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales, varRanges);
+			if (!exists(DIFF_NORMS_FILE)) {
+				assert(dl); // dataLoader must be present in case diffnorms are not calculated yet
+				d2.CalcDiffNorms(filePathIndex);
+			} else {
+				d2.LoadDiffNorms(filePathIndex);
+			}
+			string outputFilePrefix = "phasedisp";
+			if (filePathIndex > 0) {
+				outputFilePrefix += to_string(filePathIndex);
+			}
+			if (outputFilePrefixes.size() > filePathIndex) {
+				outputFilePrefix = outputFilePrefixes[filePathIndex];
+			}
+			double d2Freq = d2.Compute2DSpectrum(outputFilePrefix);
+			if (dl) {
+				delete dl;
+			}
+			double d2Period = 1 / d2Freq;
+			double periodRange = (maxPeriod - minPeriod) / 2 / zoomFactor;
+			minPeriod = d2Period - periodRange;
+			maxPeriod = d2Period + periodRange;
 		}
 		filePathIndex++;
 #ifndef _NOMPI
@@ -807,7 +820,7 @@ void D2::LoadDiffNorms(int filePathIndex) {
 	}
 }
 
-void D2::Compute2DSpectrum(const string& outputFilePrefix) {
+double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 
 	if (procId == 0) {
 		cout << "dmin = " << dmin << endl;
@@ -830,6 +843,7 @@ void D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		double intMax = -1;
 		double intMin = -1;
 		double minimaMin = -1;
+		double d2Freq = 0;
 		// Basic cycle with printing for GnuPlot
 		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
 		for (unsigned i = 0; i < numCoherences; i++) {
@@ -863,7 +877,6 @@ void D2::Compute2DSpectrum(const string& outputFilePrefix) {
 			//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 			double integral = 0;
 			double minimum = -1;
-			double minimumFreq = 0;
 			for (unsigned j = 0; j < numFreqs; j++) {
 				double w = wmin + j * freqStep;
 				output << d << " " << w << " " << spec[j] << endl;
@@ -876,7 +889,9 @@ void D2::Compute2DSpectrum(const string& outputFilePrefix) {
 				integral += spec[j];
 				if (minimum < 0 || spec[j] < minimum) {
 					minimum = spec[j];
-					minimumFreq = w;
+					if (i == 0) {
+						d2Freq = w;
+					}
 				}
 				if (j > dk - 1 && j < numFreqs - dk - 1) {
 					bool isMinimum = true;
@@ -933,6 +948,7 @@ void D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		}
 		output_stats.close();
 		*/
+		return d2Freq;
 	}
 }
 
