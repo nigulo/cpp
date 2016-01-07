@@ -5,6 +5,7 @@
 #include "TextDataLoader.h"
 #include "utils/utils.h"
 
+#include <utility>
 #include <limits>
 #include <iostream>
 #include <cstdlib>
@@ -119,8 +120,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	map<string, string> params = Utils::ReadProperties(paramFileName);
-	double minPeriod = Utils::FindDoubleProperty(params, "minPeriod", 2);
-	double maxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
+	double initMinPeriod = Utils::FindDoubleProperty(params, "minPeriod", 2);
+	double initMaxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
 	double maxCoherence = Utils::FindDoubleProperty(params, "maxCoherence", 30);
 	string modeStr = Utils::FindProperty(params, "mode", "GaussWithCosine");
@@ -138,6 +139,7 @@ int main(int argc, char *argv[]) {
 	}
 	bool normalize = Utils::FindIntProperty(params, "normalize", 1);
 	bool relative = Utils::FindIntProperty(params, "relative", 1);
+	bool removeSpurious = Utils::FindIntProperty(params, "removeSpurious", 1);
 
 	double tScale = Utils::FindDoubleProperty(params, "tScale", 1);
 
@@ -165,6 +167,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	int numIterations = Utils::FindIntProperty(params, "numIterations", 1);
+	if (numIterations > 1 && numProc > 1) {
+		cout << "Zooming not available in multiprocessor regime" << endl;
+		return EXIT_FAILURE;
+	}
 	double zoomFactor = Utils::FindDoubleProperty(params, "zoomFactor", 10);
 
 	assert(numIterations >= 1);
@@ -174,18 +180,19 @@ int main(int argc, char *argv[]) {
 		cout << "----------------" << endl;
 		cout << "Parameter values" << endl;
 		cout << "----------------" << endl;
-		cout << "numProc       " << numProc << endl;
-		cout << "minPeriod     " << minPeriod << endl;
-		cout << "maxPeriod     " << maxPeriod << endl;
-		cout << "minCoherence  " << minCoherence << endl;
-		cout << "maxCoherence  " << maxCoherence << endl;
-		cout << "mode          " << mode << endl;
-		cout << "normalize     " << normalize << endl;
-		cout << "relative      " << relative << endl;
-		cout << "tScale        " << tScale << endl;
-		cout << "varScales     " << vecToStr(varScales) << endl;
-		cout << "numIterations " << numIterations << endl;
-		cout << "zoomFactor    " << zoomFactor << endl;
+		cout << "numProc        " << numProc << endl;
+		cout << "minPeriod      " << initMinPeriod << endl;
+		cout << "maxPeriod      " << initMaxPeriod << endl;
+		cout << "minCoherence   " << minCoherence << endl;
+		cout << "maxCoherence   " << maxCoherence << endl;
+		cout << "mode           " << mode << endl;
+		cout << "normalize      " << normalize << endl;
+		cout << "relative       " << relative << endl;
+		cout << "removeSpurious " << removeSpurious << endl;
+		cout << "tScale         " << tScale << endl;
+		cout << "varScales      " << vecToStr(varScales) << endl;
+		cout << "numIterations  " << numIterations << endl;
+		cout << "zoomFactor     " << zoomFactor << endl;
 		cout << "----------------" << endl;
 	}
 	string filePathsStr = Utils::FindProperty(params, string("filePath") + to_string(procId), "");
@@ -286,12 +293,12 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	if (procId == 0) {
-		cout << "binary       " << binary << endl;
-		cout << "bufferSize   " << bufferSize << endl;
-		cout << "dims         " << vecToStr(dims) << endl;
-		cout << "regions      " << vecVecToStr(regions) << endl;
-		cout << "numVars      " << totalNumVars << endl;
-		cout << "varIndices   " << vecToStr(varIndices) << endl;
+		cout << "binary         " << binary << endl;
+		cout << "bufferSize     " << bufferSize << endl;
+		cout << "dims           " << vecToStr(dims) << endl;
+		cout << "regions        " << vecVecToStr(regions) << endl;
+		cout << "numVars        " << totalNumVars << endl;
+		cout << "varIndices     " << vecToStr(varIndices) << endl;
 		cout << "----------------" << endl;
 	}
 	assert(varScales.size() <= varIndices.size());
@@ -315,6 +322,8 @@ int main(int argc, char *argv[]) {
 	int filePathIndex = 0;
 	for (auto& filePath : filePaths) {
 		assert(filePath.size() > 0);
+		double minPeriod = initMinPeriod;
+		double maxPeriod = initMaxPeriod;
 		for (int i = 0; i < numIterations; i++) {
 			DataLoader* dl = nullptr;
 			if (exists(filePath)) {
@@ -328,7 +337,7 @@ int main(int argc, char *argv[]) {
 
 			}
 
-			D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales, varRanges);
+			D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales, varRanges, removeSpurious);
 			if (!exists(DIFF_NORMS_FILE)) {
 				assert(dl); // dataLoader must be present in case diffnorms are not calculated yet
 				d2.CalcDiffNorms(filePathIndex);
@@ -339,17 +348,32 @@ int main(int argc, char *argv[]) {
 			if (filePathIndex > 0) {
 				outputFilePrefix += to_string(filePathIndex);
 			}
-			if (outputFilePrefixes.size() > filePathIndex) {
+			if ((int) outputFilePrefixes.size() > filePathIndex) {
 				outputFilePrefix = outputFilePrefixes[filePathIndex];
 			}
 			double d2Freq = d2.Compute2DSpectrum(outputFilePrefix);
 			if (dl) {
 				delete dl;
 			}
-			double d2Period = 1 / d2Freq;
-			double periodRange = (maxPeriod - minPeriod) / 2 / zoomFactor;
-			minPeriod = d2Period - periodRange;
-			maxPeriod = d2Period + periodRange;
+			if (d2Freq == 0) {
+				cout << "Finish zooming, no minima found"  << endl;
+				break;
+			}
+			if (i < numIterations - 1) {
+				double d2Period = 1 / d2Freq;
+				double periodRange = (maxPeriod - minPeriod) / 2 / zoomFactor;
+				minPeriod = d2Period - periodRange;
+				maxPeriod = d2Period + periodRange;
+				if (minPeriod < initMinPeriod) {
+					minPeriod = initMinPeriod;
+				}
+				if (maxPeriod > initMaxPeriod) {
+					maxPeriod = initMaxPeriod;
+				}
+				cout << "d2 minimum period=" << d2Period << endl;
+				cout << "new minPeriod=" << minPeriod << endl;
+				cout << "new maxPeriod=" << maxPeriod << endl;
+			}
 		}
 		filePathIndex++;
 #ifndef _NOMPI
@@ -370,7 +394,7 @@ int main(int argc, char *argv[]) {
 D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 		double minCoherence, double maxCoherence,
 		Mode mode, bool normalize, bool relative,
-		double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges) :
+		double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges, bool removeSpurious) :
 			mpDataLoader(pDataLoader),
 			minCoherence(minCoherence),
 			maxCoherence(maxCoherence),
@@ -380,6 +404,7 @@ D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 			tScale(tScale),
 			varScales(varScales),
 			varRanges(varRanges),
+			removeSpurious(removeSpurious),
 			e1(rd()) {
 	if (pDataLoader) {
 		assert(varScales.size() == pDataLoader->GetVarIndices().size());
@@ -480,23 +505,23 @@ double D2::Criterion(double d, double w) {
 	}
 }
 
-void Normalize(vector<double>& spec) {
+void Normalize(vector<pair<double, double>>& spec) {
 
 	unique_ptr<double> min;
 	unique_ptr<double> max;
 
 	for (auto& val : spec) {
-		if (!min || val < *min) {
-			min.reset(new double(val));
+		if (!min || val.second < *min) {
+			min.reset(new double(val.second));
 		}
-		if (!max || val > *max) {
-			max.reset(new double(val));
+		if (!max || val.second > *max) {
+			max.reset(new double(val.second));
 		}
 	}
 	if (max && min && *max > *min) {
 		double range = *max - *min;
 		for (auto& val : spec) {
-			val = (val - *min) / range;
+			val = {val.first, (val.second - *min) / range};
 		}
 
 	} else {
@@ -820,7 +845,36 @@ void D2::LoadDiffNorms(int filePathIndex) {
 	}
 }
 
+vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec) {
+	vector<pair<double, double>> retVal;
+	int start = 0;
+	for (int i = 1; i < (int) spec.size() - 1; i++) {
+		if (spec[i].second < spec[i - 1].second) {
+			start = i;
+		}
+		if (start > 0 && spec[i].second < spec[i + 1].second) {
+			retVal.push_back(spec[(i + start) / 2]);
+			start = 0;
+		}
+	}
+	return retVal;
+}
+
+vector<double> getSpurious(double p0) {
+	double p = 1.0;
+	double k1[] = {1, -1, 2, -2};
+	double k2[] = {1, 1, 1, 1};
+	vector<double> retVal(8);
+	for (int bb = 0; bb < 4; bb++) {
+		double p1 = 1 / ((1 / p) + k1[bb] * (1 / (k2[bb] * p0)));
+		retVal.push_back(p1);
+		retVal.push_back(2 * p1);
+	}
+	return retVal;
+}
+
 double D2::Compute2DSpectrum(const string& outputFilePrefix) {
+	double d2Freq = 0;
 
 	if (procId == 0) {
 		cout << "dmin = " << dmin << endl;
@@ -839,16 +893,13 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		ofstream output_max(outputFilePrefix + "_max.csv");
 
 		vector<double> specInt;
-		vector<double> specMinima;
 		double intMax = -1;
 		double intMin = -1;
-		double minimaMin = -1;
-		double d2Freq = 0;
 		// Basic cycle with printing for GnuPlot
 		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
 		for (unsigned i = 0; i < numCoherences; i++) {
 			double d = minCoherence + i * deltac;
-			vector<double> spec(numFreqs);
+			vector<pair<double, double>> spec(numFreqs);
 			bool maxXReached = false;
 			for (unsigned j = 0; j < numFreqs; j++) {
 				double w = wmin + j * freqStep;
@@ -861,7 +912,7 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 					break;
 				}
 				double res = Criterion(d1, w);
-				spec[j] = res;
+				spec[j] = {w, res};
 			}
 			if (maxXReached) {
 				break;
@@ -872,63 +923,62 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 				Normalize(spec);
 			}
 
-			vector<int> minima(0);
-			unsigned dk = numFreqs / 20;
 			//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 			double integral = 0;
-			double minimum = -1;
-			for (unsigned j = 0; j < numFreqs; j++) {
-				double w = wmin + j * freqStep;
-				output << d << " " << w << " " << spec[j] << endl;
+			for (auto& s : spec) {
+				double w = s.first;
+				output << d << " " << w << " " << s.second << endl;
 				if (i == 0) {
-					output_min << w << " " << spec[j] << endl;
+					output_min << w << " " << s.second << endl;
 				} else if (i == numCoherences - 1) {
-					output_max << w << " " << spec[j] << endl;
+					output_max << w << " " << s.second << endl;
 				}
 				//output_mid << (wmin + j * step) << " " << spec[j] << endl;
-				integral += spec[j];
-				if (minimum < 0 || spec[j] < minimum) {
-					minimum = spec[j];
-					if (i == 0) {
-						d2Freq = w;
-					}
-				}
-				if (j > dk - 1 && j < numFreqs - dk - 1) {
-					bool isMinimum = true;
-					for (unsigned k1 = j - dk; k1 <= j + dk; k1++) {
-						if (spec[j] > spec[k1]) {
-							isMinimum = false;
-							break;
-						}
-					}
-					if (isMinimum) {
-						vector<int>::iterator it = minima.begin();
-						for (; it != minima.end(); ++it) {
-							if (spec[j] < spec[(*it)]) {
-								break;
-							}
-						}
-						minima.insert(it, j);
-					}
-				}
+				integral += s.second;
 			}
 			specInt.push_back(integral);
-			specMinima.push_back(minimum);
-			if (minimaMin < 0 || minimum < minimaMin) {
-				minimaMin = minimum;
-			}
 			if (intMax < 0 || integral > intMax) {
 				intMax = integral;
 			}
 			if (intMin < 0 || integral < intMin) {
 				intMin = integral;
 			}
-
-			for (unsigned k1 = 0; k1 < minima.size(); k1++) {
-				if (k1 > 0) {
-					//cout << " ";
+			if (i == 0) {
+				vector<pair<double, double>> minima = getLocalMinima(spec);
+				while (minima.size() > 10) {
+					minima = getLocalMinima(minima);
 				}
-				//cout << wmin + minima[k1] * step;
+				if (removeSpurious) {
+					for (auto i = minima.begin(); i != minima.end();) {
+						cout << "Checking minimum: " << (1 / (*i).first) << endl;
+						bool spurious = false;
+						for (auto& m : minima) {
+							if (m.first > (*i).first) {
+								for (auto s : getSpurious(1 / m.first)) {
+									if (abs(1/s - (*i).first) < 2 * freqStep) {
+										cout << "Period " << (1 / (*i).first) << " is spurious of " << 1 / m.first << endl;
+										spurious = true;
+										break;
+									}
+								}
+							}
+						}
+						if (spurious) {
+							minima.erase(i);
+						} else {
+							i++;
+						}
+					}
+				}
+				if (!minima.empty()) {
+					pair<double, double> minimum = minima[0];
+					for (auto& m : minima) {
+						if (m.second < minimum.second) {
+							minimum = m;
+						}
+					}
+					d2Freq = minimum.first;
+				}
 			}
 			//cout << endl;
 			//output_mid.close();
@@ -948,7 +998,7 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		}
 		output_stats.close();
 		*/
-		return d2Freq;
 	}
+	return d2Freq;
 }
 
