@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
 			assert(minAndMax.size() == 2);
 			trim(minAndMax[0]);
 			trim(minAndMax[1]);
-			double min = minAndMax[0].empty() ? numeric_limits<double>::min() : stod(minAndMax[0]);
+			double min = minAndMax[0].empty() ? numeric_limits<double>::lowest() : stod(minAndMax[0]);
 			double max = minAndMax[1].empty() ? numeric_limits<double>::max() : stod(minAndMax[1]);
 			varRanges.push_back({min, max});
 		}
@@ -318,7 +318,7 @@ int main(int argc, char *argv[]) {
 			cout << "Replacing missing variable ranges with min and max" << endl;
 		}
 		while (varRanges.size() < varIndices.size()) {
-			varRanges.push_back({numeric_limits<double>::min(), numeric_limits<double>::max()});
+			varRanges.push_back({numeric_limits<double>::lowest(), numeric_limits<double>::max()});
 		}
 	}
 
