@@ -137,9 +137,9 @@ int main(int argc, char *argv[]) {
 		cerr << "Invalid mode" << endl;
 		assert(false);
 	}
-	bool normalize = Utils::FindIntProperty(params, "normalize", 1);
+	bool normalize = Utils::FindIntProperty(params, "normalize", 0);
 	bool relative = Utils::FindIntProperty(params, "relative", 1);
-	bool removeSpurious = Utils::FindIntProperty(params, "removeSpurious", 1);
+	bool removeSpurious = Utils::FindIntProperty(params, "removeSpurious", 0);
 
 	double tScale = Utils::FindDoubleProperty(params, "tScale", 1);
 
@@ -153,17 +153,20 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	string strVarRanges = Utils::FindProperty(params, "varRanges", "1");
-	vector<string> varRangeStrs = Utils::SplitByChars(strVarRanges, ",;", false);
+	string strVarRanges = Utils::FindProperty(params, "varRanges", "");
+	trim(strVarRanges);
 	vector<pair<double, double>> varRanges;
-	for (auto& varRange : varRangeStrs) {
-		vector<string> minAndMax = Utils::SplitByChars(varRange, ":", false);
-		assert(minAndMax.size() == 2);
-		trim(minAndMax[0]);
-		trim(minAndMax[1]);
-		double min = minAndMax[0].empty() ? numeric_limits<double>::min() : stod(minAndMax[0]);
-		double max = minAndMax[1].empty() ? numeric_limits<double>::max() : stod(minAndMax[1]);
-		varRanges.push_back({min, max});
+	if (!strVarRanges.empty()) {
+		vector<string> varRangeStrs = Utils::SplitByChars(strVarRanges, ",;", false);
+		for (auto& varRange : varRangeStrs) {
+			vector<string> minAndMax = Utils::SplitByChars(varRange, ":", false);
+			assert(minAndMax.size() == 2);
+			trim(minAndMax[0]);
+			trim(minAndMax[1]);
+			double min = minAndMax[0].empty() ? numeric_limits<double>::min() : stod(minAndMax[0]);
+			double max = minAndMax[1].empty() ? numeric_limits<double>::max() : stod(minAndMax[1]);
+			varRanges.push_back({min, max});
+		}
 	}
 
 	int numIterations = Utils::FindIntProperty(params, "numIterations", 1);
@@ -355,11 +358,11 @@ int main(int argc, char *argv[]) {
 			if (dl) {
 				delete dl;
 			}
-			if (d2Freq == 0) {
-				cout << "Finish zooming, no minima found"  << endl;
-				break;
-			}
 			if (i < numIterations - 1) {
+				if (d2Freq == 0) {
+					cout << "Finish zooming, no minima found"  << endl;
+					break;
+				}
 				double d2Period = 1 / d2Freq;
 				double periodRange = (maxPeriod - minPeriod) / 2 / zoomFactor;
 				minPeriod = d2Period - periodRange;
@@ -654,14 +657,14 @@ void D2::CalcDiffNorms(int filePathIndex) {
 	unsigned size = mpDataLoader->GetNumVars() * mpDataLoader->GetDim();
 	double ySum[size];
 	double y2Sum[size];
-	int n[size];
+	int n = 0;
 	for (unsigned i = 0; i < size; i++) {
 		ySum[i] = 0;
 		y2Sum[i] = 0;
-		n[i] = 0;
 	}
 	while (mpDataLoader->Next()) {
 		for (unsigned i = 0; i < mpDataLoader->GetPageSize(); i++) {
+			n++;
 			auto y = mpDataLoader->GetY(i);
 			// ------------------------------------------
 			// This calculation must be redesigned
@@ -677,7 +680,6 @@ void D2::CalcDiffNorms(int filePathIndex) {
 							if (yScaled >= varRange.first && yScaled <= varRange.second) {
 								ySum[index] += yScaled;
 								y2Sum[index] += yScaled * yScaled;
-								n[index]++;
 							}
 						}
 					}
@@ -688,7 +690,6 @@ void D2::CalcDiffNorms(int filePathIndex) {
 							if (y[index] >= varRange.first && y[index] <= varRange.second) {
 								ySum[index] += y[index];
 								y2Sum[index] += y[index] * y[index];
-								n[index]++;
 							}
 						}
 					}
@@ -714,7 +715,7 @@ void D2::CalcDiffNorms(int filePathIndex) {
 	}
 	varSum = 0;
 	for (unsigned i = 0; i < size; i++) {
-		varSum += (y2Sum[i] - (ySum[i] * ySum[i]) / n[i]) / (n[i] - 1);
+		varSum += (y2Sum[i] - (ySum[i] * ySum[i]) / n) / (n - 1);
 	}
 	if (procId == 0) {
 		cout << "Waiting for data from other processes..." << endl;
@@ -889,8 +890,10 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		cout << "coherenceBinSize = " << coherenceBinSize << endl;
 
 		ofstream output(outputFilePrefix + ".csv");
-		ofstream output_min(outputFilePrefix + "_min.csv");
-		ofstream output_max(outputFilePrefix + "_max.csv");
+		//ofstream output_min(outputFilePrefix + "_min.csv");
+		//ofstream output_max(outputFilePrefix + "_max.csv");
+		ofstream output_per(outputFilePrefix + "_per.csv");
+		output_per << "f p d2" << endl;
 
 		vector<double> specInt;
 		double intMax = -1;
@@ -929,9 +932,9 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 				double w = s.first;
 				output << d << " " << w << " " << s.second << endl;
 				if (i == 0) {
-					output_min << w << " " << s.second << endl;
+					//output_min << w << " " << s.second << endl;
 				} else if (i == numCoherences - 1) {
-					output_max << w << " " << s.second << endl;
+					//output_max << w << " " << s.second << endl;
 				}
 				//output_mid << (wmin + j * step) << " " << spec[j] << endl;
 				integral += s.second;
@@ -973,6 +976,7 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 				if (!minima.empty()) {
 					pair<double, double> minimum = minima[0];
 					for (auto& m : minima) {
+						output_per << m.first << " " << 1 / m.first << " " << m.second << endl;
 						if (m.second < minimum.second) {
 							minimum = m;
 						}
@@ -984,8 +988,9 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 			//output_mid.close();
 		}
 		output.close();
-		output_min.close();
-		output_max.close();
+		//output_min.close();
+		//output_max.close();
+		output_per.close();
 
 		// print normalized integral
 		/*
