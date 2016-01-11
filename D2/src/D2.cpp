@@ -846,9 +846,17 @@ void D2::LoadDiffNorms(int filePathIndex) {
 	}
 }
 
-vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec) {
+vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec, bool allowEndPoints) {
 	vector<pair<double, double>> retVal;
 	int start = 0;
+	if (allowEndPoints) {
+		if (spec.size() == 1 || spec[0].second < spec[1].second) {
+			retVal.push_back(spec[0]);
+		}
+		if (spec.size() == 2 || (spec.size() > 2 && spec[spec.size() - 1].second < spec[spec.size() - 2].second)) {
+			retVal.push_back(spec[spec.size() - 1]);
+		}
+	}
 	for (int i = 1; i < (int) spec.size() - 1; i++) {
 		if (spec[i].second < spec[i - 1].second) {
 			start = i;
@@ -890,8 +898,8 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		cout << "coherenceBinSize = " << coherenceBinSize << endl;
 
 		ofstream output(outputFilePrefix + ".csv");
-		//ofstream output_min(outputFilePrefix + "_min.csv");
-		//ofstream output_max(outputFilePrefix + "_max.csv");
+		ofstream output_min(outputFilePrefix + "_min.csv");
+		ofstream output_max(outputFilePrefix + "_max.csv");
 		ofstream output_per(outputFilePrefix + "_per.csv");
 		output_per << "f p d2" << endl;
 
@@ -932,9 +940,9 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 				double w = s.first;
 				output << d << " " << w << " " << s.second << endl;
 				if (i == 0) {
-					//output_min << w << " " << s.second << endl;
+					output_min << w << " " << s.second << endl;
 				} else if (i == numCoherences - 1) {
-					//output_max << w << " " << s.second << endl;
+					output_max << w << " " << s.second << endl;
 				}
 				//output_mid << (wmin + j * step) << " " << spec[j] << endl;
 				integral += s.second;
@@ -947,9 +955,9 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 				intMin = integral;
 			}
 			if (i == 0) {
-				vector<pair<double, double>> minima = getLocalMinima(spec);
+				vector<pair<double, double>> minima = getLocalMinima(spec, false);
 				while (minima.size() > 10) {
-					minima = getLocalMinima(minima);
+					minima = getLocalMinima(minima, true);
 				}
 				if (removeSpurious) {
 					for (auto i = minima.begin(); i != minima.end();) {
@@ -988,8 +996,8 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 			//output_mid.close();
 		}
 		output.close();
-		//output_min.close();
-		//output_max.close();
+		output_min.close();
+		output_max.close();
 		output_per.close();
 
 		// print normalized integral
