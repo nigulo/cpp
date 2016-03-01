@@ -332,10 +332,10 @@ void wings(bool nOrS) {
 			}
 		    cout << "Processing " << fileName << endl;
 			double lat = getLat(fileName);
-			if (nOrS && lat < 127.5) {
+			if (nOrS && lat > 127.5) {
 				continue;
 			}
-			if (!nOrS && lat > 127.5) {
+			if (!nOrS && lat < 127.5) {
 				continue;
 			}
 			if (lat < 15 || lat > 240) {
