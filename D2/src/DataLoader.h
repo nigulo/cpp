@@ -13,6 +13,7 @@
 #include <fstream>
 #include <cassert>
 #include <utility>
+#include <random>
 
 using namespace std;
 
@@ -108,6 +109,18 @@ public:
 
 	bool IsInRegion(unsigned i) const {
 		return inRegion[i];
+	}
+
+	void ShufflePage(default_random_engine& e1) {
+		uniform_int_distribution<int> uniform_dist(0, pageSize - 1);
+		for (unsigned i = 0; i < pageSize; i++) {
+			auto oldPos = i * (dim * GetNumVars() + 1);
+			auto val = data[oldPos];
+			auto newIndex = uniform_dist(e1);
+			auto newPos = newIndex * (dim * GetNumVars() + 1);
+			data[oldPos] = data[newPos];
+			data[newPos] = val;
+		}
 	}
 
 private:

@@ -169,6 +169,9 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	int bootstrapSize = Utils::FindIntProperty(params, "bootstrapSize", 0);
+	assert(bootstrapSize >= 0);
+
 	int numIterations = Utils::FindIntProperty(params, "numIterations", 1);
 	if (numIterations > 1 && numProc > 1) {
 		cout << "Zooming not available in multiprocessor regime" << endl;
@@ -184,6 +187,7 @@ int main(int argc, char *argv[]) {
 		cout << "Parameter values" << endl;
 		cout << "----------------" << endl;
 		cout << "numProc        " << numProc << endl;
+		cout << "bootstrapSize  " << bootstrapSize << endl;
 		cout << "minPeriod      " << initMinPeriod << endl;
 		cout << "maxPeriod      " << initMaxPeriod << endl;
 		cout << "minCoherence   " << minCoherence << endl;
@@ -340,9 +344,8 @@ int main(int argc, char *argv[]) {
 
 			}
 
-			D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales, varRanges, removeSpurious);
-			if (!exists(DIFF_NORMS_FILE)) {
-				assert(dl); // dataLoader must be present in case diffnorms are not calculated yet
+			D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales, varRanges, removeSpurious, bootstrapSize);
+			if (!exists(DIFF_NORMS_FILE) || bootstrapSize > 0) {
 				d2.CalcDiffNorms(filePathIndex);
 			} else {
 				d2.LoadDiffNorms(filePathIndex);
@@ -354,16 +357,42 @@ int main(int argc, char *argv[]) {
 			if ((int) outputFilePrefixes.size() > filePathIndex) {
 				outputFilePrefix = outputFilePrefixes[filePathIndex];
 			}
-			double d2Freq = d2.Compute2DSpectrum(outputFilePrefix);
+			auto& minima = d2.Compute2DSpectrum(outputFilePrefix);
+
+			ofstream output_minima(outputFilePrefix + "_minima.csv");
+			for (auto& m : minima) {
+				output_minima << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
+			}
+			output_minima.close();
+			d2.Bootstrap();
+			ofstream output_bootstrap(outputFilePrefix + "_bootstrap.csv");
+			for (auto i = 0; i < bootstrapSize; i++) {
+				for (auto& m : minima) {
+					output_bootstrap << m.bootstrapValues[i] << " ";
+				}
+				output_bootstrap << endl;
+			}
+			output_bootstrap.close();
+
 			if (dl) {
 				delete dl;
 			}
+			// Zooming into the strongest minimum at smallest coherence length
+			D2Minimum strongestMinimum(numeric_limits<double>::max(), 0, numeric_limits<double>::max());
+			for (auto& m : minima) {
+				if (m.coherenceLength < strongestMinimum.coherenceLength
+						|| (m.coherenceLength < strongestMinimum.coherenceLength && m.value < strongestMinimum.value)) {
+					strongestMinimum.frequency = m.frequency;
+					strongestMinimum.value = m.value;
+					strongestMinimum.coherenceLength = m.coherenceLength;
+				}
+			}
 			if (i < numIterations - 1) {
-				if (d2Freq == 0) {
+				if (strongestMinimum.frequency == 0) {
 					cout << "Finish zooming, no minima found"  << endl;
 					break;
 				}
-				double d2Period = 1 / d2Freq;
+				double d2Period = 1 / strongestMinimum.frequency;
 				double periodRange = (maxPeriod - minPeriod) / 2 / zoomFactor;
 				minPeriod = d2Period - periodRange;
 				maxPeriod = d2Period + periodRange;
@@ -397,7 +426,7 @@ int main(int argc, char *argv[]) {
 D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 		double minCoherence, double maxCoherence,
 		Mode mode, bool normalize, bool relative,
-		double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges, bool removeSpurious) :
+		double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges, bool removeSpurious, int bootstrapSize) :
 			mpDataLoader(pDataLoader),
 			minCoherence(minCoherence),
 			maxCoherence(maxCoherence),
@@ -408,6 +437,7 @@ D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 			varScales(varScales),
 			varRanges(varRanges),
 			removeSpurious(removeSpurious),
+			bootstrapSize(bootstrapSize),
 			e1(rd()) {
 	if (pDataLoader) {
 		assert(varScales.size() == pDataLoader->GetVarIndices().size());
@@ -435,25 +465,23 @@ D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 	epslim = 1.0 - eps;
 	ln2 = sqrt(log(2.0));
 	lnp = ln2 / eps;
-
-
 }
 
-double D2::Criterion(double d, double w) {
+double D2::Criterion(int bootstrapIndex, double d, double w) {
 	double tyv = 0;
 	int tav = 0;
 	switch (mode) {
 	case Box:
-		for (unsigned j = 0; j < td.size(); j++) {
-			double dd = td[j];
+		for (unsigned j = 0; j < td[bootstrapIndex].size(); j++) {
+			double dd = td[bootstrapIndex][j];
 			if (dd <= d) {
 				double ph = dd * w - floor(dd * w);
 				if (ph < 0) {
 					ph = ph + 1;
 				}
 				if (ph < eps || ph > epslim) {
-					tyv += ty[j];
-					tav += ta[j];
+					tyv += ty[bootstrapIndex][j];
+					tav += ta[bootstrapIndex][j];
 				}
 			}
 		}
@@ -461,7 +489,7 @@ double D2::Criterion(double d, double w) {
 	case Gauss: //This is important, in td[] are precomputed sums of squares and counts.
 	case GaussWithCosine:
 		for (unsigned j = 0; j < td.size(); j++) {// to jj-1 do begin
-			double dd = td[j];
+			double dd = td[bootstrapIndex][j];
 			double ww;
 			if (d > 0.0) {
 				ww = exp(-square(ln2 * dd / d));
@@ -494,8 +522,8 @@ double D2::Criterion(double d, double w) {
 				}
 			}
 			if (closeInPhase) {
-				tyv += ww * wp * ty[j];
-				tav += ww * wp * ta[j];
+				tyv += ww * wp * ty[bootstrapIndex][j];
+				tav += ww * wp * ta[bootstrapIndex][j];
 			}
 		}
 		break;
@@ -530,7 +558,6 @@ void Normalize(vector<pair<double, double>>& spec) {
 	} else {
 		cout << "Cannot normalize" << endl;
 	}
-
 }
 
 // Currently implemented as Frobenius norm
@@ -579,60 +606,38 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 #define TAG_TTA 2
 #define TAG_VAR 3
 
-bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vector<int>& tta) {
-	bool bootstrap = false;
-	if (dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
+bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<vector<double>>& tty, vector<vector<int>>& tta) {
+	if (bootstrapSize == 0 && dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
 		return false;
 	}
-	for (unsigned i = 0; i < dl1.GetPageSize(); i++) {
-		unsigned j = 0;
-		if (dl1.GetPage() == dl2.GetPage()) {
-			j = i + 1;
+	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
+		if (bootstrapIndex > 0) {
+			dl2.ShufflePage(e1);
 		}
-		int countNeeded = 0;
-		int countTaken = 0;
-		if (bootstrap) {
+		cout << "bootstrapIndex: " << bootstrapIndex << endl;
+		for (unsigned i = 0; i < dl1.GetPageSize(); i++) {
+			unsigned j = 0;
+			if (dl1.GetPage() == dl2.GetPage()) {
+				j = i + 1;
+			}
+			//if (procId == 0) {
+			//	cout << "Time :" << dl1.GetX(i) << endl;
+			//}
 			for (; j < dl2.GetPageSize(); j++) {
+				if (dl2.GetX(j) * tScale > maxX) {
+					maxX = dl2.GetX(j) * tScale;
+				}
 				real d = (dl2.GetX(j) - dl1.GetX(i)) * tScale;
-				if (d > dmax) {
+				if (bootstrapSize == 0 && d > dmax) {
 					break;
 				}
-				countNeeded++;
-			}
-
-		} else {
-			countNeeded  = dl2.GetPageSize() - j;
-		}
-		uniform_int_distribution<int> uniform_dist(0, countNeeded - 1);
-		//if (procId == 0) {
-		//	cout << "Time :" << dl1.GetX(i) << endl;
-		//}
-		for (; j < dl2.GetPageSize(); j++) {
-			if (dl2.GetX(j) * tScale > maxX) {
-				maxX = dl2.GetX(j) * tScale;
-			}
-			real d = (dl2.GetX(j) - dl1.GetX(i)) * tScale;
-			if (d > dmax || (bootstrap && countTaken >= countNeeded)) {
-				break;
-			}
-			if (d >= dbase) {
-				int kk = round(a * d + b);
-				for (int counter = 0; counter < countNeeded; counter++) {
-					bool take = true;
-					if (bootstrap) {
-						take = uniform_dist(e1) == counter;
-					}
-					if (take) {
-						auto dy2 = DiffNorm(dl2.GetY(j), dl1.GetY(i));
-						tty[kk] += dy2;
-						tta[kk]++;
-						//cout << "tta[" << kk << "]=" << tta[kk] << endl;
-						//cout << "tty[" << kk << "]=" << tty[kk] << endl;
-						countTaken++;
-					}
-					if (!bootstrap) {
-						break;
-					}
+				if (d >= dbase && d <= dmax) {
+					int kk = round(a * d + b);
+					auto dy2 = DiffNorm(dl2.GetY(j), dl1.GetY(i));
+					tty[bootstrapIndex][kk] += dy2;
+					tta[bootstrapIndex][kk]++;
+					//cout << "tta[" << kk << "]=" << tta[kk] << endl;
+					//cout << "tty[" << kk << "]=" << tty[kk] << endl;
 				}
 			}
 		}
@@ -642,13 +647,13 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vect
 
 
 void D2::CalcDiffNorms(int filePathIndex) {
-	assert(mpDataLoader);
+	assert(mpDataLoader); // dataLoader must be present in case diffnorms are not calculated yet
 	if (procId == 0) {
 		cout << "Calculating diffnorms..." << endl;
 	}
 
-	vector<double> tty(numCoherenceBins, 0);
-	vector<int> tta(numCoherenceBins, 0);
+	vector<vector<double>> tty(bootstrapSize + 1, vector<double>(numCoherenceBins, 0));
+	vector<vector<int>> tta(bootstrapSize + 1, vector<int>(numCoherenceBins, 0));
 
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
 	if (procId == 0) {
@@ -729,29 +734,30 @@ void D2::CalcDiffNorms(int filePathIndex) {
 		//	cout << tty[j] << endl;
 		//}
 #ifndef _NOMPI
-		MPI::COMM_WORLD.Send(tty.data(), tty.size(), MPI::DOUBLE, 0, TAG_TTY);
-		MPI::COMM_WORLD.Send(tta.data(), tta.size(), MPI::INT, 0, TAG_TTA);
+		MPI::COMM_WORLD.Send(tty.data(), (bootstrapSize + 1) * numCoherenceBins, MPI::DOUBLE, 0, TAG_TTY);
+		MPI::COMM_WORLD.Send(tta.data(), (bootstrapSize + 1) * numCoherenceBins, MPI::INT, 0, TAG_TTA);
 		MPI::COMM_WORLD.Send(&varSum, 1, MPI::DOUBLE, 0, TAG_VAR);
 #endif
 	} else {
 #ifndef _NOMPI
 		for (int i = 1; i < numProc; i++) {
-			double ttyRecv[numCoherenceBins];
-			int ttaRecv[numCoherenceBins];
+			double ttyRecv[bootstrapSize + 1][numCoherenceBins];
+			int ttaRecv[bootstrapSize + 1][numCoherenceBins];
 			MPI::Status status;
-			MPI::COMM_WORLD.Recv(ttyRecv, numCoherenceBins,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
+			MPI::COMM_WORLD.Recv(ttyRecv, (bootstrapSize + 1) * numCoherenceBins,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received square differences from " << status.Get_source() << "." << endl;
-			MPI::COMM_WORLD.Recv(ttaRecv, numCoherenceBins,  MPI::INT, status.Get_source(), TAG_TTA, status);
+			MPI::COMM_WORLD.Recv(ttaRecv, (bootstrapSize + 1) * numCoherenceBins,  MPI::INT, status.Get_source(), TAG_TTA, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received weights from " << status.Get_source() << "." << endl;
-			for (unsigned j = 0; j < numCoherenceBins; j++) {
-				tty[j] += ttyRecv[j];
-				assert(tta[j] == ttaRecv[j]);
-				//tta[j] += ttaRecv[j];
-				//cout << ttyRecv[j] << endl;
+			for (unsigned j = 0; j < bootstrapSize + 1; j++) {
+				for (unsigned k = 0; k < numCoherenceBins; k++) {
+					tty[j][k] += ttyRecv[j][k];
+					assert(tta[j][k] == ttaRecv[j][k]);
+					//tta[j] += ttaRecv[j];
+					//cout << ttyRecv[j] << endl;
+				}
 			}
-
 			double varSumRecv;
 			MPI::COMM_WORLD.Recv(&varSumRecv, 1,  MPI::DOUBLE, status.Get_source(), TAG_VAR, status);
 			assert(status.Get_error() == MPI::SUCCESS);
@@ -762,43 +768,49 @@ void D2::CalcDiffNorms(int filePathIndex) {
 		}
 #endif
 		cout << "varSum: " << varSum << endl;
-		// How many time differences was actually used?
-		unsigned j = 0;
-		for (unsigned i = 0; i < numCoherenceBins; i++) {
-			if (tta[i] > 0) {
-				j++;
+		ta.resize(bootstrapSize + 1);
+		ty.resize(bootstrapSize + 1);
+		td.resize(bootstrapSize + 1);
+		for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
+			// How many time differences was actually used?
+			unsigned j = 0;
+			for (unsigned i = 0; i < numCoherenceBins; i++) {
+				if (tta[bootstrapIndex][i] > 0) {
+					j++;
+				}
 			}
-		}
-		cout << "j=" << j << endl;
-		ta.assign(j, 0);
-		ty.assign(j, 0);
-		td.assign(j, 0);
-		cout << "td.size()=" << td.size() << endl;
+			cout << "j=" << j << endl;
+			ta[bootstrapIndex].assign(j, 0);
+			ty[bootstrapIndex].assign(j, 0);
+			td[bootstrapIndex].assign(j, 0);
+			cout << "td.size()=" << td.size() << endl;
 
-		// Build final grids for periodicity search.
+			// Build final grids for periodicity search.
 
-		j = 0;
-		for (unsigned i = 0; i < numCoherenceBins; i++) {
-			double d = dbase + i * coherenceBinSize;
-			if (tta[i] > 0) {
-				td[j] = d;
-				ty[j] = tty[i];
-				ta[j] = tta[i];
-				j++;
+			j = 0;
+			for (unsigned i = 0; i < numCoherenceBins; i++) {
+				double d = dbase + i * coherenceBinSize;
+				if (tta[bootstrapIndex][i] > 0) {
+					td[bootstrapIndex][j] = d;
+					ty[bootstrapIndex][j] = tty[bootstrapIndex][i];
+					ta[bootstrapIndex][j] = tta[bootstrapIndex][i];
+					j++;
+				}
+			}
+			if (bootstrapIndex == 0 && saveDiffNorms) {
+				string diffNormsFilePrefix = string(DIFF_NORMS_FILE_PREFIX);
+				if (filePathIndex > 0) {
+					diffNormsFilePrefix += to_string(filePathIndex);
+				}
+				ofstream output(diffNormsFilePrefix + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
+				output << varSum << endl;
+				for (unsigned i = 0; i < j; i++) {
+					output << td[0][i] << " " << ty[0][i] << " " << ta[0][i] << endl;
+				}
+				output.close();
 			}
 		}
-		if (saveDiffNorms) {
-			string diffNormsFilePrefix = string(DIFF_NORMS_FILE_PREFIX);
-			if (filePathIndex > 0) {
-				diffNormsFilePrefix += to_string(filePathIndex);
-			}
-			ofstream output(diffNormsFilePrefix + "_" + to_string(currentTime) + DIFF_NORMS_FILE_SUFFIX);
-			output << varSum << endl;
-			for (unsigned i = 0; i < j; i++) {
-				output << td[i] << " " << ty[i] << " " << ta[i] << endl;
-			}
-			output.close();
-		}
+
 		if (saveParameters && filePathIndex == 0) {
 			copy_file(paramFileName, string(PARAMETERS_FILE_PREFIX) + "_" + to_string(currentTime) + PARAMETERS_FILE_SUFFIX);
 		}
@@ -808,6 +820,9 @@ void D2::CalcDiffNorms(int filePathIndex) {
 
 void D2::LoadDiffNorms(int filePathIndex) {
 	if (procId == 0) {
+		td.resize(1);
+		ty.resize(1);
+		ta.resize(1);
 		varSum = 1; // Assuming unit variance by default
 		cout << "Loading diffnorms..." << endl;
 		string diffNormsFile = DIFF_NORMS_FILE;
@@ -832,9 +847,9 @@ void D2::LoadDiffNorms(int filePathIndex) {
 				varSum = stod(words[0]);
 			} else if (words.size() == 3) {
 				try {
-					td.push_back(stod(words[0]));
-					ty.push_back(stod(words[1]));
-					ta.push_back(stoi(words[2]));
+					td[0].push_back(stod(words[0]));
+					ty[0].push_back(stod(words[1]));
+					ta[0].push_back(stoi(words[2]));
 				} catch (invalid_argument& ex) {
 					cout << "Skipping line, invalid number: " << line << endl;
 				}
@@ -882,8 +897,7 @@ vector<double> getSpurious(double p0) {
 	return retVal;
 }
 
-double D2::Compute2DSpectrum(const string& outputFilePrefix) {
-	double d2Freq = 0;
+const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 
 	if (procId == 0) {
 		cout << "dmin = " << dmin << endl;
@@ -900,8 +914,6 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		ofstream output(outputFilePrefix + ".csv");
 		ofstream output_min(outputFilePrefix + "_min.csv");
 		ofstream output_max(outputFilePrefix + "_max.csv");
-		ofstream output_per(outputFilePrefix + "_per.csv");
-		output_per << "f p d2" << endl;
 
 		vector<double> specInt;
 		double intMax = -1;
@@ -922,7 +934,7 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 					maxXReached = true;
 					break;
 				}
-				double res = Criterion(d1, w);
+				double res = Criterion(0, d1, w);
 				spec[j] = {w, res};
 			}
 			if (maxXReached) {
@@ -954,42 +966,35 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 			if (intMin < 0 || integral < intMin) {
 				intMin = integral;
 			}
-			if (i == 0) {
-				vector<pair<double, double>> minima = getLocalMinima(spec, false);
-				while (minima.size() > 10) {
-					minima = getLocalMinima(minima, true);
-				}
-				if (removeSpurious) {
-					for (auto i = minima.begin(); i != minima.end();) {
-						cout << "Checking minimum: " << (1 / (*i).first) << endl;
-						bool spurious = false;
-						for (auto& m : minima) {
-							if (m.first > (*i).first) {
-								for (auto s : getSpurious(1 / m.first)) {
-									if (abs(1/s - (*i).first) < 2 * freqStep) {
-										cout << "Period " << (1 / (*i).first) << " is spurious of " << 1 / m.first << endl;
-										spurious = true;
-										break;
-									}
+			vector<pair<double, double>> minima = getLocalMinima(spec, false);
+			while (minima.size() > 10) {
+				minima = getLocalMinima(minima, true);
+			}
+			if (removeSpurious) {
+				for (auto i = minima.begin(); i != minima.end();) {
+					cout << "Checking minimum: " << (1 / (*i).first) << endl;
+					bool spurious = false;
+					for (auto& m : minima) {
+						if (m.first > (*i).first) {
+							for (auto s : getSpurious(1 / m.first)) {
+								if (abs(1/s - (*i).first) < 2 * freqStep) {
+									cout << "Period " << (1 / (*i).first) << " is spurious of " << 1 / m.first << endl;
+									spurious = true;
+									break;
 								}
 							}
 						}
-						if (spurious) {
-							minima.erase(i);
-						} else {
-							i++;
-						}
+					}
+					if (spurious) {
+						minima.erase(i);
+					} else {
+						i++;
 					}
 				}
-				if (!minima.empty()) {
-					pair<double, double> minimum = minima[0];
-					for (auto& m : minima) {
-						output_per << m.first << " " << 1 / m.first << " " << m.second << endl;
-						if (m.second < minimum.second) {
-							minimum = m;
-						}
-					}
-					d2Freq = minimum.first;
+			}
+			for (auto& m : minima) {
+				if (i % (numCoherences / 10) == 0) { // only output every 10th coherence length
+					allMinima.push_back(D2Minimum(d, m.first, m.second));
 				}
 			}
 			//cout << endl;
@@ -998,7 +1003,6 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		output.close();
 		output_min.close();
 		output_max.close();
-		output_per.close();
 
 		// print normalized integral
 		/*
@@ -1012,6 +1016,22 @@ double D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		output_stats.close();
 		*/
 	}
-	return d2Freq;
+	return allMinima;
 }
 
+void D2::Bootstrap() {
+	for (auto i = 0; i < bootstrapSize; i++) {
+		if (procId == 0) {
+			for (auto& minimum : allMinima) {
+				if (i == 0) {
+					minimum.bootstrapValues.resize(bootstrapSize);
+				}
+				double d1 = minimum.coherenceLength;
+				if (relative) {
+					d1 = minimum.coherenceLength / minimum.frequency;
+				}
+				minimum.bootstrapValues[i] = Criterion(i + 1, d1, minimum.frequency);
+			}
+		}
+	}
+}

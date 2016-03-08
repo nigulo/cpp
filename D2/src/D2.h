@@ -13,6 +13,16 @@ enum Mode {
 	GaussWithCosine
 };
 
+class D2Minimum {
+public:
+	D2Minimum(double coherenceLength, double frequency, double value) : coherenceLength(coherenceLength), frequency(frequency), value(value) {}
+
+	double coherenceLength;
+	double frequency;
+	double value;
+	vector<double> bootstrapValues;
+};
+
 class D2 {
 private:
 
@@ -36,10 +46,13 @@ private:
 	const vector<double> varScales;
 	const vector<pair<double, double>> varRanges;
 	const bool removeSpurious;
+	const int bootstrapSize;
 
-	vector<double> ty;
-	vector<double> td;
-	vector<int> ta;
+	// Square differences, coherence bin lengths and counts
+	// Index 0 represents actual data, the rest is bootstrap data
+	vector<vector<double>> ty;
+	vector<vector<double>> td;
+	vector<vector<int>> ta;
 	double varSum = 0;
 
     unsigned numCoherences;
@@ -53,7 +66,9 @@ private:
     double wmin;
     double coherenceBinSize;
     double freqStep;
-    // For bootstrap resampling
+	vector<D2Minimum> allMinima;
+
+	// For bootstrap resampling
     // Seed with a real random value, if available
     random_device rd;
     default_random_engine e1;
@@ -62,17 +77,19 @@ public:
     D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
     		double minCoherence, double maxCoherence,
 			Mode mode, bool normalize, bool relative,
-			double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges, bool removeSpurious);
+			double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges, bool removeSpurious, int bootstrapSize);
     void CalcDiffNorms(int filePathIndex);
     void LoadDiffNorms(int filePathIndex);
-    double Compute2DSpectrum(const string& outputFilePrefix);
+    const vector<D2Minimum>& Compute2DSpectrum(const string& outputFilePrefix);
+    void Bootstrap();
+
 
 private:
-    double Criterion(double d, double w);
+    double Criterion(int bootstrapIndex, double d, double w);
 
     // The norm of the difference of two datasets
     double DiffNorm(const real y1[], const real y2[]);
-    bool ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<double>& tty, vector<int>& tta);
+    bool ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<vector<double>>& tty, vector<vector<int>>& tta);
 };
 
 
