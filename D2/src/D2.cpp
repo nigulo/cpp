@@ -366,9 +366,9 @@ int main(int argc, char *argv[]) {
 			output_minima.close();
 			d2.Bootstrap();
 			ofstream output_bootstrap(outputFilePrefix + "_bootstrap.csv");
-			for (auto i = 0; i < bootstrapSize; i++) {
+			for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize; bootstrapIndex++) {
 				for (auto& m : minima) {
-					output_bootstrap << m.bootstrapValues[i] << " ";
+					output_bootstrap << m.bootstrapValues[bootstrapIndex] << " ";
 				}
 				output_bootstrap << endl;
 			}
@@ -488,7 +488,7 @@ double D2::Criterion(int bootstrapIndex, double d, double w) {
 		break;
 	case Gauss: //This is important, in td[] are precomputed sums of squares and counts.
 	case GaussWithCosine:
-		for (unsigned j = 0; j < td.size(); j++) {// to jj-1 do begin
+		for (unsigned j = 0; j < td[bootstrapIndex].size(); j++) {// to jj-1 do begin
 			double dd = td[bootstrapIndex][j];
 			double ww;
 			if (d > 0.0) {
