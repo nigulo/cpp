@@ -605,10 +605,44 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 #define TAG_TTY 1
 #define TAG_TTA 2
 #define TAG_VAR 3
+#define TAG_IND1 4
+#define TAG_IND2 5
 
 bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<vector<double>>& tty, vector<vector<int>>& tta) {
 	if (dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
 		return false;
+	}
+	unsigned bsIndexes1[bootstrapSize][dl1.GetPageSize()];
+	unsigned bsIndexes2[bootstrapSize][dl2.GetPageSize()];
+	if (procId == 0) {
+		uniform_int_distribution<unsigned> uniform_dist1(0, dl1.GetPageSize() - 1);
+		uniform_int_distribution<unsigned> uniform_dist2(0, dl2.GetPageSize() - 1);
+		for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize; bootstrapIndex++) {
+			for (unsigned i = 0; i < dl1.GetPageSize(); i++) {
+				bsIndexes1[bootstrapIndex][i] = uniform_dist1(e1);
+			}
+			for (unsigned j = 0; j < dl2.GetPageSize(); j++) {
+				bsIndexes2[bootstrapIndex][j] = uniform_dist2(e1);
+			}
+		}
+#ifndef _NOMPI
+		for (auto procNo = 1; procNo < numProc; procNo++) {
+			MPI::COMM_WORLD.Send(bsIndexes1, bootstrapSize * dl1.GetPageSize(), MPI::INT, procNo, TAG_IND1);
+		}
+		for (auto procNo = 1; procNo < numProc; procNo++) {
+			MPI::COMM_WORLD.Send(bsIndexes2, bootstrapSize * dl2.GetPageSize(), MPI::INT, procNo, TAG_IND2);
+		}
+#endif
+	} else {
+#ifndef _NOMPI
+		MPI::Status status;
+		MPI::COMM_WORLD.Recv(bsIndexes1, bootstrapSize * dl1.GetPageSize(),  MPI::INT, 0, TAG_IND1, status);
+		assert(status.Get_error() == MPI::SUCCESS);
+		cout << "Received bootstrap indexes for 1." << endl;
+		MPI::COMM_WORLD.Recv(bsIndexes2, bootstrapSize * dl2.GetPageSize(),  MPI::INT, 0, TAG_IND2, status);
+		assert(status.Get_error() == MPI::SUCCESS);
+		cout << "Received bootstrap indexes for 2." << endl;
+#endif
 	}
 	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
 		cout << "bootstrapIndex: " << bootstrapIndex << endl;
@@ -630,8 +664,8 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<vector<double>>& t
 						maxX = xj;
 					}
 				} else {
-					xi = dl1.GetRandomX(e1) * tScale;;
-					xj = dl2.GetRandomX(e1) * tScale;
+					xi = dl1.GetX(bsIndexes1[bootstrapIndex - 1][i]) * tScale;;
+					xj = dl2.GetX(bsIndexes2[bootstrapIndex - 1][j]) * tScale;
 				}
 				real d = xj - xi;
 				if (bootstrapSize == 0 && d > dmax) {

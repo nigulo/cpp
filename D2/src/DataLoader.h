@@ -43,10 +43,12 @@ public:
 		return data[i * (dim * GetNumVars() + 1)];
 	}
 
+	/*
 	real GetRandomX(default_random_engine& e1) const {
 		uniform_int_distribution<int> uniform_dist(0, pageSize - 1);
 		return data[uniform_dist(e1) * (dim * GetNumVars() + 1)];
 	}
+	*/
 
 	const real* GetY(unsigned i) const {
 		assert(i < pageSize);
