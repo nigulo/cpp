@@ -607,36 +607,43 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 #define TAG_VAR 3
 
 bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<vector<double>>& tty, vector<vector<int>>& tta) {
-	if (bootstrapSize == 0 && dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
+	if (dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
 		return false;
 	}
 	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
-		if (bootstrapIndex > 0) {
-			dl2.ShufflePage(e1);
-		}
 		cout << "bootstrapIndex: " << bootstrapIndex << endl;
 		for (unsigned i = 0; i < dl1.GetPageSize(); i++) {
 			unsigned j = 0;
-			if (dl1.GetPage() == dl2.GetPage()) {
+			if (bootstrapIndex == 0 && dl1.GetPage() == dl2.GetPage()) {
 				j = i + 1;
 			}
 			//if (procId == 0) {
 			//	cout << "Time :" << dl1.GetX(i) << endl;
 			//}
 			for (; j < dl2.GetPageSize(); j++) {
-				if (dl2.GetX(j) * tScale > maxX) {
-					maxX = dl2.GetX(j) * tScale;
+				real xi;
+				real xj;
+				if (bootstrapIndex == 0) {
+					xi = dl1.GetX(i) * tScale;;
+					xj = dl2.GetX(j) * tScale;
+					if (xj > maxX) {
+						maxX = xj;
+					}
+				} else {
+					xi = dl1.GetRandomX(e1) * tScale;;
+					xj = dl2.GetRandomX(e1) * tScale;
 				}
-				real d = (dl2.GetX(j) - dl1.GetX(i)) * tScale;
+				real d = xj - xi;
 				if (bootstrapSize == 0 && d > dmax) {
 					break;
 				}
+				//cout << "procId i: d, dbase, dmax " << procId << " " << bootstrapIndex << ": " << d << ", " << dbase << ", " << dmax << endl;
 				if (d >= dbase && d <= dmax) {
 					int kk = round(a * d + b);
 					auto dy2 = DiffNorm(dl2.GetY(j), dl1.GetY(i));
 					tty[bootstrapIndex][kk] += dy2;
 					tta[bootstrapIndex][kk]++;
-					//cout << "tta[" << kk << "]=" << tta[kk] << endl;
+					//cout << "tta[" << kk << "]=" << tta[bootstrapIndex][kk] << endl;
 					//cout << "tty[" << kk << "]=" << tty[kk] << endl;
 				}
 			}
@@ -750,12 +757,11 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			MPI::COMM_WORLD.Recv(ttaRecv, (bootstrapSize + 1) * numCoherenceBins,  MPI::INT, status.Get_source(), TAG_TTA, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received weights from " << status.Get_source() << "." << endl;
-			for (unsigned j = 0; j < bootstrapSize + 1; j++) {
-				for (unsigned k = 0; k < numCoherenceBins; k++) {
-					tty[j][k] += ttyRecv[j][k];
-					assert(tta[j][k] == ttaRecv[j][k]);
-					//tta[j] += ttaRecv[j];
-					//cout << ttyRecv[j] << endl;
+			for (unsigned bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
+				for (unsigned j = 0; j < numCoherenceBins; j++) {
+					tty[bootstrapIndex][j] += ttyRecv[bootstrapIndex][j];
+					cout << "Weigths: " << bootstrapIndex << " " << tta[bootstrapIndex][j] << " " << ttaRecv[bootstrapIndex][j] << endl;
+					assert(tta[bootstrapIndex][j] == ttaRecv[bootstrapIndex][j]);
 				}
 			}
 			double varSumRecv;

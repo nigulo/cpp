@@ -43,6 +43,11 @@ public:
 		return data[i * (dim * GetNumVars() + 1)];
 	}
 
+	real GetRandomX(default_random_engine& e1) const {
+		uniform_int_distribution<int> uniform_dist(0, pageSize - 1);
+		return data[uniform_dist(e1) * (dim * GetNumVars() + 1)];
+	}
+
 	const real* GetY(unsigned i) const {
 		assert(i < pageSize);
 		return &data[i * (dim * GetNumVars() + 1) + 1];
@@ -111,6 +116,7 @@ public:
 		return inRegion[i];
 	}
 
+	/*
 	void ShufflePage(default_random_engine& e1) {
 		uniform_int_distribution<int> uniform_dist(0, pageSize - 1);
 		for (unsigned i = 0; i < pageSize; i++) {
@@ -122,6 +128,7 @@ public:
 			data[newPos] = val;
 		}
 	}
+	*/
 
 private:
 	bool InRegion(unsigned i) const {
