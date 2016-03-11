@@ -14,6 +14,7 @@
 #include <cassert>
 #include <utility>
 #include <random>
+#include <iostream>
 
 using namespace std;
 
@@ -51,6 +52,9 @@ public:
 	*/
 
 	const real* GetY(unsigned i) const {
+		if (i >= pageSize) {
+			cout << "pageSize, i" << pageSize << ", " << i << endl;
+		}
 		assert(i < pageSize);
 		return &data[i * (dim * GetNumVars() + 1) + 1];
 	}

@@ -89,7 +89,7 @@ private:
 
     // The norm of the difference of two datasets
     double DiffNorm(const real y1[], const real y2[]);
-    bool ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<vector<double>>& tty, vector<vector<int>>& tta);
+    bool ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta);
 };
 
 

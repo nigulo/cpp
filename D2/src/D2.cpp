@@ -608,7 +608,7 @@ double D2::DiffNorm(const real y1[], const real y2[]) {
 #define TAG_IND1 4
 #define TAG_IND2 5
 
-bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<vector<double>>& tty, vector<vector<int>>& tta) {
+bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 	if (dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
 		return false;
 	}
@@ -645,7 +645,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<vector<double>>& t
 #endif
 	}
 	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
-		cout << "bootstrapIndex: " << bootstrapIndex << endl;
+		//cout << "bootstrapIndex: " << bootstrapIndex << endl;
 		for (unsigned i = 0; i < dl1.GetPageSize(); i++) {
 			unsigned j = 0;
 			if (bootstrapIndex == 0 && dl1.GetPage() == dl2.GetPage()) {
@@ -675,8 +675,8 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, vector<vector<double>>& t
 				if (d >= dbase && d <= dmax) {
 					int kk = round(a * d + b);
 					auto dy2 = DiffNorm(dl2.GetY(j), dl1.GetY(i));
-					tty[bootstrapIndex][kk] += dy2;
-					tta[bootstrapIndex][kk]++;
+					tty[bootstrapIndex * (bootstrapSize + 1) + kk] += dy2;
+					tta[bootstrapIndex * (bootstrapSize + 1) + kk]++;
 					//cout << "tta[" << kk << "]=" << tta[bootstrapIndex][kk] << endl;
 					//cout << "tty[" << kk << "]=" << tty[kk] << endl;
 				}
@@ -693,8 +693,17 @@ void D2::CalcDiffNorms(int filePathIndex) {
 		cout << "Calculating diffnorms..." << endl;
 	}
 
-	vector<vector<double>> tty(bootstrapSize + 1, vector<double>(numCoherenceBins, 0));
-	vector<vector<int>> tta(bootstrapSize + 1, vector<int>(numCoherenceBins, 0));
+	//vector<vector<double>> tty(, vector<double>(numCoherenceBins, 0));
+	//vector<vector<int>> tta(bootstrapSize + 1, vector<int>(numCoherenceBins, 0));
+	double tty[bootstrapSize + 1][numCoherenceBins];
+	int tta[bootstrapSize + 1][numCoherenceBins];
+	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
+		for (unsigned i = 0; i < numCoherenceBins; i++) {
+			tty[bootstrapIndex][numCoherenceBins] = 0;
+			tta[bootstrapIndex][numCoherenceBins] = 0;
+		}
+	}
+
 
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
 	if (procId == 0) {
@@ -743,13 +752,13 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			}
 			// ------------------------------------------
 		}
-		if (!ProcessPage(*mpDataLoader, *mpDataLoader, tty, tta)) {
+		if (!ProcessPage(*mpDataLoader, *mpDataLoader, &tty[0][0], &tta[0][0])) {
 			break;
 		}
 		DataLoader* dl2 = mpDataLoader->Clone();
 		if (dl2) {
 			do {
-				if (!ProcessPage(*mpDataLoader, *dl2, tty, tta)) {
+				if (!ProcessPage(*mpDataLoader, *dl2, &tty[0][0], &tta[0][0])) {
 					break;
 				}
 			} while (dl2->Next());
@@ -775,8 +784,8 @@ void D2::CalcDiffNorms(int filePathIndex) {
 		//	cout << tty[j] << endl;
 		//}
 #ifndef _NOMPI
-		MPI::COMM_WORLD.Send(tty.data(), (bootstrapSize + 1) * numCoherenceBins, MPI::DOUBLE, 0, TAG_TTY);
-		MPI::COMM_WORLD.Send(tta.data(), (bootstrapSize + 1) * numCoherenceBins, MPI::INT, 0, TAG_TTA);
+		MPI::COMM_WORLD.Send(tty, (bootstrapSize + 1) * numCoherenceBins, MPI::DOUBLE, 0, TAG_TTY);
+		MPI::COMM_WORLD.Send(tta, (bootstrapSize + 1) * numCoherenceBins, MPI::INT, 0, TAG_TTA);
 		MPI::COMM_WORLD.Send(&varSum, 1, MPI::DOUBLE, 0, TAG_VAR);
 #endif
 	} else {
@@ -791,10 +800,10 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			MPI::COMM_WORLD.Recv(ttaRecv, (bootstrapSize + 1) * numCoherenceBins,  MPI::INT, status.Get_source(), TAG_TTA, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received weights from " << status.Get_source() << "." << endl;
-			for (unsigned bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
+			for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
 				for (unsigned j = 0; j < numCoherenceBins; j++) {
 					tty[bootstrapIndex][j] += ttyRecv[bootstrapIndex][j];
-					cout << "Weigths: " << bootstrapIndex << " " << tta[bootstrapIndex][j] << " " << ttaRecv[bootstrapIndex][j] << endl;
+					//cout << "Weigths: " << bootstrapIndex << " " << tta[bootstrapIndex][j] << " " << ttaRecv[bootstrapIndex][j] << endl;
 					assert(tta[bootstrapIndex][j] == ttaRecv[bootstrapIndex][j]);
 				}
 			}
