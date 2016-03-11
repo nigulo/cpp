@@ -791,8 +791,8 @@ void D2::CalcDiffNorms(int filePathIndex) {
 	} else {
 #ifndef _NOMPI
 		for (int i = 1; i < numProc; i++) {
-			double ttyRecv[bootstrapSize + 1][numCoherenceBins];
-			int ttaRecv[bootstrapSize + 1][numCoherenceBins];
+			double* ttyRecv = new double[(bootstrapSize + 1) * numCoherenceBins];
+			int* ttaRecv = new int[(bootstrapSize + 1) * numCoherenceBins];
 			MPI::Status status;
 			MPI::COMM_WORLD.Recv(ttyRecv, (bootstrapSize + 1) * numCoherenceBins,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
 			assert(status.Get_error() == MPI::SUCCESS);
@@ -802,9 +802,9 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			cout << "Received weights from " << status.Get_source() << "." << endl;
 			for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
 				for (unsigned j = 0; j < numCoherenceBins; j++) {
-					tty[bootstrapIndex][j] += ttyRecv[bootstrapIndex][j];
+					tty[bootstrapIndex * numCoherenceBins + j] += ttyRecv[bootstrapIndex * numCoherenceBins + j];
 					//cout << "Weigths: " << bootstrapIndex << " " << tta[bootstrapIndex][j] << " " << ttaRecv[bootstrapIndex][j] << endl;
-					assert(tta[bootstrapIndex][j] == ttaRecv[bootstrapIndex][j]);
+					assert(tta[bootstrapIndex * numCoherenceBins + j] == ttaRecv[bootstrapIndex * numCoherenceBins + j]);
 				}
 			}
 			double varSumRecv;
