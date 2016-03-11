@@ -675,8 +675,8 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 				if (d >= dbase && d <= dmax) {
 					int kk = round(a * d + b);
 					auto dy2 = DiffNorm(dl2.GetY(j), dl1.GetY(i));
-					tty[bootstrapIndex * (bootstrapSize + 1) + kk] += dy2;
-					tta[bootstrapIndex * (bootstrapSize + 1) + kk]++;
+					tty[bootstrapIndex * numCoherenceBins + kk] += dy2;
+					tta[bootstrapIndex * numCoherenceBins + kk]++;
 					//cout << "tta[" << kk << "]=" << tta[bootstrapIndex][kk] << endl;
 					//cout << "tty[" << kk << "]=" << tty[kk] << endl;
 				}
@@ -693,14 +693,14 @@ void D2::CalcDiffNorms(int filePathIndex) {
 		cout << "Calculating diffnorms..." << endl;
 	}
 
-	//vector<vector<double>> tty(, vector<double>(numCoherenceBins, 0));
-	//vector<vector<int>> tta(bootstrapSize + 1, vector<int>(numCoherenceBins, 0));
-	double tty[bootstrapSize + 1][numCoherenceBins];
-	int tta[bootstrapSize + 1][numCoherenceBins];
+	cout << "numCoherenceBins: " << numCoherenceBins << endl;
+	// Allocate dynamically (may not fit into stack)
+	double* tty = new double[(bootstrapSize + 1) * numCoherenceBins];
+	int* tta = new int[(bootstrapSize + 1) * numCoherenceBins];
 	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
 		for (unsigned i = 0; i < numCoherenceBins; i++) {
-			tty[bootstrapIndex][numCoherenceBins] = 0;
-			tta[bootstrapIndex][numCoherenceBins] = 0;
+			tty[bootstrapIndex * numCoherenceBins + i] = 0;
+			tta[bootstrapIndex * numCoherenceBins + i] = 0;
 		}
 	}
 
@@ -752,13 +752,13 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			}
 			// ------------------------------------------
 		}
-		if (!ProcessPage(*mpDataLoader, *mpDataLoader, &tty[0][0], &tta[0][0])) {
+		if (!ProcessPage(*mpDataLoader, *mpDataLoader, tty, tta)) {
 			break;
 		}
 		DataLoader* dl2 = mpDataLoader->Clone();
 		if (dl2) {
 			do {
-				if (!ProcessPage(*mpDataLoader, *dl2, &tty[0][0], &tta[0][0])) {
+				if (!ProcessPage(*mpDataLoader, *dl2, tty, tta)) {
 					break;
 				}
 			} while (dl2->Next());
@@ -824,7 +824,7 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			// How many time differences was actually used?
 			unsigned j = 0;
 			for (unsigned i = 0; i < numCoherenceBins; i++) {
-				if (tta[bootstrapIndex][i] > 0) {
+				if (tta[bootstrapIndex * numCoherenceBins + i] > 0) {
 					j++;
 				}
 			}
@@ -832,17 +832,17 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			ta[bootstrapIndex].assign(j, 0);
 			ty[bootstrapIndex].assign(j, 0);
 			td[bootstrapIndex].assign(j, 0);
-			cout << "td.size()=" << td.size() << endl;
+			cout << "td.size()=" << td[bootstrapIndex].size() << endl;
 
 			// Build final grids for periodicity search.
 
 			j = 0;
 			for (unsigned i = 0; i < numCoherenceBins; i++) {
 				double d = dbase + i * coherenceBinSize;
-				if (tta[bootstrapIndex][i] > 0) {
+				if (tta[bootstrapIndex * numCoherenceBins + i] > 0) {
 					td[bootstrapIndex][j] = d;
-					ty[bootstrapIndex][j] = tty[bootstrapIndex][i];
-					ta[bootstrapIndex][j] = tta[bootstrapIndex][i];
+					ty[bootstrapIndex][j] = tty[bootstrapIndex * numCoherenceBins + i];
+					ta[bootstrapIndex][j] = tta[bootstrapIndex * numCoherenceBins + i];
 					j++;
 				}
 			}
@@ -864,7 +864,8 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			copy_file(paramFileName, string(PARAMETERS_FILE_PREFIX) + "_" + to_string(currentTime) + PARAMETERS_FILE_SUFFIX);
 		}
 	}
-
+	delete[] tty;
+	delete[] tta;
 }
 
 void D2::LoadDiffNorms(int filePathIndex) {
