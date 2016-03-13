@@ -357,54 +357,56 @@ int main(int argc, char *argv[]) {
 			if ((int) outputFilePrefixes.size() > filePathIndex) {
 				outputFilePrefix = outputFilePrefixes[filePathIndex];
 			}
-			auto& minima = d2.Compute2DSpectrum(outputFilePrefix);
+			if (procId == 0) {
+				auto& minima = d2.Compute2DSpectrum(outputFilePrefix);
 
-			ofstream output_minima(outputFilePrefix + "_minima.csv");
-			for (auto& m : minima) {
-				output_minima << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
-			}
-			output_minima.close();
-			d2.Bootstrap();
-			ofstream output_bootstrap(outputFilePrefix + "_bootstrap.csv");
-			for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize; bootstrapIndex++) {
+				ofstream output_minima(outputFilePrefix + "_minima.csv");
 				for (auto& m : minima) {
-					output_bootstrap << m.bootstrapValues[bootstrapIndex] << " ";
+					output_minima << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
 				}
-				output_bootstrap << endl;
-			}
-			output_bootstrap.close();
+				output_minima.close();
+				d2.Bootstrap();
+				ofstream output_bootstrap(outputFilePrefix + "_bootstrap.csv");
+				for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize; bootstrapIndex++) {
+					for (auto& m : minima) {
+						output_bootstrap << m.bootstrapValues[bootstrapIndex] << " ";
+					}
+					output_bootstrap << endl;
+				}
+				output_bootstrap.close();
 
-			if (dl) {
-				delete dl;
-			}
-			// Zooming into the strongest minimum at smallest coherence length
-			D2Minimum strongestMinimum(numeric_limits<double>::max(), 0, numeric_limits<double>::max());
-			for (auto& m : minima) {
-				if (m.coherenceLength < strongestMinimum.coherenceLength
-						|| (m.coherenceLength < strongestMinimum.coherenceLength && m.value < strongestMinimum.value)) {
-					strongestMinimum.frequency = m.frequency;
-					strongestMinimum.value = m.value;
-					strongestMinimum.coherenceLength = m.coherenceLength;
+				if (dl) {
+					delete dl;
 				}
-			}
-			if (i < numIterations - 1) {
-				if (strongestMinimum.frequency == 0) {
-					cout << "Finish zooming, no minima found"  << endl;
-					break;
+				// Zooming into the strongest minimum at smallest coherence length
+				D2Minimum strongestMinimum(numeric_limits<double>::max(), 0, numeric_limits<double>::max());
+				for (auto& m : minima) {
+					if (m.coherenceLength < strongestMinimum.coherenceLength
+							|| (m.coherenceLength < strongestMinimum.coherenceLength && m.value < strongestMinimum.value)) {
+						strongestMinimum.frequency = m.frequency;
+						strongestMinimum.value = m.value;
+						strongestMinimum.coherenceLength = m.coherenceLength;
+					}
 				}
-				double d2Period = 1 / strongestMinimum.frequency;
-				double periodRange = (maxPeriod - minPeriod) / 2 / zoomFactor;
-				minPeriod = d2Period - periodRange;
-				maxPeriod = d2Period + periodRange;
-				if (minPeriod < initMinPeriod) {
-					minPeriod = initMinPeriod;
+				if (i < numIterations - 1) {
+					if (strongestMinimum.frequency == 0) {
+						cout << "Finish zooming, no minima found"  << endl;
+						break;
+					}
+					double d2Period = 1 / strongestMinimum.frequency;
+					double periodRange = (maxPeriod - minPeriod) / 2 / zoomFactor;
+					minPeriod = d2Period - periodRange;
+					maxPeriod = d2Period + periodRange;
+					if (minPeriod < initMinPeriod) {
+						minPeriod = initMinPeriod;
+					}
+					if (maxPeriod > initMaxPeriod) {
+						maxPeriod = initMaxPeriod;
+					}
+					cout << "d2 minimum period=" << d2Period << endl;
+					cout << "new minPeriod=" << minPeriod << endl;
+					cout << "new maxPeriod=" << maxPeriod << endl;
 				}
-				if (maxPeriod > initMaxPeriod) {
-					maxPeriod = initMaxPeriod;
-				}
-				cout << "d2 minimum period=" << d2Period << endl;
-				cout << "new minPeriod=" << minPeriod << endl;
-				cout << "new maxPeriod=" << maxPeriod << endl;
 			}
 		}
 		filePathIndex++;
@@ -948,124 +950,121 @@ vector<double> getSpurious(double p0) {
 }
 
 const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
+	cout << "dmin = " << dmin << endl;
+	cout << "dmax = " << dmax << endl;
+	cout << "wmin = " << wmin << endl;
+	cout << "numFreqs = " << numFreqs << endl;
+	cout << "freqStep = " << freqStep << endl;
+	cout << "numCoherenceBins = " << numCoherenceBins << endl;
+	cout << "numCoherences = " << numCoherences << endl;
+	cout << "a = " << a << endl;
+	cout << "b = " << b << endl;
+	cout << "coherenceBinSize = " << coherenceBinSize << endl;
 
-	if (procId == 0) {
-		cout << "dmin = " << dmin << endl;
-		cout << "dmax = " << dmax << endl;
-		cout << "wmin = " << wmin << endl;
-		cout << "numFreqs = " << numFreqs << endl;
-		cout << "freqStep = " << freqStep << endl;
-		cout << "numCoherenceBins = " << numCoherenceBins << endl;
-		cout << "numCoherences = " << numCoherences << endl;
-		cout << "a = " << a << endl;
-		cout << "b = " << b << endl;
-		cout << "coherenceBinSize = " << coherenceBinSize << endl;
+	ofstream output(outputFilePrefix + ".csv");
+	ofstream output_min(outputFilePrefix + "_min.csv");
+	ofstream output_max(outputFilePrefix + "_max.csv");
 
-		ofstream output(outputFilePrefix + ".csv");
-		ofstream output_min(outputFilePrefix + "_min.csv");
-		ofstream output_max(outputFilePrefix + "_max.csv");
-
-		vector<double> specInt;
-		double intMax = -1;
-		double intMin = -1;
-		// Basic cycle with printing for GnuPlot
-		double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
-		for (unsigned i = 0; i < numCoherences; i++) {
-			double d = minCoherence + i * deltac;
-			vector<pair<double, double>> spec(numFreqs);
-			bool maxXReached = false;
-			for (unsigned j = 0; j < numFreqs; j++) {
-				double w = wmin + j * freqStep;
-				double d1 = d;
-				if (relative) {
-					d1 = d / w;
-				}
-				if (d1 > maxX) {
-					maxXReached = true;
-					break;
-				}
-				double res = Criterion(0, d1, w);
-				spec[j] = {w, res};
+	vector<double> specInt;
+	double intMax = -1;
+	double intMin = -1;
+	// Basic cycle with printing for GnuPlot
+	double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
+	for (unsigned i = 0; i < numCoherences; i++) {
+		double d = minCoherence + i * deltac;
+		vector<pair<double, double>> spec(numFreqs);
+		bool maxXReached = false;
+		for (unsigned j = 0; j < numFreqs; j++) {
+			double w = wmin + j * freqStep;
+			double d1 = d;
+			if (relative) {
+				d1 = d / w;
 			}
-			if (maxXReached) {
+			if (d1 > maxX) {
+				maxXReached = true;
 				break;
 			}
+			double res = Criterion(0, d1, w);
+			spec[j] = {w, res};
+		}
+		if (maxXReached) {
+			break;
+		}
 
-			// Normalize locally if needed
-			if (normalize) {
-				Normalize(spec);
-			}
+		// Normalize locally if needed
+		if (normalize) {
+			Normalize(spec);
+		}
 
-			//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
-			double integral = 0;
-			for (auto& s : spec) {
-				double w = s.first;
-				output << d << " " << w << " " << s.second << endl;
-				if (i == 0) {
-					output_min << w << " " << s.second << endl;
-				} else if (i == numCoherences - 1) {
-					output_max << w << " " << s.second << endl;
-				}
-				//output_mid << (wmin + j * step) << " " << spec[j] << endl;
-				integral += s.second;
+		//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
+		double integral = 0;
+		for (auto& s : spec) {
+			double w = s.first;
+			output << d << " " << w << " " << s.second << endl;
+			if (i == 0) {
+				output_min << w << " " << s.second << endl;
+			} else if (i == numCoherences - 1) {
+				output_max << w << " " << s.second << endl;
 			}
-			specInt.push_back(integral);
-			if (intMax < 0 || integral > intMax) {
-				intMax = integral;
-			}
-			if (intMin < 0 || integral < intMin) {
-				intMin = integral;
-			}
-			vector<pair<double, double>> minima = getLocalMinima(spec, false);
-			while (minima.size() > 10) {
-				minima = getLocalMinima(minima, true);
-			}
-			if (removeSpurious) {
-				for (auto i = minima.begin(); i != minima.end();) {
-					cout << "Checking minimum: " << (1 / (*i).first) << endl;
-					bool spurious = false;
-					for (auto& m : minima) {
-						if (m.first > (*i).first) {
-							for (auto s : getSpurious(1 / m.first)) {
-								if (abs(1/s - (*i).first) < 2 * freqStep) {
-									cout << "Period " << (1 / (*i).first) << " is spurious of " << 1 / m.first << endl;
-									spurious = true;
-									break;
-								}
+			//output_mid << (wmin + j * step) << " " << spec[j] << endl;
+			integral += s.second;
+		}
+		specInt.push_back(integral);
+		if (intMax < 0 || integral > intMax) {
+			intMax = integral;
+		}
+		if (intMin < 0 || integral < intMin) {
+			intMin = integral;
+		}
+		vector<pair<double, double>> minima = getLocalMinima(spec, false);
+		while (minima.size() > 10) {
+			minima = getLocalMinima(minima, true);
+		}
+		if (removeSpurious) {
+			for (auto i = minima.begin(); i != minima.end();) {
+				cout << "Checking minimum: " << (1 / (*i).first) << endl;
+				bool spurious = false;
+				for (auto& m : minima) {
+					if (m.first > (*i).first) {
+						for (auto s : getSpurious(1 / m.first)) {
+							if (abs(1/s - (*i).first) < 2 * freqStep) {
+								cout << "Period " << (1 / (*i).first) << " is spurious of " << 1 / m.first << endl;
+								spurious = true;
+								break;
 							}
 						}
 					}
-					if (spurious) {
-						minima.erase(i);
-					} else {
-						i++;
-					}
+				}
+				if (spurious) {
+					minima.erase(i);
+				} else {
+					i++;
 				}
 			}
-			for (auto& m : minima) {
-				if (i % (numCoherences / 10) == 0) { // only output every 10th coherence length
-					allMinima.push_back(D2Minimum(d, m.first, m.second));
-				}
+		}
+		for (auto& m : minima) {
+			if (i % (numCoherences / 10) == 0) { // only output every 10th coherence length
+				allMinima.push_back(D2Minimum(d, m.first, m.second));
 			}
-			//cout << endl;
-			//output_mid.close();
 		}
-		output.close();
-		output_min.close();
-		output_max.close();
-
-		// print normalized integral
-		/*
-		ofstream output_stats("stats.csv");
-		//assert(intMin >=0 && intMax >= 0 && intMin < intMax);
-		//double norm = 1 / (intMax - intMin);
-		for (unsigned i = 0; i < specInt.size(); i++) {
-			double d = minCoherence + i * deltac;
-			output_stats << d << " " << specInt[i] / intMin << " " << specMinima[i] / minimaMin  << " " << (i > 0 ? (specMinima[i] - specMinima[i - 1]) : (specMinima[1] - specMinima[0])) << endl;
-		}
-		output_stats.close();
-		*/
+		//cout << endl;
+		//output_mid.close();
 	}
+	output.close();
+	output_min.close();
+	output_max.close();
+
+	// print normalized integral
+	/*
+	ofstream output_stats("stats.csv");
+	//assert(intMin >=0 && intMax >= 0 && intMin < intMax);
+	//double norm = 1 / (intMax - intMin);
+	for (unsigned i = 0; i < specInt.size(); i++) {
+		double d = minCoherence + i * deltac;
+		output_stats << d << " " << specInt[i] / intMin << " " << specMinima[i] / minimaMin  << " " << (i > 0 ? (specMinima[i] - specMinima[i - 1]) : (specMinima[1] - specMinima[0])) << endl;
+	}
+	output_stats.close();
+	*/
 	return allMinima;
 }
 
