@@ -242,10 +242,14 @@ int main(int argc, char *argv[]) {
 
 	vector<unsigned> dimsPerProc;
 	vector<unsigned> procIds;
+
+	int procSize = 1;
 	for (unsigned i = 0; i < dims.size(); i++) {
 		assert(dims[i] % numProcs[i] == 0);
 		dimsPerProc.push_back(dims[i] / numProcs[i]);
-		procIds.push_back(procId % numProcs[i]);
+		procIds.push_back((procId / procSize) % numProcs[i]);
+		procSize *= numProcs[i];
+		//cout << procId << ": procIds[" << i << "]" << "=" << procIds[i] << endl;
 	}
 
 
@@ -262,7 +266,7 @@ int main(int argc, char *argv[]) {
 				unsigned procMin = procIds[i] * dimsPerProc[i];
 				unsigned max = stoi(minMaxStrs[1]);
 				unsigned procMax = (procIds[i] + 1) * dimsPerProc[i] - 1;
-				//cout << procId << " min, max, procMin, procMax: " << min << ", " << max << ", " << procMin << ", " << procMax << endl;
+				//cout << procId << ": procMin, procMax [" << i << "] " << procMin << " " << procMax << endl;
 				if (min <= procMax && max >= procMin) {
 					if (min < procMin) {
 						min = 0;
