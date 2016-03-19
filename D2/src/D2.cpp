@@ -142,6 +142,7 @@ int main(int argc, char *argv[]) {
 	bool removeSpurious = Utils::FindIntProperty(params, "removeSpurious", 0);
 
 	double tScale = Utils::FindDoubleProperty(params, "tScale", 1);
+	int startTime = Utils::FindIntProperty(params, "startTime", 1);
 
 	string strVarScales = Utils::FindProperty(params, "varScales", "1");
 	vector<string> varScalesStr;
@@ -197,6 +198,7 @@ int main(int argc, char *argv[]) {
 		cout << "relative       " << relative << endl;
 		cout << "removeSpurious " << removeSpurious << endl;
 		cout << "tScale         " << tScale << endl;
+		cout << "startTime      " << startTime << endl;
 		cout << "varScales      " << vecToStr(varScales) << endl;
 		cout << "numIterations  " << numIterations << endl;
 		cout << "zoomFactor     " << zoomFactor << endl;
@@ -348,7 +350,9 @@ int main(int argc, char *argv[]) {
 
 			}
 
-			D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode, normalize, relative, tScale, varScales, varRanges, removeSpurious, bootstrapSize);
+			D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode,
+					normalize, relative, tScale, startTime, varScales, varRanges, removeSpurious,
+					bootstrapSize);
 			if (!exists(DIFF_NORMS_FILE) || bootstrapSize > 0) {
 				d2.CalcDiffNorms(filePathIndex);
 			} else {
@@ -432,7 +436,8 @@ int main(int argc, char *argv[]) {
 D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 		double minCoherence, double maxCoherence,
 		Mode mode, bool normalize, bool relative,
-		double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges, bool removeSpurious, int bootstrapSize) :
+		double tScale, double startTime,
+		const vector<double>& varScales, const vector<pair<double, double>>& varRanges, bool removeSpurious, int bootstrapSize) :
 			mpDataLoader(pDataLoader),
 			minCoherence(minCoherence),
 			maxCoherence(maxCoherence),
@@ -440,6 +445,7 @@ D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 			normalize(normalize),
 			relative(relative),
 			tScale(tScale),
+			startTime(startTime),
 			varScales(varScales),
 			varRanges(varRanges),
 			removeSpurious(removeSpurious),
@@ -661,16 +667,19 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 			//	cout << "Time :" << dl1.GetX(i) << endl;
 			//}
 			for (; j < dl2.GetPageSize(); j++) {
+				real x;
 				real xi;
 				real xj;
 				if (bootstrapIndex == 0) {
-					xi = dl1.GetX(i) * tScale;;
+					x = dl1.GetX(i);
+					xi *= x * tScale;
 					xj = dl2.GetX(j) * tScale;
 					if (xj > maxX) {
 						maxX = xj;
 					}
 				} else {
-					xi = dl1.GetX(bsIndexes1[bootstrapIndex - 1][i]) * tScale;;
+					x = dl1.GetX(bsIndexes1[bootstrapIndex - 1][i]);
+					xi = x * tScale;
 					xj = dl2.GetX(bsIndexes2[bootstrapIndex - 1][j]) * tScale;
 				}
 				real d = xj - xi;
@@ -678,7 +687,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 					break;
 				}
 				//cout << "procId i: d, dbase, dmax " << procId << " " << bootstrapIndex << ": " << d << ", " << dbase << ", " << dmax << endl;
-				if (d >= dbase && d <= dmax) {
+				if (x >= startTime && (d >= dbase && d <= dmax)) {
 					int kk = round(a * d + b);
 					auto dy2 = DiffNorm(dl2.GetY(j), dl1.GetY(i));
 					tty[bootstrapIndex * numCoherenceBins + kk] += dy2;

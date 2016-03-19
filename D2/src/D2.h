@@ -43,6 +43,7 @@ private:
 	const bool relative;
 
 	const double tScale;
+	const double startTime;
 	const vector<double> varScales;
 	const vector<pair<double, double>> varRanges;
 	const bool removeSpurious;
@@ -77,7 +78,8 @@ public:
     D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
     		double minCoherence, double maxCoherence,
 			Mode mode, bool normalize, bool relative,
-			double tScale, const vector<double>& varScales, const vector<pair<double, double>>& varRanges, bool removeSpurious, int bootstrapSize);
+			double tScale, double startTime, const vector<double>& varScales,
+			const vector<pair<double, double>>& varRanges, bool removeSpurious, int bootstrapSize);
     void CalcDiffNorms(int filePathIndex);
     void LoadDiffNorms(int filePathIndex);
     const vector<D2Minimum>& Compute2DSpectrum(const string& outputFilePrefix);
