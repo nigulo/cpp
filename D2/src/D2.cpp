@@ -672,7 +672,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 				real xj;
 				if (bootstrapIndex == 0) {
 					x = dl1.GetX(i);
-					xi *= x * tScale;
+					xi = x * tScale;
 					xj = dl2.GetX(j) * tScale;
 					if (xj > maxX) {
 						maxX = xj;
