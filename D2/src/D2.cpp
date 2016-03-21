@@ -925,7 +925,7 @@ void D2::LoadDiffNorms(int filePathIndex) {
 		input.close();
 	}
 }
-
+/*
 vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec, bool allowEndPoints) {
 	vector<pair<double, double>> retVal;
 	int start = 0;
@@ -944,6 +944,40 @@ vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& 
 		if (start > 0 && spec[i].second < spec[i + 1].second) {
 			retVal.push_back(spec[(i + start) / 2]);
 			start = 0;
+		}
+	}
+	return retVal;
+}
+*/
+
+vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec, size_t maxCount) {
+	size_t minSeparation = spec.size() / (2 * maxCount);
+	cout << "minSeparation: " << minSeparation << endl;
+	vector<pair<double, double>> retVal;
+	vector<size_t> usedIndices;
+	for (size_t count = 0; count < maxCount; count++) {
+		pair<double, double> globalMinimum = {0, numeric_limits<double>::max()};
+		size_t minimumIndex = 0;
+		for (size_t i = 1; i < spec.size() - 1; i++) {
+			bool tooClose = false;
+			for (auto usedIndex : usedIndices) {
+				if (abs (i - usedIndex) <= minSeparation) {
+					tooClose = true;
+					break;
+				}
+			}
+			if (!tooClose) {
+				if (spec[i].second < globalMinimum.second) {
+					globalMinimum = spec[i];
+					minimumIndex = i;
+				}
+			}
+		}
+		if (minimumIndex > 0) {
+			retVal.push_back(globalMinimum);
+			usedIndices.push_back(minimumIndex);
+		} else {
+			break;
 		}
 	}
 	return retVal;
@@ -1029,10 +1063,10 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		if (intMin < 0 || integral < intMin) {
 			intMin = integral;
 		}
-		vector<pair<double, double>> minima = getLocalMinima(spec, false);
-		while (minima.size() > 10) {
-			minima = getLocalMinima(minima, true);
-		}
+		vector<pair<double, double>> minima = getLocalMinima(spec, 10);
+		//while (minima.size() > 10) {
+		//	minima = getLocalMinima(minima, true);
+		//}
 		if (removeSpurious) {
 			for (auto i = minima.begin(); i != minima.end();) {
 				cout << "Checking minimum: " << (1 / (*i).first) << endl;
