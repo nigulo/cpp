@@ -950,15 +950,15 @@ vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& 
 }
 */
 
-vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec, size_t maxCount) {
-	size_t minSeparation = spec.size() / (2 * maxCount);
+vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec, int maxCount) {
+	int minSeparation = spec.size() / (2 * maxCount);
 	cout << "minSeparation: " << minSeparation << endl;
 	vector<pair<double, double>> retVal;
-	vector<size_t> usedIndices;
-	for (size_t count = 0; count < maxCount; count++) {
+	vector<int> usedIndices;
+	for (int count = 0; count < maxCount; count++) {
 		pair<double, double> globalMinimum = {0, numeric_limits<double>::max()};
-		size_t minimumIndex = 0;
-		for (size_t i = 1; i < spec.size() - 1; i++) {
+		int minimumIndex = 0;
+		for (int i = 1; i < ((int) spec.size()) - 1; i++) {
 			bool tooClose = false;
 			for (auto usedIndex : usedIndices) {
 				if (abs (i - usedIndex) <= minSeparation) {
