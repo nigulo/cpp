@@ -925,30 +925,6 @@ void D2::LoadDiffNorms(int filePathIndex) {
 		input.close();
 	}
 }
-/*
-vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec, bool allowEndPoints) {
-	vector<pair<double, double>> retVal;
-	int start = 0;
-	if (allowEndPoints) {
-		if (spec.size() == 1 || spec[0].second < spec[1].second) {
-			retVal.push_back(spec[0]);
-		}
-		if (spec.size() == 2 || (spec.size() > 2 && spec[spec.size() - 1].second < spec[spec.size() - 2].second)) {
-			retVal.push_back(spec[spec.size() - 1]);
-		}
-	}
-	for (int i = 1; i < (int) spec.size() - 1; i++) {
-		if (spec[i].second < spec[i - 1].second) {
-			start = i;
-		}
-		if (start > 0 && spec[i].second < spec[i + 1].second) {
-			retVal.push_back(spec[(i + start) / 2]);
-			start = 0;
-		}
-	}
-	return retVal;
-}
-*/
 
 vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec, int maxCount) {
 	int minSeparation = spec.size() / (2 * maxCount);
@@ -1064,9 +1040,6 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 			intMin = integral;
 		}
 		vector<pair<double, double>> minima = getLocalMinima(spec, 10);
-		//while (minima.size() > 10) {
-		//	minima = getLocalMinima(minima, true);
-		//}
 		if (removeSpurious) {
 			for (auto i = minima.begin(); i != minima.end();) {
 				cout << "Checking minimum: " << (1 / (*i).first) << endl;
