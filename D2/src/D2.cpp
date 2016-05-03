@@ -498,7 +498,7 @@ double D2::Criterion(int bootstrapIndex, double d, double w) {
 			}
 		}
 		break;
-	case Gauss: //This is important, in td[] are precomputed sums of squares and counts.
+	case Gauss:
 	case GaussWithCosine:
 		for (unsigned j = 0; j < td[bootstrapIndex].size(); j++) {// to jj-1 do begin
 			double dd = td[bootstrapIndex][j];
@@ -508,7 +508,7 @@ double D2::Criterion(int bootstrapIndex, double d, double w) {
 			} else {
 				ww = 0.0;
 			}
-			double ph = dd * w - floor(dd * w);//Frac(dd*w);
+			double ph = dd * w - floor(dd * w);
 			if (ph < 0.0) {
 				ph = ph + 1;
 			}
@@ -521,12 +521,13 @@ double D2::Criterion(int bootstrapIndex, double d, double w) {
 				closeInPhase = ph < eps || ph > epslim;
 				wp = exp(-square(lnp * ph));
 			} else {
-				if (ph >= 0.25) {
+				double df = 0.25;
+				if (ph >= df) {
 					wp = 0;
 				} else if (ph == 0) {
 					wp = 1;
 				} else {
-					wp = 0.5 * (cos(2 * M_PI * ph) + 1);
+					wp = 0.5 * (cos(M_PI * ph / df) + 1);
 				}
 				if (std::isnan(wp)) {
 					wp = 0;
