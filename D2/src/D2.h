@@ -48,6 +48,8 @@ private:
 	const vector<pair<double, double>> varRanges;
 	const bool removeSpurious;
 	const int bootstrapSize;
+	bool saveDiffNorms;
+	bool saveParameters;
 
 	// Square differences, coherence bin lengths and counts
 	// Index 0 represents actual data, the rest is bootstrap data
@@ -79,7 +81,8 @@ public:
     		double minCoherence, double maxCoherence,
 			Mode mode, bool normalize, bool relative,
 			double tScale, double startTime, const vector<double>& varScales,
-			const vector<pair<double, double>>& varRanges, bool removeSpurious, int bootstrapSize);
+			const vector<pair<double, double>>& varRanges, bool removeSpurious,
+			int bootstrapSize, bool saveDiffNorms, bool saveParameters);
     void CalcDiffNorms(int filePathIndex);
     void LoadDiffNorms(int filePathIndex);
     const vector<D2Minimum>& Compute2DSpectrum(const string& outputFilePrefix);
