@@ -702,6 +702,43 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 	return true;
 }
 
+void D2::VarCalculation(double* ySum, double* y2Sum) {
+	for (unsigned i = 0; i < mpDataLoader->GetPageSize(); i++) {
+		auto y = mpDataLoader->GetY(i);
+		// ------------------------------------------
+		// This calculation must be redesigned
+		for (unsigned j = 0; j < mpDataLoader->GetNumVars(); j++) {
+			auto offset = j * mpDataLoader->GetDim();
+			auto varScale = varScales[j];
+			auto varRange = varRanges[j];
+			if (varScale != 1.0f) {
+				for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
+					if (mpDataLoader->IsInRegion(i)) {
+						auto index = offset + i;
+						auto yScaled = y[index] * varScale;
+						if (yScaled >= varRange.first && yScaled <= varRange.second) {
+							ySum[index] += yScaled;
+							y2Sum[index] += yScaled * yScaled;
+						}
+					}
+				}
+			} else {
+				for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
+					if (mpDataLoader->IsInRegion(i)) {
+						auto index = offset + i;
+						if (y[index] >= varRange.first && y[index] <= varRange.second) {
+							ySum[index] += y[index];
+							y2Sum[index] += y[index] * y[index];
+						}
+					}
+				}
+			}
+		}
+		// ------------------------------------------
+	}
+}
+
+
 
 void D2::CalcDiffNorms(int filePathIndex) {
 	assert(mpDataLoader); // dataLoader must be present in case diffnorms are not calculated yet
@@ -734,40 +771,8 @@ void D2::CalcDiffNorms(int filePathIndex) {
 		y2Sum[i] = 0;
 	}
 	while (mpDataLoader->Next()) {
-		for (unsigned i = 0; i < mpDataLoader->GetPageSize(); i++) {
-			n++;
-			auto y = mpDataLoader->GetY(i);
-			// ------------------------------------------
-			// This calculation must be redesigned
-			for (unsigned j = 0; j < mpDataLoader->GetNumVars(); j++) {
-				auto offset = j * mpDataLoader->GetDim();
-				auto varScale = varScales[j];
-				auto varRange = varRanges[j];
-				if (varScale != 1.0f) {
-					for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
-						if (mpDataLoader->IsInRegion(i)) {
-							auto index = offset + i;
-							auto yScaled = y[index] * varScale;
-							if (yScaled >= varRange.first && yScaled <= varRange.second) {
-								ySum[index] += yScaled;
-								y2Sum[index] += yScaled * yScaled;
-							}
-						}
-					}
-				} else {
-					for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
-						if (mpDataLoader->IsInRegion(i)) {
-							auto index = offset + i;
-							if (y[index] >= varRange.first && y[index] <= varRange.second) {
-								ySum[index] += y[index];
-								y2Sum[index] += y[index] * y[index];
-							}
-						}
-					}
-				}
-			}
-			// ------------------------------------------
-		}
+		n += mpDataLoader->GetPageSize();
+		VarCalculation(ySum, y2Sum);
 		if (!ProcessPage(*mpDataLoader, *mpDataLoader, tty, tta)) {
 			break;
 		}
