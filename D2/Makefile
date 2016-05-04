@@ -1,13 +1,16 @@
 COMPILERARGS=-std=c++1y -c -O3 -fopenmp
 LINKERARGS=-fopenmp
-INCLUDEDIRS=-I/usr/include/mpi -I../utils
+INCLUDEDIRS=-I/usr/include/mpi -I..
 LIBDIRS=-L/usr/lib/openmpi/lib -L../utils
 LIBS=-lutils -lboost_system -lboost_filesystem -lmpi -lmpi_cxx
 SRCDIR=src
 GCC = g++
 
-all: D2 DataLoader BinaryDataLoader TextDataLoader
-	$(GCC) $(LIBDIRS) $(LINKERARGS) -o D2 D2.o DataLoader.o BinaryDataLoader.o TextDataLoader.o $(LIBS)
+all: main D2 DataLoader BinaryDataLoader TextDataLoader
+	$(GCC) $(LIBDIRS) $(LINKERARGS) -o D2 main.o D2.o DataLoader.o BinaryDataLoader.o TextDataLoader.o $(LIBS)
+
+main: $(SRCDIR)/main.cpp
+	$(GCC) $(COMPILERARGS) $(INCLUDEDIRS) $(SRCDIR)/main.cpp
 
 D2: $(SRCDIR)/D2.cpp
 	$(GCC) $(COMPILERARGS) $(INCLUDEDIRS) $(SRCDIR)/D2.cpp
