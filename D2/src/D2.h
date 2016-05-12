@@ -24,6 +24,24 @@ public:
 };
 
 class D2 {
+public:
+	// Essentially input parameters to constructor
+	DataLoader* mpDataLoader;
+	double minCoherence;
+	double maxCoherence;
+	Mode mode;
+	bool normalize;
+	bool relative;
+
+	double tScale;
+	double startTime;
+	vector<double> varScales;
+	vector<pair<double, double>> varRanges;
+	bool removeSpurious;
+	int bootstrapSize;
+	bool confIntOrSignificance = true;
+	bool saveDiffNorms;
+	bool saveParameters;
 private:
 
 	double maxX = -1; // little hack
@@ -34,22 +52,6 @@ private:
 	const double epsilon = 0.1;
 
 	double epslim, eps, ln2, lnp;
-
-	DataLoader* mpDataLoader;
-	const double minCoherence;
-	const double maxCoherence;
-	const Mode mode;
-	const bool normalize;
-	const bool relative;
-
-	const double tScale;
-	const double startTime;
-	const vector<double> varScales;
-	const vector<pair<double, double>> varRanges;
-	const bool removeSpurious;
-	const int bootstrapSize;
-	bool saveDiffNorms;
-	bool saveParameters;
 
 	// Square differences, coherence bin lengths and counts
 	// Index 0 represents actual data, the rest is bootstrap data

@@ -261,17 +261,25 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 				real x;
 				real xi;
 				real xj;
+				auto ix = i;
+				auto jx = j;
+				auto iy = i;
+				auto jy = j;
+				if (bootstrapIndex > 0) {
+					ix = bsIndexes1[bootstrapIndex - 1][i];
+					jx = bsIndexes2[bootstrapIndex - 1][j];
+					if (confIntOrSignificance) {
+						iy = ix;
+						jy = jx;
+					}
+				}
+				x = dl1.GetX(ix);
+				xi = x * tScale;
+				xj = dl2.GetX(jx) * tScale;
 				if (bootstrapIndex == 0) {
-					x = dl1.GetX(i);
-					xi = x * tScale;
-					xj = dl2.GetX(j) * tScale;
 					if (xj > maxX) {
 						maxX = xj;
 					}
-				} else {
-					x = dl1.GetX(bsIndexes1[bootstrapIndex - 1][i]);
-					xi = x * tScale;
-					xj = dl2.GetX(bsIndexes2[bootstrapIndex - 1][j]) * tScale;
 				}
 				real d = xj - xi;
 				if (bootstrapSize == 0 && d > dmax) {
@@ -280,7 +288,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 				//cout << "GetProcId() i: d, dbase, dmax " << GetProcId() << " " << bootstrapIndex << ": " << d << ", " << dbase << ", " << dmax << endl;
 				if (x >= startTime && (d >= dbase && d <= dmax)) {
 					int kk = round(a * d + b);
-					auto dy2 = DiffNorm(dl2.GetY(j), dl1.GetY(i));
+					auto dy2 = DiffNorm(dl2.GetY(jy), dl1.GetY(iy));
 					tty[bootstrapIndex * numCoherenceBins + kk] += dy2;
 					tta[bootstrapIndex * numCoherenceBins + kk]++;
 					//cout << "tta[" << kk << "]=" << tta[bootstrapIndex][kk] << endl;

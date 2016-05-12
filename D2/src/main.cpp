@@ -168,6 +168,9 @@ int main(int argc, char *argv[]) {
 
 	int bootstrapSize = Utils::FindIntProperty(params, "bootstrapSize", 0);
 	assert(bootstrapSize >= 0);
+	// Determines whether bootstrap resampling is done for the purpose of
+	// calculating confidence intervals or significance
+	bool confIntOrSignificance = Utils::FindIntProperty(params, "confIntOrSignificance", 1);
 
 	int numIterations = Utils::FindIntProperty(params, "numIterations", 1);
 	if (numIterations > 1 && numProc > 1) {
@@ -349,6 +352,7 @@ int main(int argc, char *argv[]) {
 			D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode,
 					normalize, relative, tScale, startTime, varScales, varRanges, removeSpurious,
 					bootstrapSize, saveDiffNorms, saveParameters);
+			d2.confIntOrSignificance = confIntOrSignificance;
 			if (!exists(DIFF_NORMS_FILE) || bootstrapSize > 0) {
 				d2.CalcDiffNorms(filePathIndex);
 			} else {
