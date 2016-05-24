@@ -322,6 +322,7 @@ double threshold = 4;
 void wings(bool nOrS) {
 	vector<double> ts;
 	vector<tuple<double /*minLat*/, double /*maxLat*/>> wings;
+	vector<double> minimaEpochs;
 	directory_iterator end_itr; // default construction yields past-the-end
 	path currentDir(".");
 	for (directory_iterator itr(currentDir); itr != end_itr; ++itr) {
@@ -347,6 +348,8 @@ void wings(bool nOrS) {
 			}
 			ifstream input(fileName);
 			unsigned i = 0;
+			double tLast = -1;
+			double bLast = -1;
 			for (string line; getline(input, line);) {
 				//cout << line << endl;
 				std::vector<std::string> words;
@@ -365,6 +368,11 @@ void wings(bool nOrS) {
 					try {
 						double t = stod(words[0]);
 						double b = stod(words[1]);
+						if (tLast >= 0 && sgn(b) != sgn(bLast)) {
+							minimaEpochs.push_back((t + tLast)/2);
+						}
+						tLast = t;
+						bLast = b;
 						if (wings.size() <= i) {
 							ts.push_back(t);
 							wings.push_back(make_tuple(90, 0));
@@ -395,6 +403,11 @@ void wings(bool nOrS) {
 		}
 	}
 	output.close();
+	ofstream output2(string("minima_epochs.csv"));
+	for (double minimum : minimaEpochs) {
+		output2 << minimum << endl;
+	}
+	output2.close();
 }
 
 int main(int argc, char** argv) {
