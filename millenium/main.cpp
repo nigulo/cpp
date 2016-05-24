@@ -318,11 +318,12 @@ double getLat(const string& fileName) {
 double minLat = 19;
 double maxLat = 31;
 double threshold = 4;
+double cycleLengthLimit = 1;
 
 void wings(bool nOrS) {
 	vector<double> ts;
 	vector<tuple<double /*minLat*/, double /*maxLat*/>> wings;
-	vector<double> minimaEpochs;
+	vector<double> cycleStrengths;
 	directory_iterator end_itr; // default construction yields past-the-end
 	path currentDir(".");
 	for (directory_iterator itr(currentDir); itr != end_itr; ++itr) {
@@ -348,8 +349,9 @@ void wings(bool nOrS) {
 			}
 			ifstream input(fileName);
 			unsigned i = 0;
-			double tLast = -1;
+			double cycleStart = 0;
 			double bLast = -1;
+			double bInt = 0;
 			for (string line; getline(input, line);) {
 				//cout << line << endl;
 				std::vector<std::string> words;
@@ -368,10 +370,16 @@ void wings(bool nOrS) {
 					try {
 						double t = stod(words[0]);
 						double b = stod(words[1]);
-						if (tLast >= 0 && sgn(b) != sgn(bLast)) {
-							minimaEpochs.push_back((t + tLast)/2);
+						if (bLast < 0) {
+							bLast = b;
 						}
-						tLast = t;
+						bInt += b * b;
+
+						if ((t - cycleStart) >= cycleLengthLimit && sgn(b) != sgn(bLast)) {
+							cycleStrengths.push_back(bInt / (t - cycleStart));
+							bInt = 0;
+							cycleStart = t;
+						}
 						bLast = b;
 						if (wings.size() <= i) {
 							ts.push_back(t);
@@ -403,9 +411,9 @@ void wings(bool nOrS) {
 		}
 	}
 	output.close();
-	ofstream output2(string("minima_epochs.csv"));
-	for (double minimum : minimaEpochs) {
-		output2 << minimum << endl;
+	ofstream output2(string("cycle_strengths.csv"));
+	for (double cycleStrength : cycleStrengths) {
+		output2 << cycleStrength << endl;
 	}
 	output2.close();
 }
