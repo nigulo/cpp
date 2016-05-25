@@ -315,12 +315,11 @@ double getLat(const string& fileName) {
 	return lat;
 }
 
-double minLat = 19;
-double maxLat = 31;
-double threshold = 4;
-double cycleLengthLimit = 1;
 
 void wings(bool nOrS) {
+	double minLat = 19;
+	double maxLat = 31;
+	double threshold = 4;
 	vector<double> ts;
 	vector<tuple<double /*minLat*/, double /*maxLat*/>> wings;
 	vector<double> cycleStrengths;
@@ -349,9 +348,6 @@ void wings(bool nOrS) {
 			}
 			ifstream input(fileName);
 			unsigned i = 0;
-			double cycleStart = 0;
-			double bLast = -1;
-			double bInt = 0;
 			for (string line; getline(input, line);) {
 				//cout << line << endl;
 				std::vector<std::string> words;
@@ -370,17 +366,6 @@ void wings(bool nOrS) {
 					try {
 						double t = stod(words[0]);
 						double b = stod(words[1]);
-						if (bLast < 0) {
-							bLast = b;
-						}
-						bInt += b * b;
-
-						if ((t - cycleStart) >= cycleLengthLimit && sgn(b) != sgn(bLast)) {
-							cycleStrengths.push_back(bInt / (t - cycleStart));
-							bInt = 0;
-							cycleStart = t;
-						}
-						bLast = b;
 						if (wings.size() <= i) {
 							ts.push_back(t);
 							wings.push_back(make_tuple(90, 0));
@@ -411,16 +396,110 @@ void wings(bool nOrS) {
 		}
 	}
 	output.close();
-	ofstream output2(string("cycle_strengths.csv"));
-	for (double cycleStrength : cycleStrengths) {
-		output2 << cycleStrength << endl;
+}
+
+enum Component {
+	PHI,
+	R,
+};
+
+enum Hemisphere {
+	N,
+	S,
+	BOTH
+};
+
+void cycles(Component component, Hemisphere hemisphere, double cycleLengthLimit, bool detectCycleLength) {
+	double minLat = 19;
+	double maxLat = 31;
+	if (component == R) {
+		minLat = 63;
+		maxLat = 75;
 	}
-	output2.close();
+	vector<double> cycleStrengths;
+	vector<double> cycleLengths;
+	directory_iterator end_itr; // default construction yields past-the-end
+	path currentDir(".");
+	for (directory_iterator itr(currentDir); itr != end_itr; ++itr) {
+		if (is_regular_file(itr->status())) {
+			const string& fileName = itr->path().generic_string();
+			if (fileName.substr(fileName.length() - 4) != ".txt") {
+				continue;
+			}
+		    //cout << "Processing " << fileName << endl;
+			double lat = getLat(fileName);
+			if (hemisphere == N && lat > 127.5) {
+				continue;
+			}
+			if (hemisphere == S && lat < 127.5) {
+				continue;
+			}
+			//if (lat < 15 || lat > 240) {
+			//	continue;
+			//}
+			lat = (lat - 127.5) * 150 / 255;
+			if (abs(lat) < minLat || abs(lat) > maxLat) {
+				continue;
+			}
+			ifstream input(fileName);
+			double cycleStart = 0;
+			double bLast = -1;
+			double bInt = 0;
+			int numCycles = 0;
+			for (string line; getline(input, line);) {
+				//cout << line << endl;
+				std::vector<std::string> words;
+				boost::split(words, line, boost::is_any_of("\t "), boost::token_compress_on);
+				for (vector<string>::iterator it = words.begin(); it != words.end();) {
+					//cout << "<" << (*it) << ">" << endl;
+					if ((*it).length() == 0) {
+						it = words.erase(it);
+					} else {
+						it++;
+					}
+				}
+				if (words.size() > 0 && words[0][0] == '#') {
+					//cout << "Skipping comment line: " << line << endl;
+				} else if (words.size() == 2) {
+					try {
+						double t = stod(words[0]);
+						double b = stod(words[1]);
+						if (bLast < 0) {
+							bLast = b;
+						}
+						bInt += b * b;
+
+						if ((t - cycleStart) >= cycleLengthLimit && (!detectCycleLength || sgn(b) != sgn(bLast))) {
+							cycleStrengths.push_back(bInt / (t - cycleStart));
+							cycleLengths.push_back(t - cycleStart);
+							bInt = 0;
+							cycleStart = t;
+							numCycles++;
+						}
+						bLast = b;
+					} catch (invalid_argument& ex) {
+						cout << "Skipping line, invalid number: " << line << endl;
+					}
+				} else {
+					cout << "Skipping line, invalid number of columns: " << line << endl;
+				}
+		    }
+			cout << "lat: " << lat << ", numCycles: " << numCycles << endl;
+			input.close();
+		}
+	}
+	string comp(component == PHI ? "_phi" : "_r");
+	string hem(hemisphere == N ? "_N" : (hemisphere == S ? "_S" : ""));
+	ofstream output(string("cycles")+ comp + hem + ".csv");
+	for (size_t i = 0; i < cycleStrengths.size(); i++) {
+		output << cycleStrengths[i] << " " << cycleLengths[i] << endl;
+	}
+	output.close();
 }
 
 int main(int argc, char** argv) {
 	if (argc  <= 1) {
-		cout << "Usage: millenium options\\n    options: wings|collect|parity" << endl;
+		cout << "Usage: millenium options\n    options: wings|collect|parity|cycles" << endl;
 		return EXIT_FAILURE;
 	}
 	string option(argv[1]);
@@ -455,8 +534,27 @@ int main(int argc, char** argv) {
 			entropy(mode);
 		}
 		return EXIT_SUCCESS;
+	} else if (option == "CYCLES" && argc >= 3) {
+		string component(argv[2]);
+		to_upper(component);
+		Hemisphere hemisphere(BOTH);
+		if (argc >= 4) {
+			string hem(argv[3]);
+			to_upper(hem);
+			hemisphere = hem == "N" ? N : (hem == "S" ? S : BOTH);
+		}
+		double cycleLengthLimit = 1;
+		if (argc >= 5) {
+			cycleLengthLimit = stof(argv[4]);
+		}
+		bool detectCycleLength = true;
+		if (argc >= 6) {
+			detectCycleLength = stoi(argv[5]) == 1;
+		}
+		cycles(component == "PHI" ? PHI : R, hemisphere, cycleLengthLimit, detectCycleLength);
+		return EXIT_SUCCESS;
 	} else {
-		cout << "Usage: millenium options\n    options: wings|map|parity" << endl;
+		cout << "Usage: millenium options\n    options: wings|map|parity|cycles" << endl;
 		return EXIT_FAILURE;
 	}
 }
