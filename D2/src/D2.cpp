@@ -619,22 +619,26 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 			break;
 		}
 
+		vector<pair<double, double>> specCopy = spec;
+		if (differential && i > 0) {
+			for (unsigned j = 0; j < numFreqs; j++) {
+				auto& s = spec[j];
+				if (differential) {
+					s.second -= prevSpec[j].second;
+				}
+			}
+		}
 		// Normalize locally if needed
 		if (normalize) {
 			Normalize(spec);
 		}
-		bool differential = false;
 
 		if (!differential || i > 0) {
 			//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 			double integral = 0;
-			for (unsigned j = 0; j < numFreqs; j++) {
-				auto& s = spec[j];
-				auto d2 = s.second;
-				if (differential) {
-					d2 -= prevSpec[j].second;
-				}
+			for (auto& s : spec) {
 				double w = s.first;
+				auto d2 = s.second;
 				output << d << " " << w << " " << d2 << endl;
 				if (i == 0) {
 					output_min << w << " " << d2 << endl;
@@ -652,7 +656,7 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 				intMin = integral;
 			}
 		}
-		prevSpec = spec;
+		prevSpec = specCopy;
 		if (!differential) {
 			vector<pair<double, double>> minima = getLocalMinima(spec, 10);
 			if (removeSpurious) {

@@ -32,6 +32,7 @@ public:
 	Mode mode;
 	bool normalize;
 	bool relative;
+	bool differential;
 
 	double tScale;
 	double startTime;

@@ -135,6 +135,7 @@ int main(int argc, char *argv[]) {
 	}
 	bool normalize = Utils::FindIntProperty(params, "normalize", 0);
 	bool relative = Utils::FindIntProperty(params, "relative", 1);
+	bool differential = Utils::FindIntProperty(params, "differential", false);
 	bool removeSpurious = Utils::FindIntProperty(params, "removeSpurious", 0);
 
 	double tScale = Utils::FindDoubleProperty(params, "tScale", 1);
@@ -195,6 +196,7 @@ int main(int argc, char *argv[]) {
 		cout << "mode           " << mode << endl;
 		cout << "normalize      " << normalize << endl;
 		cout << "relative       " << relative << endl;
+		cout << "differential   " << differential << endl;
 		cout << "removeSpurious " << removeSpurious << endl;
 		cout << "tScale         " << tScale << endl;
 		cout << "startTime      " << startTime << endl;
@@ -353,6 +355,7 @@ int main(int argc, char *argv[]) {
 					normalize, relative, tScale, startTime, varScales, varRanges, removeSpurious,
 					bootstrapSize, saveDiffNorms, saveParameters);
 			d2.confIntOrSignificance = confIntOrSignificance;
+			d2.differential = differential;
 			if (!exists(DIFF_NORMS_FILE) || bootstrapSize > 0) {
 				d2.CalcDiffNorms(filePathIndex);
 			} else {
