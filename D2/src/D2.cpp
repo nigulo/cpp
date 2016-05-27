@@ -597,6 +597,7 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 	double intMin = -1;
 	// Basic cycle with printing for GnuPlot
 	double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
+	vector<pair<double, double>> prevSpec(numFreqs);
 	for (unsigned i = 0; i < numCoherences; i++) {
 		double d = minCoherence + i * deltac;
 		vector<pair<double, double>> spec(numFreqs);
@@ -622,53 +623,64 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		if (normalize) {
 			Normalize(spec);
 		}
+		bool differential = false;
 
-		//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
-		double integral = 0;
-		for (auto& s : spec) {
-			double w = s.first;
-			output << d << " " << w << " " << s.second << endl;
-			if (i == 0) {
-				output_min << w << " " << s.second << endl;
-			} else if (i == numCoherences - 1) {
-				output_max << w << " " << s.second << endl;
+		if (!differential || i > 0) {
+			//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
+			double integral = 0;
+			for (unsigned j = 0; j < numFreqs; j++) {
+				auto& s = spec[j];
+				auto d2 = s.second;
+				if (differential) {
+					d2 -= prevSpec[j].second;
+				}
+				double w = s.first;
+				output << d << " " << w << " " << d2 << endl;
+				if (i == 0) {
+					output_min << w << " " << d2 << endl;
+				} else if (i == numCoherences - 1) {
+					output_max << w << " " << d2 << endl;
+				}
+				//output_mid << (wmin + j * step) << " " << spec[j] << endl;
+				integral += s.second;
 			}
-			//output_mid << (wmin + j * step) << " " << spec[j] << endl;
-			integral += s.second;
+			specInt.push_back(integral);
+			if (intMax < 0 || integral > intMax) {
+				intMax = integral;
+			}
+			if (intMin < 0 || integral < intMin) {
+				intMin = integral;
+			}
 		}
-		specInt.push_back(integral);
-		if (intMax < 0 || integral > intMax) {
-			intMax = integral;
-		}
-		if (intMin < 0 || integral < intMin) {
-			intMin = integral;
-		}
-		vector<pair<double, double>> minima = getLocalMinima(spec, 10);
-		if (removeSpurious) {
-			for (auto i = minima.begin(); i != minima.end();) {
-				cout << "Checking minimum: " << (1 / (*i).first) << endl;
-				bool spurious = false;
-				for (auto& m : minima) {
-					if (m.first > (*i).first) {
-						for (auto s : getSpurious(1 / m.first)) {
-							if (abs(1/s - (*i).first) < 2 * freqStep) {
-								cout << "Period " << (1 / (*i).first) << " is spurious of " << 1 / m.first << endl;
-								spurious = true;
-								break;
+		prevSpec = spec;
+		if (!differential) {
+			vector<pair<double, double>> minima = getLocalMinima(spec, 10);
+			if (removeSpurious) {
+				for (auto i = minima.begin(); i != minima.end();) {
+					cout << "Checking minimum: " << (1 / (*i).first) << endl;
+					bool spurious = false;
+					for (auto& m : minima) {
+						if (m.first > (*i).first) {
+							for (auto s : getSpurious(1 / m.first)) {
+								if (abs(1/s - (*i).first) < 2 * freqStep) {
+									cout << "Period " << (1 / (*i).first) << " is spurious of " << 1 / m.first << endl;
+									spurious = true;
+									break;
+								}
 							}
 						}
 					}
-				}
-				if (spurious) {
-					minima.erase(i);
-				} else {
-					i++;
+					if (spurious) {
+						minima.erase(i);
+					} else {
+						i++;
+					}
 				}
 			}
-		}
-		for (auto& m : minima) {
-			if (i % (numCoherences / 10) == 0) { // only output every 10th coherence length
-				allMinima.push_back(D2Minimum(d, m.first, m.second));
+			for (auto& m : minima) {
+				if (i % (numCoherences / 10) == 0) { // only output every 10th coherence length
+					allMinima.push_back(D2Minimum(d, m.first, m.second));
+				}
 			}
 		}
 		//cout << endl;
