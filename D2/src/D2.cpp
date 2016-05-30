@@ -532,7 +532,7 @@ void D2::LoadDiffNorms(int filePathIndex) {
 
 vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec, int maxCount) {
 	int minSeparation = spec.size() / (2 * maxCount);
-	cout << "minSeparation: " << minSeparation << endl;
+	//cout << "minSeparation: " << minSeparation << endl;
 	vector<pair<double, double>> retVal;
 	vector<int> usedIndices;
 	for (int count = 0; count < maxCount; count++) {
@@ -576,6 +576,21 @@ vector<double> getSpurious(double p0) {
 	return retVal;
 }
 
+double calcEntropy(vector<pair<double, double>>& spec) {
+    size_t n = spec.size();
+	double norm = 0;
+    for (auto& s : spec) {
+    	norm += s.second + 1e-12;
+    }
+    double entropy = 0;
+    for (auto& s : spec) {
+    	double d = s.second /= norm;
+    	entropy -= d * log2(d + 1e-12);
+    }
+    entropy /= log2(n);
+    return entropy;
+}
+
 const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 	cout << "dmin = " << dmin << endl;
 	cout << "dmax = " << dmax << endl;
@@ -592,9 +607,10 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 	ofstream output_min(outputFilePrefix + "_min.csv");
 	ofstream output_max(outputFilePrefix + "_max.csv");
 
-	vector<double> specInt;
-	double intMax = -1;
-	double intMin = -1;
+	vector<double> specEnt;
+	//vector<double> specInt;
+	//double intMax = -1;
+	//double intMin = -1;
 	// Basic cycle with printing for GnuPlot
 	double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
 	vector<pair<double, double>> prevSpec(numFreqs);
@@ -635,7 +651,7 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 
 		if (!differential || i > 0) {
 			//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
-			double integral = 0;
+			//double integral = 0;
 			for (auto& s : spec) {
 				double w = s.first;
 				auto d2 = s.second;
@@ -646,15 +662,16 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 					output_max << w << " " << d2 << endl;
 				}
 				//output_mid << (wmin + j * step) << " " << spec[j] << endl;
-				integral += s.second;
+				//integral += s.second;
 			}
-			specInt.push_back(integral);
-			if (intMax < 0 || integral > intMax) {
-				intMax = integral;
-			}
-			if (intMin < 0 || integral < intMin) {
-				intMin = integral;
-			}
+			specEnt.push_back(calcEntropy(spec));
+			//specInt.push_back(integral);
+			//if (intMax < 0 || integral > intMax) {
+			//	intMax = integral;
+			//}
+			//if (intMin < 0 || integral < intMin) {
+			//	intMin = integral;
+			//}
 		}
 		prevSpec = specCopy;
 		if (!differential) {
@@ -694,17 +711,15 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 	output_min.close();
 	output_max.close();
 
-	// print normalized integral
-	/*
+	// print some other stats
+
 	ofstream output_stats("stats.csv");
-	//assert(intMin >=0 && intMax >= 0 && intMin < intMax);
-	//double norm = 1 / (intMax - intMin);
-	for (unsigned i = 0; i < specInt.size(); i++) {
+	for (unsigned i = 0; i < specEnt.size(); i++) {
 		double d = minCoherence + i * deltac;
-		output_stats << d << " " << specInt[i] / intMin << " " << specMinima[i] / minimaMin  << " " << (i > 0 ? (specMinima[i] - specMinima[i - 1]) : (specMinima[1] - specMinima[0])) << endl;
+		output_stats << d << " " << specEnt[i] << endl;
 	}
 	output_stats.close();
-	*/
+
 	return allMinima;
 }
 
