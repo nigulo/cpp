@@ -289,7 +289,7 @@ void entropy(uint8_t mode) {
 		    free(data);
 		    double entropy = 0;
 		    for (size_t i = 0; i < n; i++) {
-		    	double d = powerSpec[i] /= norm;
+		    	double d = powerSpec[i] / norm;
 		    	entropy -= d * log2(d + 1e-12);
 		    }
 		    entropy /= log2(n);
