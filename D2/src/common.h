@@ -5,8 +5,8 @@
  *      Author: nigul
  */
 
-#ifndef SRC_COMMON_H_
-#define SRC_COMMON_H_
+#ifndef COMMON_H_
+#define COMMON_H_
 
 #include <ctime>
 #include <string>
@@ -37,4 +37,4 @@ time_t GetCurrentTime();
 
 const string& GetParamFileName();
 
-#endif /* SRC_COMMON_H_ */
+#endif /* COMMON_H_ */

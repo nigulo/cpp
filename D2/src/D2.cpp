@@ -74,6 +74,9 @@ double D2::Criterion(int bootstrapIndex, double d, double w) {
 	int tav = 0;
 	switch (mode) {
 	case Box:
+		#ifdef _OPENMP
+			#pragma omp parallel for reduction(+:tyv,tav)
+		#endif
 		for (unsigned j = 0; j < td[bootstrapIndex].size(); j++) {
 			double dd = td[bootstrapIndex][j];
 			if (dd <= d) {
@@ -90,6 +93,9 @@ double D2::Criterion(int bootstrapIndex, double d, double w) {
 		break;
 	case Gauss:
 	case GaussWithCosine:
+		#ifdef _OPENMP
+			#pragma omp parallel for reduction(+:tyv,tav)
+		#endif
 		for (unsigned j = 0; j < td[bootstrapIndex].size(); j++) {// to jj-1 do begin
 			double dd = td[bootstrapIndex][j];
 			double ww;
@@ -576,7 +582,7 @@ vector<double> getSpurious(double p0) {
 	return retVal;
 }
 
-double calcEntropy(vector<pair<double, double>>& spec) {
+double calcEntropy(const vector<pair<double, double>>& spec) {
     size_t n = spec.size();
 	double norm = 0;
     for (auto& s : spec) {
@@ -584,34 +590,100 @@ double calcEntropy(vector<pair<double, double>>& spec) {
     }
     double entropy = 0;
     for (auto& s : spec) {
-    	double d = s.second /= norm;
+    	double d = s.second / norm;
     	entropy -= d * log2(d + 1e-12);
     }
     entropy /= log2(n);
     return entropy;
 }
 
-const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
-	cout << "dmin = " << dmin << endl;
-	cout << "dmax = " << dmax << endl;
-	cout << "wmin = " << wmin << endl;
-	cout << "numFreqs = " << numFreqs << endl;
-	cout << "freqStep = " << freqStep << endl;
-	cout << "numCoherenceBins = " << numCoherenceBins << endl;
-	cout << "numCoherences = " << numCoherences << endl;
-	cout << "a = " << a << endl;
-	cout << "b = " << b << endl;
-	cout << "coherenceBinSize = " << coherenceBinSize << endl;
+pair<double /*mean*/, double /*variance*/> meanVariance(const vector<pair<double, double>>& spec) {
+	assert(spec.size() > 0);
+	double sum = 0;
+	double sumSquares = 0;
+	for(auto& s : spec) {
+		sum += s.second;
+		sumSquares += s.second * s.second;
+	}
+	int n = spec.size();
+	double mean = sum / n;
+	return {mean,  sumSquares / n - mean * mean};
+}
 
-	ofstream output(outputFilePrefix + ".csv");
-	ofstream output_min(outputFilePrefix + "_min.csv");
-	ofstream output_max(outputFilePrefix + "_max.csv");
+double calcBimodality(const vector<pair<double, double>>& spec) {
+    size_t n = spec.size();
+    assert(n > 3);
+    auto mv = meanVariance(spec);
+    auto mean = mv.first;
+    auto var = mv.second;
+    double skewness = 0;
+    double excessKurtosity = 0;
+    for (auto& s : spec) {
+    	double diff = s.second - mean;
+    	double diffSqr = diff * diff;
+    	skewness += diff * diffSqr;
+    	excessKurtosity += diffSqr * diffSqr;
+    }
+    skewness /= n * var * sqrt(var);
+    excessKurtosity /= n * (var * var);
+    excessKurtosity -= 3;
 
-	vector<double> specEnt;
+    return (skewness * skewness + 1) / (excessKurtosity + 3 * (n - 1) * (n - 1) / (n - 2) / (n - 3));
+
+}
+
+void D2::RemoveSpurious(vector<pair<double, double>>& minima) {
+	for (auto i = minima.begin(); i != minima.end();) {
+		cout << "Checking minimum: " << (1 / (*i).first) << endl;
+		bool spurious = false;
+		for (auto& m : minima) {
+			if (m.first > (*i).first) {
+				for (auto s : getSpurious(1 / m.first)) {
+					if (abs(1/s - (*i).first) < 2 * freqStep) {
+						cout << "Period " << (1 / (*i).first) << " is spurious of " << 1 / m.first << endl;
+						spurious = true;
+						break;
+					}
+				}
+			}
+		}
+		if (spurious) {
+			minima.erase(i);
+		} else {
+			i++;
+		}
+	}
+
+}
+
+//TODO: printing the results to file should be taken out of from this method
+const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& outputFilePrefix) {
+	ofstream output;
+	ofstream output_min;
+	ofstream output_max;
+	if (bootstrapIndex == 0) {
+		cout << "dmin = " << dmin << endl;
+		cout << "dmax = " << dmax << endl;
+		cout << "wmin = " << wmin << endl;
+		cout << "numFreqs = " << numFreqs << endl;
+		cout << "freqStep = " << freqStep << endl;
+		cout << "numCoherenceBins = " << numCoherenceBins << endl;
+		cout << "numCoherences = " << numCoherences << endl;
+		cout << "a = " << a << endl;
+		cout << "b = " << b << endl;
+		cout << "coherenceBinSize = " << coherenceBinSize << endl;
+
+		output.open(outputFilePrefix + ".csv");
+		output_min.open(outputFilePrefix + "_min.csv");
+		output_max.open(outputFilePrefix + "_max.csv");
+	}
+
+	vector<D2Minimum> allMinima;
+	vector<double> bimodality;
 	//vector<double> specInt;
 	//double intMax = -1;
 	//double intMin = -1;
-	// Basic cycle with printing for GnuPlot
+
 	double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
 	vector<pair<double, double>> prevSpec(numFreqs);
 	for (unsigned i = 0; i < numCoherences; i++) {
@@ -628,7 +700,7 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 				maxXReached = true;
 				break;
 			}
-			double res = Criterion(0, d1, w);
+			double res = Criterion(bootstrapIndex, d1, w);
 			spec[j] = {w, res};
 		}
 		if (maxXReached) {
@@ -649,57 +721,40 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 			Normalize(spec);
 		}
 
-		if (!differential || i > 0) {
-			//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
-			//double integral = 0;
-			for (auto& s : spec) {
-				double w = s.first;
-				auto d2 = s.second;
-				output << d << " " << w << " " << d2 << endl;
-				if (i == 0) {
-					output_min << w << " " << d2 << endl;
-				} else if (i == numCoherences - 1) {
-					output_max << w << " " << d2 << endl;
+		if (bootstrapIndex == 0) {
+			if (!differential || i > 0) {
+				//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
+				//double integral = 0;
+				for (auto& s : spec) {
+					double w = s.first;
+					auto d2 = s.second;
+					output << d << " " << w << " " << d2 << endl;
+					if (i == 0) {
+						output_min << w << " " << d2 << endl;
+					} else if (i == numCoherences - 1) {
+						output_max << w << " " << d2 << endl;
+					}
+					//output_mid << (wmin + j * step) << " " << spec[j] << endl;
+					//integral += s.second;
 				}
-				//output_mid << (wmin + j * step) << " " << spec[j] << endl;
-				//integral += s.second;
+				bimodality.push_back(calcBimodality(spec));
+				//specInt.push_back(integral);
+				//if (intMax < 0 || integral > intMax) {
+				//	intMax = integral;
+				//}
+				//if (intMin < 0 || integral < intMin) {
+				//	intMin = integral;
+				//}
 			}
-			specEnt.push_back(calcEntropy(spec));
-			//specInt.push_back(integral);
-			//if (intMax < 0 || integral > intMax) {
-			//	intMax = integral;
-			//}
-			//if (intMin < 0 || integral < intMin) {
-			//	intMin = integral;
-			//}
 		}
 		prevSpec = specCopy;
 		if (!differential) {
 			vector<pair<double, double>> minima = getLocalMinima(spec, 10);
 			if (removeSpurious) {
-				for (auto i = minima.begin(); i != minima.end();) {
-					cout << "Checking minimum: " << (1 / (*i).first) << endl;
-					bool spurious = false;
-					for (auto& m : minima) {
-						if (m.first > (*i).first) {
-							for (auto s : getSpurious(1 / m.first)) {
-								if (abs(1/s - (*i).first) < 2 * freqStep) {
-									cout << "Period " << (1 / (*i).first) << " is spurious of " << 1 / m.first << endl;
-									spurious = true;
-									break;
-								}
-							}
-						}
-					}
-					if (spurious) {
-						minima.erase(i);
-					} else {
-						i++;
-					}
-				}
+				RemoveSpurious(minima);
 			}
 			for (auto& m : minima) {
-				if (i % (numCoherences / 10) == 0) { // only output every 10th coherence length
+				if (i % (numCoherences / 5) == 0) { // only output every 5th coherence length
 					allMinima.push_back(D2Minimum(d, m.first, m.second));
 				}
 			}
@@ -707,35 +762,34 @@ const vector<D2Minimum>& D2::Compute2DSpectrum(const string& outputFilePrefix) {
 		//cout << endl;
 		//output_mid.close();
 	}
-	output.close();
-	output_min.close();
-	output_max.close();
+	if (bootstrapIndex == 0) {
+		output.close();
+		output_min.close();
+		output_max.close();
 
-	// print some other stats
+		// print some other stats
 
-	ofstream output_stats("stats.csv");
-	for (unsigned i = 0; i < specEnt.size(); i++) {
-		double d = minCoherence + i * deltac;
-		output_stats << d << " " << specEnt[i] << endl;
+		ofstream output_stats("stats.csv");
+		for (unsigned i = 0; i < bimodality.size(); i++) {
+			double d = minCoherence + i * deltac;
+			output_stats << d << " " << bimodality[i] << endl;
+		}
+		output_stats.close();
+		this->allMinima = allMinima;
 	}
-	output_stats.close();
-
 	return allMinima;
 }
 
-void D2::Bootstrap() {
-	for (auto i = 0; i < bootstrapSize; i++) {
-		if (GetProcId() == 0) {
-			for (auto& minimum : allMinima) {
-				if (i == 0) {
-					minimum.bootstrapValues.resize(bootstrapSize);
+void D2::Bootstrap(const string& outputFilePrefix) {
+	if (GetProcId() == 0) {
+		ofstream output_bootstrap(outputFilePrefix + "_bootstrap.csv");
+		for (auto i = 0; i < bootstrapSize; i++) {
+				auto minima = Compute2DSpectrum(i + 1, "");
+				for (auto& m : minima) {
+					output_bootstrap << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
 				}
-				double d1 = minimum.coherenceLength;
-				if (relative) {
-					d1 = minimum.coherenceLength / minimum.frequency;
-				}
-				minimum.bootstrapValues[i] = Criterion(i + 1, d1, minimum.frequency);
-			}
+				output_bootstrap << endl;
 		}
+		output_bootstrap.close();
 	}
 }

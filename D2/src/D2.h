@@ -20,7 +20,6 @@ public:
 	double coherenceLength;
 	double frequency;
 	double value;
-	vector<double> bootstrapValues;
 };
 
 class D2 {
@@ -88,8 +87,8 @@ public:
 			int bootstrapSize, bool saveDiffNorms, bool saveParameters);
     void CalcDiffNorms(int filePathIndex);
     void LoadDiffNorms(int filePathIndex);
-    const vector<D2Minimum>& Compute2DSpectrum(const string& outputFilePrefix);
-    void Bootstrap();
+    const vector<D2Minimum> Compute2DSpectrum(int bootstrapIndex, const string& outputFilePrefix);
+    void Bootstrap(const string& outputFilePrefix);
 
 
 private:
@@ -99,6 +98,7 @@ private:
     double DiffNorm(const real y1[], const real y2[]);
     bool ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta);
     void VarCalculation(double* ySum, double* y2Sum);
+    void RemoveSpurious(vector<pair<double, double>>& minima);
 };
 
 
