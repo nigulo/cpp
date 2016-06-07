@@ -205,15 +205,9 @@ int main(int argc, char *argv[]) {
 		cout << "zoomFactor     " << zoomFactor << endl;
 		cout << "----------------" << endl;
 	}
-	string filePathsStr = Utils::FindProperty(params, string("filePath") + to_string(procId), "");
-	vector<string> filePaths;
-	boost::split(filePaths, filePathsStr, boost::is_any_of(",;"), boost::token_compress_on);
+	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId), "");
+	string outputFilePrefix = Utils::FindProperty(params, string("outputFilePath"), "phasedisp");
 
-	string outputFilePrefixesStr = Utils::FindProperty(params, string("outputFilePath"), "");
-	vector<string> outputFilePrefixes;
-	if (outputFilePrefixesStr.length() > 0) {
-		boost::split(outputFilePrefixes, outputFilePrefixesStr, boost::is_any_of(",;"), boost::token_compress_on);
-	}
 	bool saveDiffNorms = Utils::FindIntProperty(params, "saveDiffNorms", 1);
 	bool saveParameters = Utils::FindIntProperty(params, "saveParameters", 1);
 
@@ -333,98 +327,79 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	int filePathIndex = 0;
-	for (auto& filePath : filePaths) {
-		assert(filePath.size() > 0);
-		double minPeriod = initMinPeriod;
-		double maxPeriod = initMaxPeriod;
-		for (int i = 0; i < numIterations; i++) {
-			DataLoader* dl = nullptr;
-			if (exists(filePath)) {
-				cout << "Rank: " << procId << " file: " << filePath << endl;
+	assert(filePath.size() > 0);
+	double minPeriod = initMinPeriod;
+	double maxPeriod = initMaxPeriod;
+	for (int i = 0; i < numIterations; i++) {
+		DataLoader* dl = nullptr;
+		if (exists(filePath)) {
+			cout << "Rank: " << procId << " file: " << filePath << endl;
 
-				if (binary) {
-					dl = new BinaryDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
-				} else {
-					dl = new TextDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
-				}
-
-			}
-
-			D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode,
-					normalize, relative, tScale, startTime, varScales, varRanges, removeSpurious,
-					bootstrapSize, saveDiffNorms, saveParameters);
-			d2.confIntOrSignificance = confIntOrSignificance;
-			d2.differential = differential;
-			if (!exists(DIFF_NORMS_FILE) || bootstrapSize > 0) {
-				d2.CalcDiffNorms(filePathIndex);
+			if (binary) {
+				dl = new BinaryDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
 			} else {
-				d2.LoadDiffNorms(filePathIndex);
+				dl = new TextDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
 			}
-			string outputFilePrefix = "phasedisp";
-			if (filePathIndex > 0) {
-				outputFilePrefix += to_string(filePathIndex);
-			}
-			if ((int) outputFilePrefixes.size() > filePathIndex) {
-				outputFilePrefix = outputFilePrefixes[filePathIndex];
-			}
-			if (procId == 0) {
-				auto& minima = d2.Compute2DSpectrum(outputFilePrefix);
 
-				ofstream output_minima(outputFilePrefix + "_minima.csv");
-				for (auto& m : minima) {
-					output_minima << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
-				}
-				output_minima.close();
-				d2.Bootstrap();
-				ofstream output_bootstrap(outputFilePrefix + "_bootstrap.csv");
-				for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize; bootstrapIndex++) {
-					for (auto& m : minima) {
-						output_bootstrap << m.bootstrapValues[bootstrapIndex] << " ";
-					}
-					output_bootstrap << endl;
-				}
-				output_bootstrap.close();
+		}
 
-				if (dl) {
-					delete dl;
+		D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode,
+				normalize, relative, tScale, startTime, varScales, varRanges, removeSpurious,
+				bootstrapSize, saveDiffNorms, saveParameters);
+		d2.confIntOrSignificance = confIntOrSignificance;
+		d2.differential = differential;
+		if (!exists(DIFF_NORMS_FILE) || bootstrapSize > 0) {
+			d2.CalcDiffNorms();
+		} else {
+			d2.LoadDiffNorms();
+		}
+		if (procId == 0) {
+			auto& minima = d2.Compute2DSpectrum(0, outputFilePrefix);
+
+			ofstream output_minima(outputFilePrefix + "_minima.csv");
+			for (auto& m : minima) {
+				output_minima << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
+			}
+			output_minima.close();
+			d2.Bootstrap(outputFilePrefix);
+
+			if (dl) {
+				delete dl;
+			}
+			// Zooming into the strongest minimum at smallest coherence length
+			D2Minimum strongestMinimum(numeric_limits<double>::max(), 0, numeric_limits<double>::max());
+			for (auto& m : minima) {
+				if (m.coherenceLength < strongestMinimum.coherenceLength
+						|| (m.coherenceLength < strongestMinimum.coherenceLength && m.value < strongestMinimum.value)) {
+					strongestMinimum.frequency = m.frequency;
+					strongestMinimum.value = m.value;
+					strongestMinimum.coherenceLength = m.coherenceLength;
 				}
-				// Zooming into the strongest minimum at smallest coherence length
-				D2Minimum strongestMinimum(numeric_limits<double>::max(), 0, numeric_limits<double>::max());
-				for (auto& m : minima) {
-					if (m.coherenceLength < strongestMinimum.coherenceLength
-							|| (m.coherenceLength < strongestMinimum.coherenceLength && m.value < strongestMinimum.value)) {
-						strongestMinimum.frequency = m.frequency;
-						strongestMinimum.value = m.value;
-						strongestMinimum.coherenceLength = m.coherenceLength;
-					}
+			}
+			if (i < numIterations - 1) {
+				if (strongestMinimum.frequency == 0) {
+					cout << "Finish zooming, no minima found"  << endl;
+					break;
 				}
-				if (i < numIterations - 1) {
-					if (strongestMinimum.frequency == 0) {
-						cout << "Finish zooming, no minima found"  << endl;
-						break;
-					}
-					double d2Period = 1 / strongestMinimum.frequency;
-					double periodRange = (maxPeriod - minPeriod) / 2 / zoomFactor;
-					minPeriod = d2Period - periodRange;
-					maxPeriod = d2Period + periodRange;
-					if (minPeriod < initMinPeriod) {
-						minPeriod = initMinPeriod;
-					}
-					if (maxPeriod > initMaxPeriod) {
-						maxPeriod = initMaxPeriod;
-					}
-					cout << "d2 minimum period=" << d2Period << endl;
-					cout << "new minPeriod=" << minPeriod << endl;
-					cout << "new maxPeriod=" << maxPeriod << endl;
+				double d2Period = 1 / strongestMinimum.frequency;
+				double periodRange = (maxPeriod - minPeriod) / 2 / zoomFactor;
+				minPeriod = d2Period - periodRange;
+				maxPeriod = d2Period + periodRange;
+				if (minPeriod < initMinPeriod) {
+					minPeriod = initMinPeriod;
 				}
+				if (maxPeriod > initMaxPeriod) {
+					maxPeriod = initMaxPeriod;
+				}
+				cout << "d2 minimum period=" << d2Period << endl;
+				cout << "new minPeriod=" << minPeriod << endl;
+				cout << "new maxPeriod=" << maxPeriod << endl;
 			}
 		}
-		filePathIndex++;
+	}
 #ifndef _NOMPI
 		MPI::COMM_WORLD.Barrier();
 #endif
-	}
 	if (procId == 0) {
 		cout << "done!" << endl;
 	}

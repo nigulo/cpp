@@ -85,8 +85,8 @@ public:
 			double tScale, double startTime, const vector<double>& varScales,
 			const vector<pair<double, double>>& varRanges, bool removeSpurious,
 			int bootstrapSize, bool saveDiffNorms, bool saveParameters);
-    void CalcDiffNorms(int filePathIndex);
-    void LoadDiffNorms(int filePathIndex);
+    void CalcDiffNorms();
+    void LoadDiffNorms();
     const vector<D2Minimum> Compute2DSpectrum(int bootstrapIndex, const string& outputFilePrefix);
     void Bootstrap(const string& outputFilePrefix);
 

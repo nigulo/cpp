@@ -344,7 +344,7 @@ void D2::VarCalculation(double* ySum, double* y2Sum) {
 
 
 
-void D2::CalcDiffNorms(int filePathIndex) {
+void D2::CalcDiffNorms() {
 	assert(mpDataLoader); // dataLoader must be present in case diffnorms are not calculated yet
 	if (GetProcId() == 0) {
 		cout << "Calculating diffnorms..." << endl;
@@ -473,9 +473,6 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			}
 			if (bootstrapIndex == 0 && saveDiffNorms) {
 				string diffNormsFilePrefix = string(DIFF_NORMS_FILE_PREFIX);
-				if (filePathIndex > 0) {
-					diffNormsFilePrefix += to_string(filePathIndex);
-				}
 				ofstream output(diffNormsFilePrefix + "_" + to_string(GetCurrentTime()) + DIFF_NORMS_FILE_SUFFIX);
 				output << varSum << endl;
 				for (unsigned i = 0; i < j; i++) {
@@ -485,7 +482,7 @@ void D2::CalcDiffNorms(int filePathIndex) {
 			}
 		}
 
-		if (saveParameters && filePathIndex == 0) {
+		if (saveParameters) {
 			copy_file(GetParamFileName(), string(PARAMETERS_FILE_PREFIX) + "_" + to_string(GetCurrentTime()) + PARAMETERS_FILE_SUFFIX);
 		}
 	}
@@ -493,7 +490,7 @@ void D2::CalcDiffNorms(int filePathIndex) {
 	delete[] tta;
 }
 
-void D2::LoadDiffNorms(int filePathIndex) {
+void D2::LoadDiffNorms() {
 	if (GetProcId() == 0) {
 		td.resize(1);
 		ty.resize(1);
@@ -501,9 +498,6 @@ void D2::LoadDiffNorms(int filePathIndex) {
 		varSum = 1; // Assuming unit variance by default
 		cout << "Loading diffnorms..." << endl;
 		string diffNormsFile = DIFF_NORMS_FILE;
-		if (filePathIndex > 0) {
-			diffNormsFile = string(DIFF_NORMS_FILE_PREFIX) + to_string(filePathIndex)  + DIFF_NORMS_FILE_SUFFIX;
-		}
 		ifstream input(diffNormsFile);
 		for (string line; getline(input, line);) {
 			std::vector<std::string> words;
