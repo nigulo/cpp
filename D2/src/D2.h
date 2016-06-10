@@ -62,8 +62,6 @@ private:
 
     unsigned numCoherences;
     unsigned numCoherenceBins;
-    double a;
-    double b;
     double dmin;
     double dmax;
     double dbase;

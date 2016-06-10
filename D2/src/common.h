@@ -29,6 +29,15 @@
 #define PARAMETERS_FILE_SUFFIX ".txt"
 #define PARAMETERS_FILE (PARAMETERS_FILE_PREFIX PARAMETERS_FILE_SUFFIX)
 
+#define TAG_TTY 1
+#define TAG_TTA 2
+#define TAG_VAR 3
+#define TAG_IND1 4
+#define TAG_IND2 5
+#define TAG_LOG_LEN 6
+#define TAG_LOG 7
+
+
 using namespace std;
 
 int GetProcId();
@@ -36,5 +45,8 @@ int GetNumProc();
 time_t GetCurrentTime();
 
 const string& GetParamFileName();
+
+// Synchronized logging
+void log(const string& str);
 
 #endif /* COMMON_H_ */
