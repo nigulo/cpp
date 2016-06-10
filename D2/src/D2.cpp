@@ -19,7 +19,9 @@ using namespace boost::filesystem;
 
 #define square(x) ((x) * (x))
 
-D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
+D2::D2(DataLoader* pDataLoader,
+		double duration,
+		double minPeriod, double maxPeriod,
 		double minCoherence, double maxCoherence,
 		Mode mode, bool normalize, bool relative,
 		double tScale, double startTime,
@@ -31,6 +33,7 @@ D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 			mode(mode),
 			normalize(normalize),
 			relative(relative),
+			duration(duration),
 			tScale(tScale),
 			startTime(startTime),
 			varScales(varScales),
@@ -49,12 +52,21 @@ D2::D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
 
 	dmin = minCoherence * (relative ? minPeriod : 1);
 	dmax = maxCoherence * (relative ? maxPeriod : 1);
+	if (dmax > duration * tScale) {
+		dmax = duration * tScale;
+		this->maxCoherence = floor(duration * tScale / maxPeriod);
+	}
 	dbase = dmin / 10;
 	dmaxUnscaled = dmax / tScale;
 
-	if (dmax < dmin || minPeriod > maxPeriod) {
-		throw "Check Arguments";
+	if (dmax < dmin || this->maxCoherence < this->minCoherence) {
+		throw "Maximum coherence length smaller than minimum coherence length";
 	}
+	if (minPeriod > maxPeriod) {
+		throw "Minimum period greater than maximum period";
+	}
+	endTime = startTime + duration;
+
 	numCoherences = dmax > dmin ? coherenceGrid : 1; // output precision in coherence
 	numCoherenceBins = ceil(phaseBins * (dmax - dbase) * wmax);
 	coherenceBinSize = (dmax - dbase) / (numCoherenceBins - 1);
@@ -257,9 +269,6 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 			//	cout << "Time :" << dl1.GetX(i) << endl;
 			//}
 			for (; j < dl2.GetPageSize(); j++) {
-				real x;
-				real xi;
-				real xj;
 				auto ix = i;
 				auto jx = j;
 				auto iy = i;
@@ -272,20 +281,21 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 						jy = jx;
 					}
 				}
-				x = dl1.GetX(ix);
-				xi = x * tScale;
-				xj = dl2.GetX(jx) * tScale;
+				real xiUnscaled = dl1.GetX(ix);
+				real xjUnscaled = dl2.GetX(jx);
+				real xi = xiUnscaled * tScale;
+				real xj = xjUnscaled * tScale;
 				if (bootstrapIndex == 0) {
 					if (xj > maxX) {
 						maxX = xj;
 					}
 				}
 				real d = xj - xi;
-				if (bootstrapSize == 0 && d > dmax) {
-					//cout << "Breaking GetProcId, i, d: " << GetProcId() << ", " << bootstrapIndex << ", " << d << endl;
-					break;
-				}
-				if (x >= startTime && (d >= dbase && d <= dmax)) {
+				//if (bootstrapSize == 0 && d > dmax) {
+				//	//cout << "Breaking GetProcId, i, d: " << GetProcId() << ", " << bootstrapIndex << ", " << d << endl;
+				//	break;
+				//}
+				if (xiUnscaled >= startTime && (d >= dbase && d <= dmax && xjUnscaled <= endTime)) {
 					int kk = round((d - dbase) / numCoherenceBins);
 					//cout << "GetProcId, i, d, kk: " << GetProcId() << ", " << bootstrapIndex << ", " << d << ", " << kk << endl;
 					auto dy2 = DiffNorm(dl2.GetY(jy), dl1.GetY(iy));

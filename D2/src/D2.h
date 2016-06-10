@@ -33,8 +33,10 @@ public:
 	bool relative;
 	bool differential;
 
+	double duration;
 	double tScale;
 	double startTime;
+	double endTime;
 	vector<double> varScales;
 	vector<pair<double, double>> varRanges;
 	bool removeSpurious;
@@ -77,7 +79,8 @@ private:
     default_random_engine e1;
 
 public:
-    D2(DataLoader* pDataLoader, double minPeriod, double maxPeriod,
+    D2(DataLoader* pDataLoader, double duration, 
+    		double minPeriod, double maxPeriod,
     		double minCoherence, double maxCoherence,
 			Mode mode, bool normalize, bool relative,
 			double tScale, double startTime, const vector<double>& varScales,

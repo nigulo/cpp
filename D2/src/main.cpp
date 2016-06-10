@@ -148,6 +148,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	map<string, string> params = Utils::ReadProperties(paramFileName);
+	double duration = Utils::FindDoubleProperty(params, "duration", numeric_limits<double>::max());
+	if (duration <= 0) {
+		duration = numeric_limits<double>::max();
+	}
 	double initMinPeriod = Utils::FindDoubleProperty(params, "minPeriod", 2);
 	double initMaxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
@@ -221,6 +225,7 @@ int main(int argc, char *argv[]) {
 		cout << "----------------" << endl;
 		cout << "numProc        " << numProc << endl;
 		cout << "bootstrapSize  " << bootstrapSize << endl;
+		cout << "duration       " << duration << endl;
 		cout << "minPeriod      " << initMinPeriod << endl;
 		cout << "maxPeriod      " << initMaxPeriod << endl;
 		cout << "minCoherence   " << minCoherence << endl;
@@ -379,7 +384,7 @@ int main(int argc, char *argv[]) {
 
 		}
 
-		D2 d2(dl, minPeriod, maxPeriod, minCoherence, maxCoherence, mode,
+		D2 d2(dl, duration, minPeriod, maxPeriod, minCoherence, maxCoherence, mode,
 				normalize, relative, tScale, startTime, varScales, varRanges, removeSpurious,
 				bootstrapSize, saveDiffNorms, saveParameters);
 		d2.confIntOrSignificance = confIntOrSignificance;
