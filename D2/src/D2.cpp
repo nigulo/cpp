@@ -291,10 +291,10 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 					}
 				}
 				real d = xj - xi;
-				//if (bootstrapSize == 0 && d > dmax) {
-				//	//cout << "Breaking GetProcId, i, d: " << GetProcId() << ", " << bootstrapIndex << ", " << d << endl;
-				//	break;
-				//}
+				if (bootstrapSize == 0 && (d > dmax || xjUnscaled > endTime)) {
+					//cout << "Breaking GetProcId, i, d: " << GetProcId() << ", " << bootstrapIndex << ", " << d << endl;
+					break;
+				}
 				if (xiUnscaled >= startTime && (d >= dbase && d <= dmax && xjUnscaled <= endTime)) {
 					int kk = round((d - dbase) / numCoherenceBins);
 					//cout << "GetProcId, i, d, kk: " << GetProcId() << ", " << bootstrapIndex << ", " << d << ", " << kk << endl;
