@@ -44,25 +44,36 @@ const string& GetParamFileName() {
 	return paramFileName;
 }
 
-void log(const string& str) {
+void sendLog(const string& str) {
 	if (GetProcId() > 0) {
 #ifndef _NOMPI
-		int len = str.length();
+		int len = str.length() + 1;
 		MPI::COMM_WORLD.Send(&len, 1, MPI::INT, 0, TAG_LOG_LEN);
-		MPI::COMM_WORLD.Send(str.c_str(), str.length(), MPI::CHAR, 0, TAG_LOG);
+		MPI::COMM_WORLD.Send(str.c_str(), len, MPI::CHAR, 0, TAG_LOG);
+		MPI::COMM_WORLD.Barrier();
 #endif
 	} else {
-#ifndef _NOMPI
-		int len;
-		MPI::Status status;
-		MPI::COMM_WORLD.Recv(&len, 1,  MPI::INT, MPI_ANY_SOURCE, TAG_LOG_LEN, status);
-		assert(status.Get_error() == MPI::SUCCESS);
-		char strRecv[len];
-		MPI::COMM_WORLD.Recv(strRecv, len,  MPI::CHAR, status.Get_source(), TAG_LOG, status);
-		assert(status.Get_error() == MPI::SUCCESS);
-#endif
-		cout << str;
+		cout << "PROC" << GetProcId() << ": " << str;
 	}
+}
+
+void recvLog() {
+#ifndef _NOMPI
+	if (GetProcId() == 0) {
+		for (int i = 1; i < GetNumProc(); i++) {
+			int len;
+			MPI::Status status;
+			MPI::COMM_WORLD.Recv(&len, 1,  MPI::INT, MPI_ANY_SOURCE, TAG_LOG_LEN, status);
+			assert(status.Get_error() == MPI::SUCCESS);
+			char strRecv[len];
+			int source = status.Get_source();
+			MPI::COMM_WORLD.Recv(strRecv, len,  MPI::CHAR, source, TAG_LOG, status);
+			assert(status.Get_error() == MPI::SUCCESS);
+			cout << "PROC" << source << ": " << strRecv;
+		}
+		MPI::COMM_WORLD.Barrier();
+	}
+#endif
 }
 
 template<typename T> string vecToStr(const vector<T>& vec) {
@@ -204,30 +215,29 @@ int main(int argc, char *argv[]) {
 	assert(numIterations >= 1);
 	assert(zoomFactor >= 1);
 
-	stringstream ss;
 	if (procId == 0) {
-		ss << "----------------" << endl;
-		ss << "Parameter values" << endl;
-		ss << "----------------" << endl;
-		ss << "numProc        " << numProc << endl;
-		ss << "bootstrapSize  " << bootstrapSize << endl;
-		ss << "minPeriod      " << initMinPeriod << endl;
-		ss << "maxPeriod      " << initMaxPeriod << endl;
-		ss << "minCoherence   " << minCoherence << endl;
-		ss << "maxCoherence   " << maxCoherence << endl;
-		ss << "mode           " << mode << endl;
-		ss << "normalize      " << normalize << endl;
-		ss << "relative       " << relative << endl;
-		ss << "differential   " << differential << endl;
-		ss << "removeSpurious " << removeSpurious << endl;
-		ss << "tScale         " << tScale << endl;
-		ss << "startTime      " << startTime << endl;
-		ss << "varScales      " << vecToStr(varScales) << endl;
-		ss << "numIterations  " << numIterations << endl;
-		ss << "zoomFactor     " << zoomFactor << endl;
-		ss << "----------------" << endl;
+		cout << "----------------" << endl;
+		cout << "Parameter values" << endl;
+		cout << "----------------" << endl;
+		cout << "numProc        " << numProc << endl;
+		cout << "bootstrapSize  " << bootstrapSize << endl;
+		cout << "minPeriod      " << initMinPeriod << endl;
+		cout << "maxPeriod      " << initMaxPeriod << endl;
+		cout << "minCoherence   " << minCoherence << endl;
+		cout << "maxCoherence   " << maxCoherence << endl;
+		cout << "mode           " << mode << endl;
+		cout << "normalize      " << normalize << endl;
+		cout << "relative       " << relative << endl;
+		cout << "differential   " << differential << endl;
+		cout << "removeSpurious " << removeSpurious << endl;
+		cout << "tScale         " << tScale << endl;
+		cout << "startTime      " << startTime << endl;
+		cout << "varScales      " << vecToStr(varScales) << endl;
+		cout << "numIterations  " << numIterations << endl;
+		cout << "zoomFactor     " << zoomFactor << endl;
+		cout << "----------------" << endl;
 	}
-	log(ss.str());
+
 	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId), "");
 	string outputFilePrefix = Utils::FindProperty(params, string("outputFilePath"), "phasedisp");
 
@@ -323,21 +333,21 @@ int main(int argc, char *argv[]) {
 			varIndices.push_back(stoi(*it));
 		}
 	}
-	ss.clear();
+
 	if (procId == 0) {
-		ss << "binary         " << binary << endl;
-		ss << "bufferSize     " << bufferSize << endl;
-		ss << "dims           " << vecToStr(dims) << endl;
-		ss << "regions        " << vecVecToStr(regions) << endl;
-		ss << "numVars        " << totalNumVars << endl;
-		ss << "varIndices     " << vecToStr(varIndices) << endl;
-		ss << "----------------" << endl;
+		cout << "binary         " << binary << endl;
+		cout << "bufferSize     " << bufferSize << endl;
+		cout << "dims           " << vecToStr(dims) << endl;
+		cout << "regions        " << vecVecToStr(regions) << endl;
+		cout << "numVars        " << totalNumVars << endl;
+		cout << "varIndices     " << vecToStr(varIndices) << endl;
+		cout << "----------------" << endl;
 	}
-	log(ss.str());
+
 	assert(varScales.size() <= varIndices.size());
 	if (varScales.size() < varIndices.size()) {
 		if (procId == 0) {
-			log("Replacing missing variable scales with 1\n");
+			cout << "Replacing missing variable scales with 1" << endl;
 		}
 		while (varScales.size() < varIndices.size()) {
 			varScales.push_back(1.0f);
@@ -345,7 +355,7 @@ int main(int argc, char *argv[]) {
 	}
 	if (varRanges.size() < varIndices.size()) {
 		if (procId == 0) {
-			log("Replacing missing variable ranges with min and max\n");
+			cout << "Replacing missing variable ranges with min and max" << endl;
 		}
 		while (varRanges.size() < varIndices.size()) {
 			varRanges.push_back({numeric_limits<double>::lowest(), numeric_limits<double>::max()});
@@ -358,7 +368,8 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < numIterations; i++) {
 		DataLoader* dl = nullptr;
 		if (exists(filePath)) {
-			log(string("Rank: ") + to_string(procId) + " file: " + filePath + "\n");
+			sendLog(string("Rank: ") + to_string(procId) + " file: " + filePath + "\n");
+			recvLog();
 
 			if (binary) {
 				dl = new BinaryDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
@@ -426,7 +437,7 @@ int main(int argc, char *argv[]) {
 		MPI::COMM_WORLD.Barrier();
 #endif
 	if (procId == 0) {
-		log("done!\n");
+		cout << "done!" << endl;
 	}
 #ifndef _NOMPI
 	MPI::Finalize();

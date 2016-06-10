@@ -124,7 +124,7 @@ double D2::Criterion(int bootstrapIndex, double d, double w) {
 				}
 				if (std::isnan(wp)) {
 					wp = 0;
-					log("wp is still nan\n");
+					cout << "wp is still nan" << endl;
 				}
 			}
 			if (closeInPhase) {
@@ -137,7 +137,7 @@ double D2::Criterion(int bootstrapIndex, double d, double w) {
 	if (tav > 0 && varSum > 0) {
 		return 0.5 * tyv / tav / varSum;
 	} else {
-		log(string("tav=") + to_string(tav) + "\n");
+		cout << "tav=" << tav << endl;
 		return 0.0;
 	}
 }
@@ -162,7 +162,7 @@ void Normalize(vector<pair<double, double>>& spec) {
 		}
 
 	} else {
-		log("Cannot normalize\n");
+		cout << "Cannot normalize" << endl;
 	}
 }
 
@@ -229,22 +229,23 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 		for (auto procNo = 1; procNo < GetNumProc(); procNo++) {
 			MPI::COMM_WORLD.Send(bsIndexes1, bootstrapSize * dl1.GetPageSize(), MPI::INT, procNo, TAG_IND1);
 		}
+		recvLog();
 		for (auto procNo = 1; procNo < GetNumProc(); procNo++) {
 			MPI::COMM_WORLD.Send(bsIndexes2, bootstrapSize * dl2.GetPageSize(), MPI::INT, procNo, TAG_IND2);
 		}
+		recvLog();
 #endif
 	} else {
 #ifndef _NOMPI
 		MPI::Status status;
 		MPI::COMM_WORLD.Recv(bsIndexes1, bootstrapSize * dl1.GetPageSize(),  MPI::INT, 0, TAG_IND1, status);
 		assert(status.Get_error() == MPI::SUCCESS);
-		log("Received bootstrap indexes for 1.\n");
+		sendLog("Received bootstrap indexes for 1.\n");
 		MPI::COMM_WORLD.Recv(bsIndexes2, bootstrapSize * dl2.GetPageSize(),  MPI::INT, 0, TAG_IND2, status);
 		assert(status.Get_error() == MPI::SUCCESS);
-		log("Received bootstrap indexes for 2.\n");
+		sendLog("Received bootstrap indexes for 2.\n");
 #endif
 	}
-	stringstream ss;
 	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
 		//cout << "bootstrapIndex: " << bootstrapIndex << endl;
 		for (unsigned i = 0; i < dl1.GetPageSize(); i++) {
@@ -281,12 +282,12 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 				}
 				real d = xj - xi;
 				if (bootstrapSize == 0 && d > dmax) {
-					ss << "Breaking GetProcId, i, d: " << GetProcId() << ", " << bootstrapIndex << ", " << d << endl;
+					//cout << "Breaking GetProcId, i, d: " << GetProcId() << ", " << bootstrapIndex << ", " << d << endl;
 					break;
 				}
 				if (x >= startTime && (d >= dbase && d <= dmax)) {
 					int kk = round((d - dbase) / numCoherenceBins);
-					ss << "GetProcId, i, d, kk: " << GetProcId() << ", " << bootstrapIndex << ", " << d << ", " << kk << endl;
+					//cout << "GetProcId, i, d, kk: " << GetProcId() << ", " << bootstrapIndex << ", " << d << ", " << kk << endl;
 					auto dy2 = DiffNorm(dl2.GetY(jy), dl1.GetY(iy));
 					tty[bootstrapIndex * numCoherenceBins + kk] += dy2;
 					tta[bootstrapIndex * numCoherenceBins + kk]++;
@@ -296,7 +297,6 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 			}
 		}
 	}
-	log(ss.str());
 	return true;
 }
 
@@ -340,11 +340,11 @@ void D2::VarCalculation(double* ySum, double* y2Sum) {
 
 void D2::CalcDiffNorms() {
 	assert(mpDataLoader); // dataLoader must be present in case diffnorms are not calculated yet
-	if (GetProcId() == 0) {
-		log("Calculating diffnorms...\n");
-	}
+	sendLog("Calculating diffnorms...\n");
+	recvLog();
 
-	log(string("numCoherenceBins: ") + to_string(numCoherenceBins) + "\n");
+	sendLog(string("numCoherenceBins: ") + to_string(numCoherenceBins) + "\n");
+	recvLog();
 	// Allocate dynamically (may not fit into stack)
 	double* tty = new double[(bootstrapSize + 1) * numCoherenceBins];
 	int* tta = new int[(bootstrapSize + 1) * numCoherenceBins];
@@ -357,9 +357,9 @@ void D2::CalcDiffNorms() {
 
 
 	// Now comes precomputation of differences and counts. They are accumulated in two grids.
-	if (GetProcId() == 0) {
-		log("Loading data...\n");
-	}
+	sendLog("Loading data...\n");
+	recvLog();
+
 	unsigned size = mpDataLoader->GetNumVars() * mpDataLoader->GetDim();
 	double ySum[size];
 	double y2Sum[size];
@@ -368,8 +368,8 @@ void D2::CalcDiffNorms() {
 		ySum[i] = 0;
 		y2Sum[i] = 0;
 	}
-	log(string("GetProcId, dbase, dmax, numCoherenceBins: ") + to_string(GetProcId()) + ", " + to_string(dbase) + ", " + to_string(dmax) + ", " + to_string(numCoherenceBins) + "\n");
-
+	sendLog(string("GetProcId, dbase, dmax, numCoherenceBins: ") + to_string(GetProcId()) + ", " + to_string(dbase) + ", " + to_string(dmax) + ", " + to_string(numCoherenceBins) + "\n");
+	recvLog();
 	while (mpDataLoader->Next()) {
 		n += mpDataLoader->GetPageSize();
 		VarCalculation(ySum, y2Sum);
@@ -384,9 +384,8 @@ void D2::CalcDiffNorms() {
 				}
 			} while (dl2->Next());
 		}
-		if (GetProcId() == 0) {
-			log(string("Page ") + to_string(mpDataLoader->GetPage()) + " loaded.\n");
-		}
+		sendLog(string("Page ") + to_string(mpDataLoader->GetPage()) + " loaded.\n");
+		recvLog();
 		delete dl2;
 	}
 	varSum = 0;
@@ -394,13 +393,13 @@ void D2::CalcDiffNorms() {
 		varSum += (y2Sum[i] - (ySum[i] * ySum[i]) / n) / (n - 1);
 	}
 	if (GetProcId() == 0) {
-		log("Waiting for data from other processes...\n");
+		cout << "Waiting for data from other processes..." << endl;
 	}
 #ifndef _NOMPI
 	MPI::COMM_WORLD.Barrier();
 #endif
 	if (GetProcId() > 0) {
-		log(string("Sending data from ") + to_string(GetProcId()) + ".\n");
+		sendLog(string("Sending data from ") + to_string(GetProcId()) + ".\n");
 		//for (unsigned j = 0; j < m; j++) {
 		//	cout << tty[j] << endl;
 		//}
@@ -411,16 +410,17 @@ void D2::CalcDiffNorms() {
 #endif
 	} else {
 #ifndef _NOMPI
+		recvLog();
 		for (int i = 1; i < GetNumProc(); i++) {
 			double* ttyRecv = new double[(bootstrapSize + 1) * numCoherenceBins];
 			int* ttaRecv = new int[(bootstrapSize + 1) * numCoherenceBins];
 			MPI::Status status;
 			MPI::COMM_WORLD.Recv(ttyRecv, (bootstrapSize + 1) * numCoherenceBins,  MPI::DOUBLE, MPI_ANY_SOURCE, TAG_TTY, status);
 			assert(status.Get_error() == MPI::SUCCESS);
-			log(string("Received square differences from ") + to_string(status.Get_source()) + ".\n");
+			cout << "Received square differences from " << status.Get_source() << "." << endl;
 			MPI::COMM_WORLD.Recv(ttaRecv, (bootstrapSize + 1) * numCoherenceBins,  MPI::INT, status.Get_source(), TAG_TTA, status);
 			assert(status.Get_error() == MPI::SUCCESS);
-			log(string("Received weights from ") + to_string(status.Get_source()) + ".\n");
+			cout << "Received weights from " << status.Get_source() << "." << endl;
 			for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
 				for (unsigned j = 0; j < numCoherenceBins; j++) {
 					tty[bootstrapIndex * numCoherenceBins + j] += ttyRecv[bootstrapIndex * numCoherenceBins + j];
@@ -428,19 +428,19 @@ void D2::CalcDiffNorms() {
 					if (tta[bootstrapIndex * numCoherenceBins + j] != ttaRecv[bootstrapIndex * numCoherenceBins + j]) {
 						cout << "tta discrepancy: " << i << " " << bootstrapIndex << " " << j << " " << tta[bootstrapIndex * numCoherenceBins + j] << " " << ttaRecv[bootstrapIndex * numCoherenceBins + j] << endl;
 					}
-					assert(tta[bootstrapIndex * numCoherenceBins + j] == ttaRecv[bootstrapIndex * numCoherenceBins + j]);
+					//assert(tta[bootstrapIndex * numCoherenceBins + j] == ttaRecv[bootstrapIndex * numCoherenceBins + j]);
 				}
 			}
 			double varSumRecv;
 			MPI::COMM_WORLD.Recv(&varSumRecv, 1,  MPI::DOUBLE, status.Get_source(), TAG_VAR, status);
 			assert(status.Get_error() == MPI::SUCCESS);
-			log(string("Received variance sum ") + to_string(status.Get_source()) + ".\n");
+			cout << "Received variance sum " << status.Get_source() + "." << endl;
 			for (unsigned j = 0; j < numCoherenceBins; j++) {
 				varSum += varSumRecv;
 			}
 		}
 #endif
-		log(string("varSum: ") + to_string(varSum) + "\n");
+		cout << "varSum: " << varSum << endl;
 		ta.resize(bootstrapSize + 1);
 		ty.resize(bootstrapSize + 1);
 		td.resize(bootstrapSize + 1);
@@ -495,7 +495,7 @@ void D2::LoadDiffNorms() {
 		ty.resize(1);
 		ta.resize(1);
 		varSum = 1; // Assuming unit variance by default
-		log("Loading diffnorms...\n");
+		cout << "Loading diffnorms..." << endl;
 		string diffNormsFile = DIFF_NORMS_FILE;
 		ifstream input(diffNormsFile);
 		for (string line; getline(input, line);) {
@@ -519,10 +519,10 @@ void D2::LoadDiffNorms() {
 					ty[0].push_back(stod(words[1]));
 					ta[0].push_back(stoi(words[2]));
 				} catch (invalid_argument& ex) {
-					log("Skipping line, invalid number: " + line + "\n");
+					cout << "Skipping line, invalid number: " << line << endl;
 				}
 			} else {
-				log("Skipping line, invalid number of columns: " + line + "\n");
+				cout << "Skipping line, invalid number of columns: " << line << endl;
 			}
 		}
 		input.close();
@@ -627,13 +627,13 @@ double calcBimodality(const vector<pair<double, double>>& spec) {
 
 void D2::RemoveSpurious(vector<pair<double, double>>& minima) {
 	for (auto i = minima.begin(); i != minima.end();) {
-		log(string("Checking minimum: ") + to_string((1 / (*i).first)) + "\n");
+		cout << "Checking minimum: " << (1 / (*i).first) << endl;
 		bool spurious = false;
 		for (auto& m : minima) {
 			if (m.first > (*i).first) {
 				for (auto s : getSpurious(1 / m.first)) {
 					if (abs(1/s - (*i).first) < 2 * freqStep) {
-						log(string("Period ") + to_string(1 / (*i).first) + " is spurious of " + to_string(1 / m.first) + "\n");
+						cout << "Period " << 1 / (*i).first << " is spurious of " << 1 / m.first << endl;
 						spurious = true;
 						break;
 					}
@@ -655,16 +655,14 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 	ofstream output_min;
 	ofstream output_max;
 	if (bootstrapIndex == 0) {
-		stringstream ss;
-		ss << "dmin = " << dmin << endl;
-		ss << "dmax = " << dmax << endl;
-		ss << "wmin = " << wmin << endl;
-		ss << "numFreqs = " << numFreqs << endl;
-		ss << "freqStep = " << freqStep << endl;
-		ss << "numCoherenceBins = " << numCoherenceBins << endl;
-		ss << "numCoherences = " << numCoherences << endl;
-		ss << "coherenceBinSize = " << coherenceBinSize << endl;
-		log(ss.str());
+		cout << "dmin = " << dmin << endl;
+		cout << "dmax = " << dmax << endl;
+		cout << "wmin = " << wmin << endl;
+		cout << "numFreqs = " << numFreqs << endl;
+		cout << "freqStep = " << freqStep << endl;
+		cout << "numCoherenceBins = " << numCoherenceBins << endl;
+		cout << "numCoherences = " << numCoherences << endl;
+		cout << "coherenceBinSize = " << coherenceBinSize << endl;
 
 		output.open(outputFilePrefix + ".csv");
 		output_min.open(outputFilePrefix + "_min.csv");

@@ -47,6 +47,7 @@ time_t GetCurrentTime();
 const string& GetParamFileName();
 
 // Synchronized logging
-void log(const string& str);
+void sendLog(const string& str);
+void recvLog();
 
 #endif /* COMMON_H_ */
