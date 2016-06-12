@@ -33,7 +33,6 @@ D2::D2(DataLoader* pDataLoader,
 			mode(mode),
 			normalize(normalize),
 			relative(relative),
-			duration(duration),
 			tScale(tScale),
 			startTime(startTime),
 			varScales(varScales),
@@ -52,7 +51,7 @@ D2::D2(DataLoader* pDataLoader,
 
 	dmin = minCoherence * (relative ? minPeriod : 1);
 	dmax = maxCoherence * (relative ? maxPeriod : 1);
-	if (dmax > duration * tScale) {
+	if (duration > 0 && dmax > duration * tScale) {
 		dmax = duration * tScale;
 		this->maxCoherence = floor(duration * tScale / maxPeriod);
 	}
@@ -65,10 +64,14 @@ D2::D2(DataLoader* pDataLoader,
 	if (minPeriod > maxPeriod) {
 		throw "Minimum period greater than maximum period";
 	}
-	endTime = startTime + duration;
+	if (duration > 0) {
+		endTime = startTime + duration;
+	} else {
+		endTime = numeric_limits<double>::max();
+	}
 
 	numCoherences = dmax > dmin ? coherenceGrid : 1; // output precision in coherence
-	numCoherenceBins = ceil(phaseBins * (dmax - dbase) * wmax);
+	numCoherenceBins = round(phaseBins * (dmax - dbase) * wmax);
 	coherenceBinSize = (dmax - dbase) / (numCoherenceBins - 1);
 
 	freqStep = (wmax - wmin) / (numFreqs - 1);
@@ -296,7 +299,11 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 					break;
 				}
 				if (xiUnscaled >= startTime && (d >= dbase && d <= dmax && xjUnscaled <= endTime)) {
-					int kk = round((d - dbase) / numCoherenceBins);
+					//numCoherenceBins = round(phaseBins * (dmax - dbase) * wmax);
+					//a = (numCoherenceBins - 1.0) / (dmax - dbase);
+					//b = -dbase * a;
+					//int kk = round(a * d + b);
+					int kk = round((d - dbase) * (numCoherenceBins - 1) / (dmax - dbase));
 					//cout << "GetProcId, i, d, kk: " << GetProcId() << ", " << bootstrapIndex << ", " << d << ", " << kk << endl;
 					auto dy2 = DiffNorm(dl2.GetY(jy), dl1.GetY(iy));
 					tty[bootstrapIndex * numCoherenceBins + kk] += dy2;

@@ -148,10 +148,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	map<string, string> params = Utils::ReadProperties(paramFileName);
-	double duration = Utils::FindDoubleProperty(params, "duration", numeric_limits<double>::max());
-	if (duration <= 0) {
-		duration = numeric_limits<double>::max();
-	}
+	double duration = Utils::FindDoubleProperty(params, "duration", 0);
 	double initMinPeriod = Utils::FindDoubleProperty(params, "minPeriod", 2);
 	double initMaxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);

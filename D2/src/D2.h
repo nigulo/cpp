@@ -33,7 +33,6 @@ public:
 	bool relative;
 	bool differential;
 
-	double duration;
 	double tScale;
 	double startTime;
 	double endTime;
