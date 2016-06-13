@@ -452,9 +452,7 @@ void D2::CalcDiffNorms() {
 			MPI::COMM_WORLD.Recv(&varSumRecv, 1,  MPI::DOUBLE, status.Get_source(), TAG_VAR, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received variance sum " << status.Get_source() + "." << endl;
-			for (unsigned j = 0; j < numCoherenceBins; j++) {
-				varSum += varSumRecv;
-			}
+			varSum += varSumRecv;
 		}
 #endif
 		cout << "varSum: " << varSum << endl;
