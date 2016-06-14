@@ -22,7 +22,7 @@ using namespace boost::filesystem;
 D2::D2(DataLoader* pDataLoader,
 		double duration,
 		double minPeriod, double maxPeriod,
-		double minCoherence, double maxCoherence,
+		double minCoherence, double maxCoherence, int numFreqs,
 		Mode mode, bool normalize, bool relative,
 		double tScale, double startTime,
 		const vector<double>& varScales, const vector<pair<double, double>>& varRanges,
@@ -30,6 +30,7 @@ D2::D2(DataLoader* pDataLoader,
 			mpDataLoader(pDataLoader),
 			minCoherence(minCoherence),
 			maxCoherence(maxCoherence),
+			numFreqs(numFreqs),
 			mode(mode),
 			normalize(normalize),
 			relative(relative),
@@ -46,7 +47,7 @@ D2::D2(DataLoader* pDataLoader,
 		assert(varScales.size() == pDataLoader->GetVarIndices().size());
 	}
 
-	double wmax = 1.0 / minPeriod;
+	wmax = 1.0 / minPeriod;
 	wmin = 1.0 / maxPeriod;
 
 	dmin = minCoherence * (relative ? minPeriod : 1);
@@ -81,7 +82,7 @@ D2::D2(DataLoader* pDataLoader,
 	lnp = ln2 / eps;
 }
 
-double D2::Criterion(int bootstrapIndex, double d, double w) {
+pair<double, double> D2::Criterion(int bootstrapIndex, double d, double w) {
 	double tyv = 0;
 	int tav = 0;
 	switch (mode) {
@@ -149,31 +150,26 @@ double D2::Criterion(int bootstrapIndex, double d, double w) {
 		}
 		break;
 	}
-	if (tav > 0 && varSum > 0) {
-		return 0.5 * tyv / tav / varSum;
-	} else {
-		cout << "tav=" << tav << endl;
-		return 0.0;
-	}
+	return {tyv, tav};
 }
 
-void Normalize(vector<pair<double, double>>& spec) {
+void Normalize(vector<D2SpecLine>& spec) {
 
 	unique_ptr<double> min;
 	unique_ptr<double> max;
 
-	for (auto& val : spec) {
-		if (!min || val.second < *min) {
-			min.reset(new double(val.second));
+	for (auto& s : spec) {
+		if (!min || s.value < *min) {
+			min.reset(new double(s.value));
 		}
-		if (!max || val.second > *max) {
-			max.reset(new double(val.second));
+		if (!max || s.value > *max) {
+			max.reset(new double(s.value));
 		}
 	}
 	if (max && min && *max > *min) {
 		double range = *max - *min;
-		for (auto& val : spec) {
-			val = {val.first, (val.second - *min) / range};
+		for (auto& s : spec) {
+			s.value = (s.value - *min) / range;
 		}
 
 	} else {
@@ -544,13 +540,13 @@ void D2::LoadDiffNorms() {
 	}
 }
 
-vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& spec, int maxCount) {
+vector<D2SpecLine> getLocalMinima(const vector<D2SpecLine>& spec, int maxCount) {
 	int minSeparation = spec.size() / (2 * maxCount);
 	//cout << "minSeparation: " << minSeparation << endl;
-	vector<pair<double, double>> retVal;
+	vector<D2SpecLine> retVal;
 	vector<int> usedIndices;
 	for (int count = 0; count < maxCount; count++) {
-		pair<double, double> globalMinimum = {0, numeric_limits<double>::max()};
+		D2SpecLine globalMinimum(0, numeric_limits<double>::max(), 1, 1);
 		int minimumIndex = 0;
 		for (int i = 1; i < ((int) spec.size()) - 1; i++) {
 			bool tooClose = false;
@@ -561,7 +557,7 @@ vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& 
 				}
 			}
 			if (!tooClose) {
-				if (spec[i].second < globalMinimum.second) {
+				if (spec[i].value < globalMinimum.value) {
 					globalMinimum = spec[i];
 					minimumIndex = i;
 				}
@@ -575,6 +571,38 @@ vector<pair<double, double>> getLocalMinima(const vector<pair<double, double>>& 
 		}
 	}
 	return retVal;
+}
+
+pair<double, double> confInt(const D2SpecLine& minimum, const vector<D2SpecLine>& spec) {
+	//cout << "Conf. int. for minimum: " << minimum.frequency << " " << minimum.tyv << " " << minimum.tav << endl;
+	size_t index = 0;
+	for (auto s : spec) {
+		if (s.frequency == minimum.frequency) {
+			break;
+		}
+		index++;
+	}
+	double lower = -1;
+	double upper = -1;
+	if (index < spec.size()) {
+		for (int i = index - 1; i >= 0; i--) {
+			double probFact = exp(minimum.tav * (1 - minimum.tav * spec[i].tyv / minimum.tyv / spec[i].tav));
+			//cout << "Lower: " << spec[i].frequency << " " << spec[i].tyv << " " << spec[i].tav << " " << probFact << endl;
+			if (probFact < 0.05) {
+				lower = spec[i].frequency;
+				break;
+			}
+		}
+		for (size_t i = index + 1; i < spec.size(); i++) {
+			double probFact = exp(minimum.tav * (1 - minimum.tav * spec[i].tyv / minimum.tyv / spec[i].tav));
+			//cout << "Upper: " << spec[i].frequency << " " << spec[i].tyv << " " << spec[i].tav << " " << probFact << endl;
+			if (probFact < 0.05) {
+				upper = spec[i].frequency;
+				break;
+			}
+		}
+	}
+	return {lower, upper};
 }
 
 vector<double> getSpurious(double p0) {
@@ -605,20 +633,20 @@ double calcEntropy(const vector<pair<double, double>>& spec) {
     return entropy;
 }
 
-pair<double /*mean*/, double /*variance*/> meanVariance(const vector<pair<double, double>>& spec) {
+pair<double /*mean*/, double /*variance*/> meanVariance(const vector<D2SpecLine>& spec) {
 	assert(spec.size() > 0);
 	double sum = 0;
 	double sumSquares = 0;
 	for(auto& s : spec) {
-		sum += s.second;
-		sumSquares += s.second * s.second;
+		sum += s.value;
+		sumSquares += s.value * s.value;
 	}
 	int n = spec.size();
 	double mean = sum / n;
 	return {mean,  sumSquares / n - mean * mean};
 }
 
-double calcBimodality(const vector<pair<double, double>>& spec) {
+double calcBimodality(const vector<D2SpecLine>& spec) {
     size_t n = spec.size();
     assert(n > 3);
     auto mv = meanVariance(spec);
@@ -627,7 +655,7 @@ double calcBimodality(const vector<pair<double, double>>& spec) {
     double skewness = 0;
     double excessKurtosity = 0;
     for (auto& s : spec) {
-    	double diff = s.second - mean;
+    	double diff = s.value - mean;
     	double diffSqr = diff * diff;
     	skewness += diff * diffSqr;
     	excessKurtosity += diffSqr * diffSqr;
@@ -640,15 +668,15 @@ double calcBimodality(const vector<pair<double, double>>& spec) {
 
 }
 
-void D2::RemoveSpurious(vector<pair<double, double>>& minima) {
+void D2::RemoveSpurious(vector<D2SpecLine>& minima) {
 	for (auto i = minima.begin(); i != minima.end();) {
-		cout << "Checking minimum: " << (1 / (*i).first) << endl;
+		cout << "Checking minimum: " << (1 / (*i).frequency) << endl;
 		bool spurious = false;
 		for (auto& m : minima) {
-			if (m.first > (*i).first) {
-				for (auto s : getSpurious(1 / m.first)) {
-					if (abs(1/s - (*i).first) < 2 * freqStep) {
-						cout << "Period " << 1 / (*i).first << " is spurious of " << 1 / m.first << endl;
+			if (m.frequency > (*i).frequency) {
+				for (auto s : getSpurious(1 / m.frequency)) {
+					if (abs(1/s - (*i).frequency) < 2 * freqStep) {
+						cout << "Period " << 1 / (*i).frequency << " is spurious of " << 1 / m.frequency << endl;
 						spurious = true;
 						break;
 					}
@@ -673,6 +701,7 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 		cout << "dmin = " << dmin << endl;
 		cout << "dmax = " << dmax << endl;
 		cout << "wmin = " << wmin << endl;
+		cout << "wmax = " << wmax << endl;
 		cout << "numFreqs = " << numFreqs << endl;
 		cout << "freqStep = " << freqStep << endl;
 		cout << "numCoherenceBins = " << numCoherenceBins << endl;
@@ -691,12 +720,12 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 	//double intMin = -1;
 
 	double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
-	vector<pair<double, double>> prevSpec(numFreqs);
+	vector<D2SpecLine> prevSpec(numFreqs);
 	for (unsigned i = 0; i < numCoherences; i++) {
 		double d = minCoherence + i * deltac;
-		vector<pair<double, double>> spec(numFreqs);
+		vector<D2SpecLine> spec(numFreqs);
 		bool maxXReached = false;
-		for (unsigned j = 0; j < numFreqs; j++) {
+		for (int j = 0; j < numFreqs; j++) {
 			double w = wmin + j * freqStep;
 			double d1 = d;
 			if (relative) {
@@ -706,19 +735,28 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 				maxXReached = true;
 				break;
 			}
-			double res = Criterion(bootstrapIndex, d1, w);
-			spec[j] = {w, res};
+			auto res = Criterion(bootstrapIndex, d1, w);
+			double tyv = res.first;
+			double tav = res.second;
+			if (tav > 0 && varSum > 0) {
+				spec[j] = D2SpecLine(w, tyv, tav, varSum);
+			} else {
+				cout << "tav=" << tav << endl;
+				// Commented out, because default constructor of D2SpecLine
+				// is already called when the spec vector is constructed
+				// spec[j] = D2SpecLine();
+			}
 		}
 		if (maxXReached) {
 			break;
 		}
 
-		vector<pair<double, double>> specCopy = spec;
+		vector<D2SpecLine> specCopy = spec;
 		if (differential && i > 0) {
-			for (unsigned j = 0; j < numFreqs; j++) {
+			for (int j = 0; j < numFreqs; j++) {
 				auto& s = spec[j];
 				if (differential) {
-					s.second -= prevSpec[j].second;
+					s.value -= prevSpec[j].value;
 				}
 			}
 		}
@@ -732,8 +770,8 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 				//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 				//double integral = 0;
 				for (auto& s : spec) {
-					double w = s.first;
-					auto d2 = s.second;
+					double w = s.frequency;
+					auto d2 = s.value;
 					output << d << " " << w << " " << d2 << endl;
 					if (i == 0) {
 						output_min << w << " " << d2 << endl;
@@ -755,13 +793,23 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 		}
 		prevSpec = specCopy;
 		if (!differential) {
-			vector<pair<double, double>> minima = getLocalMinima(spec, 10);
-			if (removeSpurious) {
-				RemoveSpurious(minima);
-			}
-			for (auto& m : minima) {
-				if (i % (numCoherences / 5) == 0) { // only output every 5th coherence length
-					allMinima.push_back(D2Minimum(d, m.first, m.second));
+			double log2i = log2(i);
+			if (floor(log2i) == log2i) {
+				// 1 minimum for shortest coherence length, more for longer ones
+				auto minima = getLocalMinima(spec, round(d / minCoherence * wmax / wmin) );
+				if (removeSpurious) {
+					RemoveSpurious(minima);
+				}
+				for (auto& m : minima) {
+					auto ci = confInt(m, spec);
+					if (ci.first > 0 && ci.second > 0) {
+						allMinima.push_back(D2Minimum(d, m.frequency, m.value, ci));
+						if (m.frequency - ci.first <= freqStep || ci.second - m.frequency <= freqStep) {
+							cout << "Possibly too wide confidence interval estimated for minimum at d=" << d << ", f=" <<  m.frequency << endl;
+						}
+					} else {
+						cout << "Skipping insignificant minimum at d=" << d << ", f=" <<  m.frequency << endl;
+					}
 				}
 			}
 		}

@@ -13,13 +13,31 @@ enum Mode {
 	GaussWithCosine
 };
 
+class D2SpecLine {
+public:
+	D2SpecLine() : frequency(0), tyv(0), tav(0) {
+		value = 0;
+	}
+
+	D2SpecLine(double frequency, double tyv, double tav, double varSum) : frequency(frequency), tyv(tyv), tav(tav) {
+		value = 0.5 * tyv / tav / varSum;
+	}
+
+	double frequency;
+	double tyv;
+	double tav;
+	double value;
+};
+
 class D2Minimum {
 public:
-	D2Minimum(double coherenceLength, double frequency, double value) : coherenceLength(coherenceLength), frequency(frequency), value(value) {}
+	D2Minimum(double coherenceLength, double frequency, double value, pair<double, double> ci) :
+		coherenceLength(coherenceLength), frequency(frequency), value(value), ci(ci) {}
 
 	double coherenceLength;
 	double frequency;
 	double value;
+	pair<double, double> ci;
 };
 
 class D2 {
@@ -28,6 +46,7 @@ public:
 	DataLoader* mpDataLoader;
 	double minCoherence;
 	double maxCoherence;
+    int numFreqs;
 	Mode mode;
 	bool normalize;
 	bool relative;
@@ -48,7 +67,6 @@ private:
 	double maxX = -1; // little hack
 
 	const unsigned coherenceGrid = 200;
-    const unsigned numFreqs = 200;
 	const unsigned phaseBins = 50;
 	const double epsilon = 0.1;
 
@@ -67,6 +85,7 @@ private:
     double dmax;
     double dbase;
     double dmaxUnscaled;
+    double wmax;
     double wmin;
     double coherenceBinSize;
     double freqStep;
@@ -80,7 +99,7 @@ private:
 public:
     D2(DataLoader* pDataLoader, double duration, 
     		double minPeriod, double maxPeriod,
-    		double minCoherence, double maxCoherence,
+    		double minCoherence, double maxCoherence, int numFreqs,
 			Mode mode, bool normalize, bool relative,
 			double tScale, double startTime, const vector<double>& varScales,
 			const vector<pair<double, double>>& varRanges, bool removeSpurious,
@@ -92,13 +111,13 @@ public:
 
 
 private:
-    double Criterion(int bootstrapIndex, double d, double w);
+    pair<double, double> Criterion(int bootstrapIndex, double d, double w);
 
     // The norm of the difference of two datasets
     double DiffNorm(const real y1[], const real y2[]);
     bool ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta);
     void VarCalculation(double* ySum, double* y2Sum);
-    void RemoveSpurious(vector<pair<double, double>>& minima);
+    void RemoveSpurious(vector<D2SpecLine>& minima);
 };
 
 

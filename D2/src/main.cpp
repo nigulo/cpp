@@ -16,6 +16,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <sstream>
+#include <iomanip>
 
 using namespace utils;
 using namespace std;
@@ -153,6 +154,7 @@ int main(int argc, char *argv[]) {
 	double initMaxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
 	double maxCoherence = Utils::FindDoubleProperty(params, "maxCoherence", 30);
+	int numFreqs = Utils::FindIntProperty(params, "numFreqs", 1000);
 	string modeStr = Utils::FindProperty(params, "mode", "GaussWithCosine");
 	to_upper(modeStr);
 	Mode mode;
@@ -227,6 +229,7 @@ int main(int argc, char *argv[]) {
 		cout << "maxPeriod      " << initMaxPeriod << endl;
 		cout << "minCoherence   " << minCoherence << endl;
 		cout << "maxCoherence   " << maxCoherence << endl;
+		cout << "numFreqs       " << numFreqs << endl;
 		cout << "mode           " << mode << endl;
 		cout << "normalize      " << normalize << endl;
 		cout << "relative       " << relative << endl;
@@ -381,7 +384,7 @@ int main(int argc, char *argv[]) {
 
 		}
 
-		D2 d2(dl, duration, minPeriod, maxPeriod, minCoherence, maxCoherence, mode,
+		D2 d2(dl, duration, minPeriod, maxPeriod, minCoherence, maxCoherence, numFreqs, mode,
 				normalize, relative, tScale, startTime, varScales, varRanges, removeSpurious,
 				bootstrapSize, saveDiffNorms, saveParameters);
 		d2.confIntOrSignificance = confIntOrSignificance;
@@ -396,7 +399,15 @@ int main(int argc, char *argv[]) {
 
 			ofstream output_minima(outputFilePrefix + "_minima.csv");
 			for (auto& m : minima) {
-				output_minima << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
+				output_minima
+					<< std::setprecision(10) << m.coherenceLength << " "
+					<< m.frequency << " "
+					<< 1 / m.frequency << " "
+					<< m.value << " "
+					<< m.ci.first << " "
+					<< m.ci.second << " "
+					<< 1/m.ci.second << " "
+					<< 1/m.ci.first << endl;
 			}
 			output_minima.close();
 			d2.Bootstrap(outputFilePrefix);
@@ -405,18 +416,19 @@ int main(int argc, char *argv[]) {
 				delete dl;
 			}
 			// Zooming into the strongest minimum at smallest coherence length
-			D2Minimum strongestMinimum(numeric_limits<double>::max(), 0, numeric_limits<double>::max());
+			D2Minimum strongestMinimum(numeric_limits<double>::max(), 0, numeric_limits<double>::max(), {0, 0});
 			for (auto& m : minima) {
 				if (m.coherenceLength < strongestMinimum.coherenceLength
 						|| (m.coherenceLength < strongestMinimum.coherenceLength && m.value < strongestMinimum.value)) {
 					strongestMinimum.frequency = m.frequency;
 					strongestMinimum.value = m.value;
 					strongestMinimum.coherenceLength = m.coherenceLength;
+					strongestMinimum. ci = m.ci;
 				}
 			}
 			if (i < numIterations - 1) {
 				if (strongestMinimum.frequency == 0) {
-					cout << "Finish zooming, no minima found"  << endl;
+					cout << "Finish zooming, no minima found" << endl;
 					break;
 				}
 				double d2Period = 1 / strongestMinimum.frequency;
