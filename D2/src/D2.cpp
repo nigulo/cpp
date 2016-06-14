@@ -381,7 +381,7 @@ void D2::CalcDiffNorms() {
 		ySum[i] = 0;
 		y2Sum[i] = 0;
 	}
-	sendLog(string("GetProcId, dbase, dmax, numCoherenceBins: ") + to_string(GetProcId()) + ", " + to_string(dbase) + ", " + to_string(dmax) + ", " + to_string(numCoherenceBins) + "\n");
+	sendLog(string("dbase, dmax, numCoherenceBins: ") + to_string(dbase) + ", " + to_string(dmax) + ", " + to_string(numCoherenceBins) + "\n");
 	recvLog();
 	while (mpDataLoader->Next()) {
 		n += mpDataLoader->GetPageSize();
