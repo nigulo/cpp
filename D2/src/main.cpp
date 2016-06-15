@@ -246,8 +246,8 @@ int main(int argc, char *argv[]) {
 	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId), "");
 	string outputFilePrefix = Utils::FindProperty(params, string("outputFilePath"), "phasedisp");
 
-	bool saveDiffNorms = Utils::FindIntProperty(params, "saveDiffNorms", 1);
-	bool saveParameters = Utils::FindIntProperty(params, "saveParameters", 1);
+	bool saveDiffNorms = Utils::FindIntProperty(params, "saveDiffNorms", 0);
+	bool saveParameters = Utils::FindIntProperty(params, "saveParameters", 0);
 
 	bool binary = Utils::FindIntProperty(params, "binary", 0);
 	unsigned bufferSize = Utils::FindIntProperty(params, "bufferSize", 0);
