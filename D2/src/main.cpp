@@ -155,15 +155,15 @@ int main(int argc, char *argv[]) {
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
 	double maxCoherence = Utils::FindDoubleProperty(params, "maxCoherence", 30);
 	int numFreqs = Utils::FindIntProperty(params, "numFreqs", 1000);
-	string modeStr = Utils::FindProperty(params, "mode", "GaussWithCosine");
+	string modeStr = Utils::FindProperty(params, "mode", "GaussCosine");
 	to_upper(modeStr);
 	Mode mode;
 	if (modeStr == "BOX") {
 		mode = Mode::Box;
 	} else if (modeStr == "GAUSS") {
 		mode = Mode::Gauss;
-	} else if (modeStr == "GAUSSWITHCOSINE") {
-		mode = Mode::GaussWithCosine;
+	} else if (modeStr == "GAUSSCOSINE" ||modeStr == "GAUSSWITHCOSINE") {
+		mode = Mode::GaussCosine;
 	} else {
 		cerr << "Invalid mode" << endl;
 		assert(false);

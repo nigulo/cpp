@@ -10,7 +10,7 @@ using namespace std;
 enum Mode {
 	Box,
 	Gauss,
-	GaussWithCosine
+	GaussCosine
 };
 
 class D2SpecLine {
@@ -64,7 +64,7 @@ public:
 	bool saveParameters;
 private:
 
-	double maxX = -1; // little hack
+	//double maxX = -1; // little hack
 
 	const unsigned coherenceGrid = 200;
 	const unsigned phaseBins = 50;

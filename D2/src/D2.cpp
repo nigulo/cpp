@@ -105,7 +105,7 @@ pair<double, double> D2::Criterion(int bootstrapIndex, double d, double w) {
 		}
 		break;
 	case Gauss:
-	case GaussWithCosine:
+	case GaussCosine:
 		#ifdef _OPENMP
 			#pragma omp parallel for reduction(+:tyv,tav)
 		#endif
@@ -130,13 +130,13 @@ pair<double, double> D2::Criterion(int bootstrapIndex, double d, double w) {
 				closeInPhase = ph < eps || ph > epslim;
 				wp = exp(-square(lnp * ph));
 			} else {
-				double df = 0.25;
+				const double df = 0.5; // With this value we have wp = 1 + 2 cos (2 pi w (ti - tj))
 				if (ph >= df) {
 					wp = 0;
 				} else if (ph == 0) {
 					wp = 1;
 				} else {
-					wp = 0.5 * (cos(M_PI * ph / df) + 1);
+					wp = 2 * cos(M_PI * ph / df) + 1;
 				}
 				if (std::isnan(wp)) {
 					wp = 0;
@@ -284,11 +284,11 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 				real xjUnscaled = dl2.GetX(jx);
 				real xi = xiUnscaled * tScale;
 				real xj = xjUnscaled * tScale;
-				if (bootstrapIndex == 0) {
-					if (xj > maxX) {
-						maxX = xj;
-					}
-				}
+				//if (bootstrapIndex == 0) {
+				//	if (xj > maxX) {
+				//		maxX = xj;
+				//	}
+				//}
 				real d = xj - xi;
 				if (bootstrapSize == 0 && (d > dmax || xjUnscaled > endTime)) {
 					//cout << "Breaking GetProcId, i, d: " << GetProcId() << ", " << bootstrapIndex << ", " << d << endl;
@@ -731,10 +731,10 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 			if (relative) {
 				d1 = d / w;
 			}
-			if (d1 > maxX) {
-				maxXReached = true;
-				break;
-			}
+			//if (d1 > maxX) {
+			//	maxXReached = true;
+			//	break;
+			//}
 			auto res = Criterion(bootstrapIndex, d1, w);
 			double tyv = res.first;
 			double tav = res.second;
