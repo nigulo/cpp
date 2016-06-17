@@ -12,10 +12,10 @@
 
 class TextDataLoader: public DataLoader {
 public:
-	TextDataLoader(const string& fileName, unsigned bufferSize,
-			const vector<unsigned>& dims,
-			const vector<vector<pair<unsigned, unsigned>>>& regions,
-			unsigned totalNumVars, const vector<unsigned>& varIndices);
+	TextDataLoader(const string& fileName, int bufferSize,
+			const vector<int>& dims,
+			const vector<vector<pair<int, int>>>& regions,
+			int totalNumVars, const vector<int>& varIndices);
 	TextDataLoader(const TextDataLoader& dataLoader);
 	virtual ~TextDataLoader();
 

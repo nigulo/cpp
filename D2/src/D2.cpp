@@ -90,7 +90,7 @@ pair<double, double> D2::Criterion(int bootstrapIndex, double d, double w) {
 		#ifdef _OPENMP
 			#pragma omp parallel for reduction(+:tyv,tav)
 		#endif
-		for (unsigned j = 0; j < td[bootstrapIndex].size(); j++) {
+		for (int j = 0; j < td[bootstrapIndex].size(); j++) {
 			double dd = td[bootstrapIndex][j];
 			if (dd <= d) {
 				double ph = dd * w - floor(dd * w);
@@ -109,7 +109,7 @@ pair<double, double> D2::Criterion(int bootstrapIndex, double d, double w) {
 		#ifdef _OPENMP
 			#pragma omp parallel for reduction(+:tyv,tav)
 		#endif
-		for (unsigned j = 0; j < td[bootstrapIndex].size(); j++) {// to jj-1 do begin
+		for (int j = 0; j < td[bootstrapIndex].size(); j++) {// to jj-1 do begin
 			double dd = td[bootstrapIndex][j];
 			double ww;
 			if (d > 0.0) {
@@ -178,61 +178,96 @@ void Normalize(vector<D2SpecLine>& spec) {
 }
 
 // Currently implemented as Frobenius norm
-double D2::DiffNorm(const real y1[], const real y2[]) {
+double D2::DiffNorm(const real y1[], const real y2[], vector<double>& mean1, vector<double>& mean2) const {
 	double norm = 0;
-#ifdef _OPENACC
-	#pragma acc data copyin(y1[0:mpDataLoader->GetDim() * mpDataLoader->GetNumVars()], y2[0:mpDataLoader->GetDim() * mpDataLoader->GetNumVars()])
-	#pragma acc parallel loop reduction(+:norm)
-#else
+	int k = 0;
 #ifdef _OPENMP
-	#pragma omp parallel for reduction(+:norm)
+	#pragma omp parallel for reduction(+:norm,k)
 #endif
-#endif
-	for (unsigned j = 0; j < mpDataLoader->GetNumVars(); j++) {
+	for (int j = 0; j < mpDataLoader->GetNumVars(); j++) {
 		auto offset = j * mpDataLoader->GetDim();
 		auto varScale = varScales[j];
 		auto varRange = varRanges[j];
-		if (varScale != 1.0f) {
-			for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
-				if (mpDataLoader->IsInRegion(i)) {
-					auto index = offset + i;
-					if (y1[index] >= varRange.first && y1[index] <= varRange.second
-							&& y2[index] >= varRange.first && y2[index] <= varRange.second) {
+		for (int i = 0; i < mpDataLoader->GetDim(); i++) {
+			if (mpDataLoader->IsInRegion(i)) {
+				auto index = offset + i;
+				if (y1[index] >= varRange.first && y1[index] <= varRange.second
+						&& y2[index] >= varRange.first && y2[index] <= varRange.second) {
+					if (smoothWindow > 0) {
+						norm += square((y1[index] - y2[index] + (mean2[k]- mean1[k])) * varScale);
+					} else {
 						norm += square((y1[index] - y2[index]) * varScale);
 					}
 				}
-			}
-		} else {
-			for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
-				if (mpDataLoader->IsInRegion(i)) {
-					auto index = offset + i;
-					if (y1[index] >= varRange.first && y1[index] <= varRange.second
-							&& y2[index] >= varRange.first && y2[index] <= varRange.second) {
-						norm += square(y1[index] - y2[index]);
-					}
-				}
+				k++;
 			}
 		}
 	}
+	assert(k == mean1.size() && k == mean2.size());
 	return norm;
 }
 
+void D2::UpdateLocalMean(vector<double>& mean, const real yOld[], const real yNew[]) const {
+	int k = 0;
+	bool empty = mean.empty();
+#ifdef _OPENMP
+	#pragma omp parallel for reduction(+:k)
+#endif
+	for (int j = 0; j < mpDataLoader->GetNumVars(); j++) {
+		auto offset = j * mpDataLoader->GetDim();
+		auto varScale = varScales[j];
+		auto varRange = varRanges[j];
+		for (int i = 0; i < mpDataLoader->GetDim(); i++) {
+			if (mpDataLoader->IsInRegion(i)) {
+				auto index = offset + i;
+				if (!empty) {
+					if (yNew[index] >= varRange.first && yNew[index] <= varRange.second) {
+						mean[k] += yNew[index] * varScale / (2 * smoothWindowSize + 1);
+					}
+					if (yOld[index] >= varRange.first && yOld[index] <= varRange.second) {
+						mean[k] -= yOld[index] * varScale / (2 * smoothWindowSize + 1);
+					}
+				} else {
+					if (yNew[index] >= varRange.first && yNew[index] <= varRange.second) {
+						mean.push_back(yNew[index] * varScale / (2 * smoothWindowSize + 1));
+					} else {
+						mean.push_back(0);
+					}
+				}
+				k++;
+			}
+		}
+	}
+	assert(k == mean.size());
+}
+
+pair<double, double> D2::GetIndexes(int pageSize, int* bsIndexes, int bootstrapIndex, int i) const {
+	auto ix = i;
+	auto iy = i;
+	if (bootstrapIndex > 0) {
+		ix = bsIndexes[(bootstrapIndex - 1) * pageSize + i];
+		if (confIntOrSignificance) {
+			iy = ix;
+		}
+	}
+	return {ix, iy};
+}
 
 
 bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 	if (dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
 		return false;
 	}
-	unsigned bsIndexes1[bootstrapSize][dl1.GetPageSize()];
-	unsigned bsIndexes2[bootstrapSize][dl2.GetPageSize()];
+	int bsIndexes1[bootstrapSize][dl1.GetPageSize()];
+	int bsIndexes2[bootstrapSize][dl2.GetPageSize()];
 	if (GetProcId() == 0) {
-		uniform_int_distribution<unsigned> uniform_dist1(0, dl1.GetPageSize() - 1);
-		uniform_int_distribution<unsigned> uniform_dist2(0, dl2.GetPageSize() - 1);
+		uniform_int_distribution<int> uniform_dist1(0, dl1.GetPageSize() - 1);
+		uniform_int_distribution<int> uniform_dist2(0, dl2.GetPageSize() - 1);
 		for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize; bootstrapIndex++) {
-			for (unsigned i = 0; i < dl1.GetPageSize(); i++) {
+			for (int i = 0; i < dl1.GetPageSize(); i++) {
 				bsIndexes1[bootstrapIndex][i] = uniform_dist1(e1);
 			}
-			for (unsigned j = 0; j < dl2.GetPageSize(); j++) {
+			for (int j = 0; j < dl2.GetPageSize(); j++) {
 				bsIndexes2[bootstrapIndex][j] = uniform_dist2(e1);
 			}
 		}
@@ -258,31 +293,58 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 #endif
 	}
 	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
+		if (smoothWindow > 0) {
+			smoothWindowSize = 0.5 / ((dl1.GetX(1)-dl1.GetX(0)) * tScale / smoothWindow);
+			cout << smoothWindowSize << endl;
+		}
+		vector<double> ma1;
 		//cout << "bootstrapIndex: " << bootstrapIndex << endl;
-		for (unsigned i = 0; i < dl1.GetPageSize(); i++) {
-			unsigned j = 0;
+		for (int i = 0; i < dl1.GetPageSize(); i++) {
+			if (smoothWindow > 0) {
+				if (i < smoothWindowSize || i > dl1.GetPageSize() - smoothWindowSize - 1) {
+					continue;
+				}
+				if (ma1.empty()) {
+					for (int i1 = 0; i1 < 2 * smoothWindowSize + 1; i1++) {
+						auto ixy1 = GetIndexes(dl1.GetPageSize(), (int*) bsIndexes1, bootstrapIndex, i1);
+						auto iy1 = ixy1.second;
+						UpdateLocalMean(ma1, dl1.GetY(iy1), dl1.GetY(iy1));
+					}
+				}
+			}
+			int j = 0;
 			if (bootstrapIndex == 0 && dl1.GetPage() == dl2.GetPage()) {
 				j = i + 1;
 			}
 			//if (GetProcId() == 0) {
 			//	cout << "Time :" << dl1.GetX(i) << endl;
 			//}
+			auto ixy = GetIndexes(dl1.GetPageSize(), (int*) bsIndexes1, bootstrapIndex, i);
+			auto ix = ixy.first;
+			auto iy = ixy.second;
+			real xiUnscaled = dl1.GetX(ix);
+			real xi = xiUnscaled * tScale;
+			vector<double> ma2 = ma1;
 			for (; j < dl2.GetPageSize(); j++) {
-				auto ix = i;
-				auto jx = j;
-				auto iy = i;
-				auto jy = j;
-				if (bootstrapIndex > 0) {
-					ix = bsIndexes1[bootstrapIndex - 1][i];
-					jx = bsIndexes2[bootstrapIndex - 1][j];
-					if (confIntOrSignificance) {
-						iy = ix;
-						jy = jx;
+				if (smoothWindow > 0) {
+					if (j > dl2.GetPageSize() - smoothWindowSize - 1) {
+						break;
 					}
+					auto jy1 = GetIndexes(dl2.GetPageSize(), (int*) bsIndexes2, bootstrapIndex, j-1-smoothWindowSize).second;
+					auto jy2 = GetIndexes(dl2.GetPageSize(), (int*) bsIndexes2, bootstrapIndex, j-1+smoothWindowSize).second;
+					UpdateLocalMean(ma2, dl2.GetY(jy1), dl2.GetY(jy2));
 				}
-				real xiUnscaled = dl1.GetX(ix);
+				//if (ma2.empty()) {
+				//	for (int j1 = jStart - smoothWindow; j1 < jStart + smoothWindow + 1; j1++) {
+				//		auto jxy1 = GetIndexes(dl2.GetPageSize(), (int*) bsIndexes2, bootstrapIndex, j1);
+				//		auto jy1 = jxy1.second;
+				//		UpdateLocalMean(ma2, dl2.GetY(jy1), dl2.GetY(jy1));
+				//	}
+				//}
+				auto jxy = GetIndexes(dl2.GetPageSize(), (int*) bsIndexes2, bootstrapIndex, j);
+				auto jx = jxy.first;
+				auto jy = jxy.second;
 				real xjUnscaled = dl2.GetX(jx);
-				real xi = xiUnscaled * tScale;
 				real xj = xjUnscaled * tScale;
 				//if (bootstrapIndex == 0) {
 				//	if (xj > maxX) {
@@ -301,46 +363,46 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 					//int kk = round(a * d + b);
 					int kk = round((d - dbase) * (numCoherenceBins - 1) / (dmax - dbase));
 					//cout << "GetProcId, i, d, kk: " << GetProcId() << ", " << bootstrapIndex << ", " << d << ", " << kk << endl;
-					auto dy2 = DiffNorm(dl2.GetY(jy), dl1.GetY(iy));
+					auto dy2 = DiffNorm(dl1.GetY(iy), dl2.GetY(jy), ma1, ma2);
 					tty[bootstrapIndex * numCoherenceBins + kk] += dy2;
 					tta[bootstrapIndex * numCoherenceBins + kk]++;
 					//cout << "tta[" << kk << "]=" << tta[bootstrapIndex][kk] << endl;
 					//cout << "tty[" << kk << "]=" << tty[kk] << endl;
 				}
+				//if (dl1.GetPage() == 0 && i == 5000) {
+				//	cout << "MA " << xj << " " << ma2[0] << endl;
+				//}
 			}
+			//if (dl1.GetPage() == 0) {
+			//	cout << "MA " << xi << " " << ma1[0] << endl;
+			//}
+			if (smoothWindow > 0) {
+				auto iy1 = GetIndexes(dl1.GetPageSize(), (int*) bsIndexes1, bootstrapIndex, i-smoothWindowSize).second;
+				auto iy2 = GetIndexes(dl1.GetPageSize(), (int*) bsIndexes1, bootstrapIndex, i+smoothWindowSize).second;
+				UpdateLocalMean(ma1, dl1.GetY(iy1), dl1.GetY(iy2));
+			}
+
 		}
 	}
 	return true;
 }
 
-void D2::VarCalculation(double* ySum, double* y2Sum) {
-	for (unsigned i = 0; i < mpDataLoader->GetPageSize(); i++) {
+void D2::VarCalculation(double* ySum, double* y2Sum) const {
+	for (int i = 0; i < mpDataLoader->GetPageSize(); i++) {
 		auto y = mpDataLoader->GetY(i);
 		// ------------------------------------------
 		// This calculation must be redesigned
-		for (unsigned j = 0; j < mpDataLoader->GetNumVars(); j++) {
+		for (int j = 0; j < mpDataLoader->GetNumVars(); j++) {
 			auto offset = j * mpDataLoader->GetDim();
 			auto varScale = varScales[j];
 			auto varRange = varRanges[j];
-			if (varScale != 1.0f) {
-				for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
-					if (mpDataLoader->IsInRegion(i)) {
-						auto index = offset + i;
-						auto yScaled = y[index] * varScale;
-						if (yScaled >= varRange.first && yScaled <= varRange.second) {
-							ySum[index] += yScaled;
-							y2Sum[index] += yScaled * yScaled;
-						}
-					}
-				}
-			} else {
-				for (unsigned i = 0; i < mpDataLoader->GetDim(); i++) {
-					if (mpDataLoader->IsInRegion(i)) {
-						auto index = offset + i;
-						if (y[index] >= varRange.first && y[index] <= varRange.second) {
-							ySum[index] += y[index];
-							y2Sum[index] += y[index] * y[index];
-						}
+			for (int i = 0; i < mpDataLoader->GetDim(); i++) {
+				if (mpDataLoader->IsInRegion(i)) {
+					auto index = offset + i;
+					auto yScaled = y[index] * varScale;
+					if (yScaled >= varRange.first && yScaled <= varRange.second) {
+						ySum[index] += yScaled;
+						y2Sum[index] += yScaled * yScaled;
 					}
 				}
 			}
@@ -362,7 +424,7 @@ void D2::CalcDiffNorms() {
 	double* tty = new double[(bootstrapSize + 1) * numCoherenceBins];
 	int* tta = new int[(bootstrapSize + 1) * numCoherenceBins];
 	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
-		for (unsigned i = 0; i < numCoherenceBins; i++) {
+		for (int i = 0; i < numCoherenceBins; i++) {
 			tty[bootstrapIndex * numCoherenceBins + i] = 0;
 			tta[bootstrapIndex * numCoherenceBins + i] = 0;
 		}
@@ -373,11 +435,11 @@ void D2::CalcDiffNorms() {
 	sendLog("Loading data...\n");
 	recvLog();
 
-	unsigned size = mpDataLoader->GetNumVars() * mpDataLoader->GetDim();
+	int size = mpDataLoader->GetNumVars() * mpDataLoader->GetDim();
 	double ySum[size];
 	double y2Sum[size];
 	int n = 0;
-	for (unsigned i = 0; i < size; i++) {
+	for (int i = 0; i < size; i++) {
 		ySum[i] = 0;
 		y2Sum[i] = 0;
 	}
@@ -402,7 +464,7 @@ void D2::CalcDiffNorms() {
 		delete dl2;
 	}
 	varSum = 0;
-	for (unsigned i = 0; i < size; i++) {
+	for (int i = 0; i < size; i++) {
 		varSum += (y2Sum[i] - (ySum[i] * ySum[i]) / n) / (n - 1);
 	}
 	if (GetProcId() == 0) {
@@ -413,7 +475,7 @@ void D2::CalcDiffNorms() {
 #endif
 	if (GetProcId() > 0) {
 		sendLog(string("Sending data from ") + to_string(GetProcId()) + ".\n");
-		//for (unsigned j = 0; j < m; j++) {
+		//for (int j = 0; j < m; j++) {
 		//	cout << tty[j] << endl;
 		//}
 #ifndef _NOMPI
@@ -435,7 +497,7 @@ void D2::CalcDiffNorms() {
 			assert(status.Get_error() == MPI::SUCCESS);
 			cout << "Received weights from " << status.Get_source() << "." << endl;
 			for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
-				for (unsigned j = 0; j < numCoherenceBins; j++) {
+				for (int j = 0; j < numCoherenceBins; j++) {
 					tty[bootstrapIndex * numCoherenceBins + j] += ttyRecv[bootstrapIndex * numCoherenceBins + j];
 					//cout << "Weigths: " << bootstrapIndex << " " << tta[bootstrapIndex][j] << " " << ttaRecv[bootstrapIndex][j] << endl;
 					if (tta[bootstrapIndex * numCoherenceBins + j] != ttaRecv[bootstrapIndex * numCoherenceBins + j]) {
@@ -457,8 +519,8 @@ void D2::CalcDiffNorms() {
 		td.resize(bootstrapSize + 1);
 		for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
 			// How many time differences was actually used?
-			unsigned j = 0;
-			for (unsigned i = 0; i < numCoherenceBins; i++) {
+			int j = 0;
+			for (int i = 0; i < numCoherenceBins; i++) {
 				if (tta[bootstrapIndex * numCoherenceBins + i] > 0) {
 					j++;
 				}
@@ -472,7 +534,7 @@ void D2::CalcDiffNorms() {
 			// Build final grids for periodicity search.
 
 			j = 0;
-			for (unsigned i = 0; i < numCoherenceBins; i++) {
+			for (int i = 0; i < numCoherenceBins; i++) {
 				double d = dbase + i * coherenceBinSize;
 				if (tta[bootstrapIndex * numCoherenceBins + i] > 0) {
 					td[bootstrapIndex][j] = d;
@@ -485,7 +547,7 @@ void D2::CalcDiffNorms() {
 				string diffNormsFilePrefix = string(DIFF_NORMS_FILE_PREFIX);
 				ofstream output(diffNormsFilePrefix + "_" + to_string(GetCurrentTime()) + DIFF_NORMS_FILE_SUFFIX);
 				output << varSum << endl;
-				for (unsigned i = 0; i < j; i++) {
+				for (int i = 0; i < j; i++) {
 					output << td[0][i] << " " << ty[0][i] << " " << ta[0][i] << endl;
 				}
 				output.close();
@@ -668,7 +730,7 @@ double calcBimodality(const vector<D2SpecLine>& spec) {
 
 }
 
-void D2::RemoveSpurious(vector<D2SpecLine>& minima) {
+void D2::RemoveSpurious(vector<D2SpecLine>& minima) const {
 	for (auto i = minima.begin(); i != minima.end();) {
 		cout << "Checking minimum: " << (1 / (*i).frequency) << endl;
 		bool spurious = false;
@@ -721,7 +783,7 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 
 	double deltac = maxCoherence > minCoherence ? (maxCoherence - minCoherence) / (numCoherences - 1) : 0;
 	vector<D2SpecLine> prevSpec(numFreqs);
-	for (unsigned i = 0; i < numCoherences; i++) {
+	for (int i = 0; i < numCoherences; i++) {
 		double d = minCoherence + i * deltac;
 		vector<D2SpecLine> spec(numFreqs);
 		bool maxXReached = false;
@@ -824,7 +886,7 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 		// print some other stats
 
 		ofstream output_stats("stats.csv");
-		for (unsigned i = 0; i < bimodality.size(); i++) {
+		for (int i = 0; i < bimodality.size(); i++) {
 			double d = minCoherence + i * deltac;
 			output_stats << d << " " << bimodality[i] << endl;
 		}

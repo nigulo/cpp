@@ -22,11 +22,11 @@ typedef float real;
 
 class DataLoader {
 public:
-	DataLoader(const string& fileName, unsigned bufferSize, ios::openmode mode,
-			const vector<unsigned>& dims,
-			const vector<vector<pair<unsigned, unsigned>>>& regions,
-			unsigned totalNumVars,
-			const vector<unsigned>& varIndices);
+	DataLoader(const string& fileName, int bufferSize, ios::openmode mode,
+			const vector<int>& dims,
+			const vector<vector<pair<int, int>>>& regions,
+			int totalNumVars,
+			const vector<int>& varIndices);
 	DataLoader(const DataLoader& dataLoader);
 	virtual ~DataLoader();
 
@@ -39,7 +39,7 @@ public:
 		return fileName;
 	}
 
-	real GetX(unsigned i) const {
+	real GetX(int i) const {
 		assert(i < pageSize);
 		return data[i * (dim * GetNumVars() + 1)];
 	}
@@ -51,7 +51,7 @@ public:
 	}
 	*/
 
-	const real* GetY(unsigned i) const {
+	const real* GetY(int i) const {
 		if (i >= pageSize) {
 			cout << "pageSize, i" << pageSize << ", " << i << endl;
 		}
@@ -60,13 +60,13 @@ public:
 	}
 
 	/*
-	unsigned GetAbsoluteIndex(const vector<unsigned>& indices) const {
+	int GetAbsoluteIndex(const vector<int>& indices) const {
 		assert(indices.size() == dims.size());
 		assert(mins.empty() || mins[0] <= indices[0]);
 		assert(maxs.empty() || maxs[0] >= indices[0]);
-		unsigned i = indices[0];
-		unsigned d = 1;
-		for (unsigned j = 1; j < indices.size(); j++) {
+		int i = indices[0];
+		int d = 1;
+		for (int j = 1; j < indices.size(); j++) {
 			assert(mins.size() <= j || mins[j] <= indices[j]);
 			assert(maxs.size() <= j || maxs[j] >= indices[j]);
 			d *= dims[j - 1];
@@ -80,33 +80,33 @@ public:
 		return page;
 	}
 
-	const vector<unsigned>& GetDims() const {
+	const vector<int>& GetDims() const {
 		return dims;
 	}
 
-	unsigned GetDim() const {
+	int GetDim() const {
 		return dim;
 	}
 
 	/*
-	const vector<unsigned>& GetMins() const {
+	const vector<int>& GetMins() const {
 		return mins;
 	}
 
-	const vector<unsigned>& GetMaxs() const {
+	const vector<int>& GetMaxs() const {
 		return maxs;
 	}
 	*/
 
-	unsigned GetPageSize() const {
+	int GetPageSize() const {
 		return pageSize;
 	}
 
-	unsigned GetTotalNumVars() const {
+	int GetTotalNumVars() const {
 		return totalNumVars;
 	}
 
-	unsigned GetNumVars() const {
+	int GetNumVars() const {
 		if (varIndices.size() > 0) {
 			return varIndices.size();
 		} else {
@@ -114,18 +114,18 @@ public:
 		}
 	}
 
-	const vector<unsigned>& GetVarIndices() const {
+	const vector<int>& GetVarIndices() const {
 		return varIndices;
 	}
 
-	bool IsInRegion(unsigned i) const {
+	bool IsInRegion(int i) const {
 		return inRegion[i];
 	}
 
 	/*
 	void ShufflePage(default_random_engine& e1) {
 		uniform_int_distribution<int> uniform_dist(0, pageSize - 1);
-		for (unsigned i = 0; i < pageSize; i++) {
+		for (int i = 0; i < pageSize; i++) {
 			auto oldPos = i * (dim * GetNumVars() + 1);
 			auto val = data[oldPos];
 			auto newIndex = uniform_dist(e1);
@@ -137,14 +137,14 @@ public:
 	*/
 
 private:
-	bool InRegion(unsigned i) const {
+	bool InRegion(int i) const {
 		if (regions.empty()) {
 			return false;
 		}
-		for (vector<pair<unsigned, unsigned>> region : regions) {
+		for (vector<pair<int, int>> region : regions) {
 			bool inRegion = true;
-			for (unsigned j = 0; j < dims.size(); j++) {
-				unsigned d = i % dims[j];
+			for (int j = 0; j < dims.size(); j++) {
+				int d = i % dims[j];
 				if (region.size() > j && (d < get<0>(region[j]) || d > get<1>(region[j]))) {
 					inRegion = false;
 					break;
@@ -161,17 +161,17 @@ private:
 
 protected:
 	const string fileName;
-	const unsigned bufferSize;
+	const int bufferSize;
 	const ios::openmode mode;
-	const vector<unsigned> dims;
-	const vector<vector<pair<unsigned /*min*/, unsigned /*max*/>>> regions;
-	const unsigned totalNumVars;
-	const vector<unsigned> varIndices;
+	const vector<int> dims;
+	const vector<vector<pair<int /*min*/, int /*max*/>>> regions;
+	const int totalNumVars;
+	const vector<int> varIndices;
 	ifstream input;
 	int page;
 	real* data;
-	unsigned pageSize;
-	unsigned dim;
+	int pageSize;
+	int dim;
 	bool* inRegion;
 
 };

@@ -90,7 +90,7 @@ template<typename T> string vecToStr(const vector<T>& vec) {
 	return ss.str();
 }
 
-template<> string vecToStr<pair<unsigned, unsigned>>(const vector<pair<unsigned, unsigned>>& vec) {
+template<> string vecToStr<pair<int, int>>(const vector<pair<int, int>>& vec) {
 	stringstream ss;
 	bool first = true;
 	for (auto t : vec) {
@@ -214,6 +214,7 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 	double zoomFactor = Utils::FindDoubleProperty(params, "zoomFactor", 10);
+	double smoothWindow = Utils::FindDoubleProperty(params, "smoothWindow", 0);
 
 	assert(numIterations >= 1);
 	assert(zoomFactor >= 1);
@@ -240,6 +241,7 @@ int main(int argc, char *argv[]) {
 		cout << "varScales      " << vecToStr(varScales) << endl;
 		cout << "numIterations  " << numIterations << endl;
 		cout << "zoomFactor     " << zoomFactor << endl;
+		cout << "smoothWindow   " << smoothWindow << endl;
 		cout << "----------------" << endl;
 	}
 
@@ -250,11 +252,11 @@ int main(int argc, char *argv[]) {
 	bool saveParameters = Utils::FindIntProperty(params, "saveParameters", 0);
 
 	bool binary = Utils::FindIntProperty(params, "binary", 0);
-	unsigned bufferSize = Utils::FindIntProperty(params, "bufferSize", 0);
+	int bufferSize = Utils::FindIntProperty(params, "bufferSize", 0);
 
 	string strDims = Utils::FindProperty(params, "dims", "1");
 	vector<string> dimsStr;
-	vector<unsigned> dims;
+	vector<int> dims;
 	boost::split(dimsStr, strDims, boost::is_any_of(",;"), boost::token_compress_on);
 	for (vector<string>::iterator it = dimsStr.begin() ; it != dimsStr.end(); ++it) {
 		if ((*it).length() != 0) {
@@ -264,7 +266,7 @@ int main(int argc, char *argv[]) {
 
 	string strNumProcs = Utils::FindProperty(params, "numProcs", "1");
 	vector<string> numProcsStr;
-	vector<unsigned> numProcs;
+	vector<int> numProcs;
 	boost::split(numProcsStr, strNumProcs, boost::is_any_of(",;"), boost::token_compress_on);
 	for (vector<string>::iterator it = numProcsStr.begin() ; it != numProcsStr.end(); ++it) {
 		if ((*it).length() != 0) {
@@ -273,13 +275,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	assert(numProcs.size() == dims.size());
-	assert(numProc == accumulate(numProcs.begin(), numProcs.end(), 1, multiplies<unsigned>()));
+	assert(numProc == accumulate(numProcs.begin(), numProcs.end(), 1, multiplies<int>()));
 
-	vector<unsigned> dimsPerProc;
-	vector<unsigned> procIds;
+	vector<int> dimsPerProc;
+	vector<int> procIds;
 
 	int procSize = 1;
-	for (unsigned i = 0; i < dims.size(); i++) {
+	for (int i = 0; i < dims.size(); i++) {
 		assert(dims[i] % numProcs[i] == 0);
 		dimsPerProc.push_back(dims[i] / numProcs[i]);
 		procIds.push_back((procId / procSize) % numProcs[i]);
@@ -288,19 +290,19 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	vector<vector<pair<unsigned, unsigned>>> regions;
+	vector<vector<pair<int, int>>> regions;
 	string strRegions = Utils::FindProperty(params, "regions", "");
 	if (!strRegions.empty()) {
 		for (string strRegion : Utils::SplitByChars(strRegions, ";")) {
-			vector<pair<unsigned, unsigned>> region;
+			vector<pair<int, int>> region;
 			int i = 0;
 			for (string strMinMax : Utils::SplitByChars(strRegion, ",", false)) {
 				vector<string> minMaxStrs = Utils::SplitByChars(strMinMax, ":-", false);
 				assert(minMaxStrs.size() == 2);
-				unsigned min = stoi(minMaxStrs[0]);
-				unsigned procMin = procIds[i] * dimsPerProc[i];
-				unsigned max = stoi(minMaxStrs[1]);
-				unsigned procMax = (procIds[i] + 1) * dimsPerProc[i] - 1;
+				int min = stoi(minMaxStrs[0]);
+				int procMin = procIds[i] * dimsPerProc[i];
+				int max = stoi(minMaxStrs[1]);
+				int procMax = (procIds[i] + 1) * dimsPerProc[i] - 1;
 				//cout << procId << ": procMin, procMax [" << i << "] " << procMin << " " << procMax << endl;
 				if (min <= procMax && max >= procMin) {
 					if (min < procMin) {
@@ -327,11 +329,11 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	unsigned totalNumVars = Utils::FindIntProperty(params, "numVars", 1);
+	int totalNumVars = Utils::FindIntProperty(params, "numVars", 1);
 
 	string strVarIndices = Utils::FindProperty(params, "varIndices", "0");
 	vector<string> varIndicesStr;
-	vector<unsigned> varIndices;
+	vector<int> varIndices;
 	boost::split(varIndicesStr, strVarIndices, boost::is_any_of(",;"), boost::token_compress_on);
 	for (vector<string>::iterator it = varIndicesStr.begin() ; it != varIndicesStr.end(); ++it) {
 		if ((*it).length() != 0) {
@@ -389,6 +391,7 @@ int main(int argc, char *argv[]) {
 				bootstrapSize, saveDiffNorms, saveParameters);
 		d2.confIntOrSignificance = confIntOrSignificance;
 		d2.differential = differential;
+		d2.smoothWindow = smoothWindow;
 		if (!exists(DIFF_NORMS_FILE) || bootstrapSize > 0) {
 			d2.CalcDiffNorms();
 		} else {

@@ -2,10 +2,10 @@
 #include <iostream>
 using namespace std;
 
-BinaryDataLoader::BinaryDataLoader(const string& fileName, unsigned bufferSize,
-		const vector<unsigned>& dims,
-		const vector<vector<pair<unsigned, unsigned>>>& regions,
-		unsigned totalNumVars, const vector<unsigned>& varIndices) :
+BinaryDataLoader::BinaryDataLoader(const string& fileName, int bufferSize,
+		const vector<int>& dims,
+		const vector<vector<pair<int, int>>>& regions,
+		int totalNumVars, const vector<int>& varIndices) :
 				DataLoader(fileName, bufferSize, ios::in | ios::binary, dims, regions, totalNumVars, varIndices) {
 }
 
@@ -33,17 +33,17 @@ bool BinaryDataLoader::Next() {
 		return false;
 	}
 	page++;
-	unsigned varSize = dim * GetNumVars() + 1;
-	unsigned dataPageSize = bufferSize * varSize;
+	int varSize = dim * GetNumVars() + 1;
+	int dataPageSize = bufferSize * varSize;
 	data = new real[dataPageSize];
 	if (RECORDHEADER) {
-		assert(sizeof (unsigned) == 4);
-		unsigned i = 0;
-		unsigned dataOffset = 0;
+		assert(sizeof (int) == 4);
+		int i = 0;
+		int dataOffset = 0;
 		while (i < bufferSize) {
-			unsigned recordSize;
+			int recordSize;
 			input.read((char*) &recordSize, 4);
-			unsigned numBytesRead = input.gcount();
+			int numBytesRead = input.gcount();
 			if (input.eof()) {
 				input.close();
 				break;
@@ -63,8 +63,8 @@ bool BinaryDataLoader::Next() {
 			//input.read((char*) (data + dataOffset + 1), recordSize);
 			//numBytesRead = input.gcount();
 			//assert(numBytesRead == recordSize);
-			unsigned lastVarIndex = 0;
-			for (unsigned varIndex : GetVarIndices()) {
+			int lastVarIndex = 0;
+			for (int varIndex : GetVarIndices()) {
 				assert(varIndex >= lastVarIndex);
 				if (varIndex - lastVarIndex != 0) {
 					input.seekg((varIndex - lastVarIndex) * dim * sizeof (real), ios::cur);
@@ -88,7 +88,7 @@ bool BinaryDataLoader::Next() {
 		pageSize = i;
 	} else {
 		input.read((char*) data, (sizeof (real)) * dataPageSize);
-		unsigned numBytesRead = input.gcount();
+		int numBytesRead = input.gcount();
 		if (numBytesRead < (sizeof (real)) * dataPageSize) {
 			assert(numBytesRead % ((sizeof (real)) * varSize) == 0);
 			pageSize = numBytesRead / ((sizeof (real)) * varSize);

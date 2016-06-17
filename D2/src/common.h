@@ -14,12 +14,8 @@
 #ifndef _NOMPI
 #include "mpi.h"
 #endif
-#ifdef _OPENACC
-#include <openacc.h>
-#else
 #ifdef _OPENMP
 #include <omp.h>
-#endif
 #endif
 
 #define DIFF_NORMS_FILE_PREFIX "diffnorms"

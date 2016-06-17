@@ -52,6 +52,9 @@ public:
 	bool relative;
 	bool differential;
 
+	// Unfinished implementation (works only in case of even sampling and 1 page)
+    double smoothWindow;
+
 	double tScale;
 	double startTime;
 	double endTime;
@@ -66,8 +69,8 @@ private:
 
 	//double maxX = -1; // little hack
 
-	const unsigned coherenceGrid = 200;
-	const unsigned phaseBins = 50;
+	const int coherenceGrid = 200;
+	const int phaseBins = 50;
 	const double epsilon = 0.1;
 
 	double epslim, eps, ln2, lnp;
@@ -79,8 +82,8 @@ private:
 	vector<vector<int>> ta;
 	double varSum = 0;
 
-    unsigned numCoherences;
-    unsigned numCoherenceBins;
+    int numCoherences;
+    int numCoherenceBins;
     double dmin;
     double dmax;
     double dbase;
@@ -95,6 +98,8 @@ private:
     // Seed with a real random value, if available
     random_device rd;
     default_random_engine e1;
+
+    int smoothWindowSize;
 
 public:
     D2(DataLoader* pDataLoader, double duration, 
@@ -114,10 +119,12 @@ private:
     pair<double, double> Criterion(int bootstrapIndex, double d, double w);
 
     // The norm of the difference of two datasets
-    double DiffNorm(const real y1[], const real y2[]);
+    double DiffNorm(const real y1[], const real y2[], vector<double>& mean1, vector<double>& mean2) const;
+    void UpdateLocalMean(vector<double>& mean, const real yOld[], const real yNew[]) const;
     bool ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta);
-    void VarCalculation(double* ySum, double* y2Sum);
-    void RemoveSpurious(vector<D2SpecLine>& minima);
+    void VarCalculation(double* ySum, double* y2Sum) const;
+    void RemoveSpurious(vector<D2SpecLine>& minima) const;
+    pair<double, double> GetIndexes(int pageSize, int* bsIndexes, int bootstrapIndex, int i) const;
 };
 
 

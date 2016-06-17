@@ -7,10 +7,10 @@
 
 #include "DataLoader.h"
 
-DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmode mode,
-			const vector<unsigned>& dims,
-			const vector<vector<pair<unsigned, unsigned>>>& regions,
-			unsigned totalNumVars, const vector<unsigned>& varIndices) :
+DataLoader::DataLoader(const string& fileName, int bufferSize, ios::openmode mode,
+			const vector<int>& dims,
+			const vector<vector<pair<int, int>>>& regions,
+			int totalNumVars, const vector<int>& varIndices) :
 		fileName(fileName),
 		bufferSize(bufferSize),
 		mode(mode),
@@ -28,11 +28,11 @@ DataLoader::DataLoader(const string& fileName, unsigned bufferSize, ios::openmod
 	for (auto dimx : dims) {
 		dim *= dimx;
 	}
-	for (unsigned varIndex : varIndices) {
+	for (int varIndex : varIndices) {
 		assert(varIndex < GetTotalNumVars());
 	}
 	inRegion = new bool[dim];
-	for (unsigned i = 0; i < dim; i++) {
+	for (int i = 0; i < dim; i++) {
 		inRegion[i] = InRegion(i);
 	}
 }
@@ -52,7 +52,7 @@ DataLoader::DataLoader(const DataLoader& dataLoader) :
 	dim(dataLoader.dim) {
 	assert(input.is_open());
 	inRegion = new bool[dim];
-	for (unsigned i = 0; i < dim; i++) {
+	for (int i = 0; i < dim; i++) {
 		inRegion[i] = dataLoader.inRegion[i];
 	}
 }
