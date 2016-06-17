@@ -203,7 +203,9 @@ double D2::DiffNorm(const real y1[], const real y2[], vector<double>& mean1, vec
 			}
 		}
 	}
-	assert(k == mean1.size() && k == mean2.size());
+	if (smoothWindow > 0) {
+		assert(k == mean1.size() && k == mean2.size());
+	}
 	return norm;
 }
 
