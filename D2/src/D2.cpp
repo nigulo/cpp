@@ -295,11 +295,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 #endif
 	}
 	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
-		if (smoothWindow > 0) {
-			smoothWindowSize = 0.5 / ((dl1.GetX(1)-dl1.GetX(0)) * tScale / smoothWindow);
-			cout << smoothWindowSize << endl;
-		}
-		vector<double> ma1;
+		vector<double> ma1; // moving average (local mean) around data point 1
 		//cout << "bootstrapIndex: " << bootstrapIndex << endl;
 		for (int i = 0; i < dl1.GetPageSize(); i++) {
 			if (smoothWindow > 0) {
@@ -326,7 +322,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 			auto iy = ixy.second;
 			real xiUnscaled = dl1.GetX(ix);
 			real xi = xiUnscaled * tScale;
-			vector<double> ma2 = ma1;
+			vector<double> ma2 = ma1;  // moving average (local mean) around data point 2
 			for (; j < dl2.GetPageSize(); j++) {
 				if (smoothWindow > 0) {
 					if (j > dl2.GetPageSize() - smoothWindowSize - 1) {
@@ -390,10 +386,22 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 }
 
 void D2::VarCalculation(double* ySum, double* y2Sum) const {
+	vector<double> ma; // moving average (local mean) around data point 1
 	for (int i = 0; i < mpDataLoader->GetPageSize(); i++) {
 		auto y = mpDataLoader->GetY(i);
+		if (smoothWindow > 0) {
+			if (i < smoothWindowSize || i > mpDataLoader->GetPageSize() - smoothWindowSize - 1) {
+				continue;
+			}
+			if (ma.empty()) {
+				for (int i1 = 0; i1 < 2 * smoothWindowSize + 1; i1++) {
+					UpdateLocalMean(ma, y, y);
+				}
+			}
+		}
 		// ------------------------------------------
 		// This calculation must be redesigned
+		int k = 0;
 		for (int j = 0; j < mpDataLoader->GetNumVars(); j++) {
 			auto offset = j * mpDataLoader->GetDim();
 			auto varScale = varScales[j];
@@ -403,9 +411,16 @@ void D2::VarCalculation(double* ySum, double* y2Sum) const {
 					auto index = offset + i;
 					auto yScaled = y[index] * varScale;
 					if (yScaled >= varRange.first && yScaled <= varRange.second) {
-						ySum[index] += yScaled;
-						y2Sum[index] += yScaled * yScaled;
+						if (smoothWindow > 0) {
+							ySum[index] += yScaled - ma[k];
+							y2Sum[index] += yScaled * yScaled;
+						} else {
+							auto yScaledSmooth = yScaled - ma[k];
+							ySum[index] += yScaledSmooth;
+							y2Sum[index] += yScaledSmooth * yScaledSmooth;
+						}
 					}
+					k++;
 				}
 			}
 		}
@@ -449,6 +464,10 @@ void D2::CalcDiffNorms() {
 	recvLog();
 	while (mpDataLoader->Next()) {
 		n += mpDataLoader->GetPageSize();
+		if (smoothWindow > 0) {
+			smoothWindowSize = 0.5 / ((mpDataLoader->GetX(1)-mpDataLoader->GetX(0)) * tScale / smoothWindow);
+			cout << smoothWindowSize << endl;
+		}
 		VarCalculation(ySum, y2Sum);
 		if (!ProcessPage(*mpDataLoader, *mpDataLoader, tty, tta)) {
 			break;
