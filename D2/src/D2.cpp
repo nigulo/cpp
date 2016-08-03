@@ -12,12 +12,11 @@
 #include <sstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#include <iomanip>
 
 using namespace std;
 using namespace boost;
 using namespace boost::filesystem;
-
-#define square(x) ((x) * (x))
 
 D2::D2(DataLoader* pDataLoader,
 		double duration,
@@ -662,7 +661,7 @@ vector<D2SpecLine> getLocalMinima(const vector<D2SpecLine>& spec, int maxCount) 
 	return retVal;
 }
 
-pair<double, double> confInt(const D2SpecLine& minimum, const vector<D2SpecLine>& spec) {
+double getError(const D2SpecLine& minimum, const vector<D2SpecLine>& spec) {
 	//cout << "Conf. int. for minimum: " << minimum.frequency << " " << minimum.tyv << " " << minimum.tav << endl;
 	size_t index = 0;
 	for (auto s : spec) {
@@ -673,25 +672,35 @@ pair<double, double> confInt(const D2SpecLine& minimum, const vector<D2SpecLine>
 	}
 	double lower = -1;
 	double upper = -1;
+	double sum = 0;
+	double sum2 = 0;
 	if (index < spec.size()) {
-		for (int i = index - 1; i >= 0; i--) {
+		for (size_t i = index - 1; i >= 0; i--) {
 			double probFact = exp(minimum.tav * (1 - minimum.tav * spec[i].tyv / minimum.tyv / spec[i].tav));
 			//cout << "Lower: " << spec[i].frequency << " " << spec[i].tyv << " " << spec[i].tav << " " << probFact << endl;
-			if (probFact < 0.05) {
-				lower = spec[i].frequency;
+			if (probFact < 0.001) {
 				break;
 			}
+			sum += sqrt(-2*log(probFact)) * abs(spec[i].frequency - minimum.frequency);
+			sum2 += -2*log(probFact);
+			lower = spec[i].frequency;
 		}
 		for (size_t i = index + 1; i < spec.size(); i++) {
 			double probFact = exp(minimum.tav * (1 - minimum.tav * spec[i].tyv / minimum.tyv / spec[i].tav));
 			//cout << "Upper: " << spec[i].frequency << " " << spec[i].tyv << " " << spec[i].tav << " " << probFact << endl;
-			if (probFact < 0.05) {
-				upper = spec[i].frequency;
+			if (probFact < 0.001) {
 				break;
 			}
+			sum += sqrt(-2*log(probFact)) * abs(spec[i].frequency - minimum.frequency);
+			sum2 += -2*log(probFact);
+			lower = spec[i].frequency;
 		}
 	}
-	return {lower, upper};
+	if (sum > 0) {
+		return 2 * sum/sum2; // 2sigma
+	} else {
+		return 0;
+	}
 }
 
 vector<double> getSpurious(double p0) {
@@ -858,17 +867,21 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 			if (!differential || i > 0) {
 				//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 				//double integral = 0;
-				for (auto& s : spec) {
-					double w = s.frequency;
-					auto d2 = s.value;
-					output << d << " " << w << " " << d2 << endl;
-					if (i == 0) {
-						output_min << w << " " << d2 << endl;
-					} else if (i == numCoherences - 1) {
-						output_max << w << " " << d2 << endl;
+				auto outputFreqCount = min(numFreqs, 1000);
+				for (int j = 0; j < numFreqs; j++) {
+					if (j % (numFreqs / outputFreqCount) == 0) {
+						auto s = spec[j];
+						double w = s.frequency;
+						auto d2 = s.value;
+						output << d << " " << w << " " << d2 << endl;
+						if (i == 0) {
+							output_min << w << " " << d2 << endl;
+						} else if (i == numCoherences - 1) {
+							output_max << w << " " << d2 << endl;
+						}
+						//output_mid << (wmin + j * step) << " " << spec[j] << endl;
+						//integral += s.second;
 					}
-					//output_mid << (wmin + j * step) << " " << spec[j] << endl;
-					//integral += s.second;
 				}
 				bimodality.push_back(calcBimodality(spec));
 				//specInt.push_back(integral);
@@ -890,14 +903,18 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 					RemoveSpurious(minima);
 				}
 				for (auto& m : minima) {
-					auto ci = confInt(m, spec);
-					if (ci.first > 0 && ci.second > 0) {
-						allMinima.push_back(D2Minimum(d, m.frequency, m.value, ci));
-						if (m.frequency - ci.first <= freqStep || ci.second - m.frequency <= freqStep) {
-							cout << "Possibly too wide confidence interval estimated for minimum at d=" << d << ", f=" <<  m.frequency << endl;
+					if (bootstrapIndex == 0) {
+						auto error = getError(m, spec);
+						if (error > 0) {
+							allMinima.push_back(D2Minimum(d, m.frequency, m.value, error));
+							if (error <= freqStep) {
+								cout << "Possibly too wide confidence interval estimated for minimum at d=" << d << ", f=" <<  m.frequency << endl;
+							}
+						} else {
+							cout << "Skipping insignificant minimum at d=" << d << ", f=" <<  m.frequency << endl;
 						}
 					} else {
-						cout << "Skipping insignificant minimum at d=" << d << ", f=" <<  m.frequency << endl;
+						allMinima.push_back(D2Minimum(d, m.frequency, m.value, 0));
 					}
 				}
 			}
@@ -913,7 +930,7 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 		// print some other stats
 
 		ofstream output_stats("stats.csv");
-		for (int i = 0; i < bimodality.size(); i++) {
+		for (size_t i = 0; i < bimodality.size(); i++) {
 			double d = minCoherence + i * deltac;
 			output_stats << d << " " << bimodality[i] << endl;
 		}
@@ -929,9 +946,8 @@ void D2::Bootstrap(const string& outputFilePrefix) {
 		for (auto i = 0; i < bootstrapSize; i++) {
 				auto minima = Compute2DSpectrum(i + 1, "");
 				for (auto& m : minima) {
-					output_bootstrap << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
+					output_bootstrap << i << " " << std::setprecision(10) << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
 				}
-				output_bootstrap << endl;
 		}
 		output_bootstrap.close();
 	}
