@@ -395,7 +395,7 @@ void D2::VarCalculation(double* ySum, double* y2Sum) const {
 			}
 			if (ma.empty()) {
 				for (int i1 = 0; i1 < 2 * smoothWindowSize + 1; i1++) {
-					UpdateLocalMean(ma, y, y);
+					UpdateLocalMean(ma, mpDataLoader->GetY(i1), mpDataLoader->GetY(i1));
 				}
 			}
 		}
@@ -412,17 +412,23 @@ void D2::VarCalculation(double* ySum, double* y2Sum) const {
 					auto yScaled = y[index] * varScale;
 					if (yScaled >= varRange.first && yScaled <= varRange.second) {
 						if (smoothWindow > 0) {
-							ySum[index] += yScaled - ma[k];
-							y2Sum[index] += yScaled * yScaled;
-						} else {
 							auto yScaledSmooth = yScaled - ma[k];
 							ySum[index] += yScaledSmooth;
 							y2Sum[index] += yScaledSmooth * yScaledSmooth;
+						} else {
+							ySum[index] += yScaled;
+							y2Sum[index] += yScaled * yScaled;
 						}
 					}
 					k++;
 				}
 			}
+		}
+		if (smoothWindow > 0) {
+			assert(k == ma.size());
+			auto iy1 = i-smoothWindowSize;
+			auto iy2 = i+smoothWindowSize;
+			UpdateLocalMean(ma, mpDataLoader->GetY(iy1), mpDataLoader->GetY(iy2));
 		}
 		// ------------------------------------------
 	}
