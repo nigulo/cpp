@@ -31,13 +31,13 @@ public:
 
 class D2Minimum {
 public:
-	D2Minimum(double coherenceLength, double frequency, double value, pair<double, double> ci) :
-		coherenceLength(coherenceLength), frequency(frequency), value(value), ci(ci) {}
+	D2Minimum(double coherenceLength, double frequency, double value, double error) :
+		coherenceLength(coherenceLength), frequency(frequency), value(value), error(error) {}
 
 	double coherenceLength;
 	double frequency;
 	double value;
-	pair<double, double> ci;
+	double error;
 };
 
 class D2 {
@@ -119,12 +119,13 @@ private:
     pair<double, double> Criterion(int bootstrapIndex, double d, double w);
 
     // The norm of the difference of two datasets
-    double DiffNorm(const real y1[], const real y2[], vector<double>& mean1, vector<double>& mean2) const;
+    double DiffNorm(const real y1[], const real y2[]) const;
     void UpdateLocalMean(vector<double>& mean, const real yOld[], const real yNew[]) const;
     bool ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta);
     void VarCalculation(double* ySum, double* y2Sum) const;
     void RemoveSpurious(vector<D2SpecLine>& minima) const;
     pair<double, double> GetIndexes(int pageSize, int* bsIndexes, int bootstrapIndex, int i) const;
+    void Smooth();
 };
 
 

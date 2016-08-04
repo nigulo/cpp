@@ -59,6 +59,28 @@ public:
 		return &data[i * (dim * GetNumVars() + 1) + 1];
 	}
 
+	real* GetYToModify(int i) {
+		if (i >= pageSize) {
+			cout << "pageSize, i" << pageSize << ", " << i << endl;
+		}
+		assert(i < pageSize);
+		return &data[i * (dim * GetNumVars() + 1) + 1];
+	}
+
+	/*
+	// Not tested
+	void SetY(int i, const real* y) const {
+		if (i >= pageSize) {
+			cout << "pageSize, i" << pageSize << ", " << i << endl;
+		}
+		assert(i < pageSize);
+		for (int j = 0; j < GetNumVars() * GetDim(); j++) {
+			data[i * (dim * GetNumVars() + 1) + 1 + j] = y[j];
+		}
+
+	}
+	*/
+
 	/*
 	int GetAbsoluteIndex(const vector<int>& indices) const {
 		assert(indices.size() == dims.size());

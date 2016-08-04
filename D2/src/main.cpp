@@ -154,7 +154,9 @@ int main(int argc, char *argv[]) {
 	double initMaxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
 	double maxCoherence = Utils::FindDoubleProperty(params, "maxCoherence", 30);
-	int numFreqs = Utils::FindIntProperty(params, "numFreqs", 1000);
+	int bootstrapSize = Utils::FindIntProperty(params, "bootstrapSize", 0);
+	assert(bootstrapSize >= 0);
+	int numFreqs = Utils::FindIntProperty(params, "numFreqs", bootstrapSize > 0 ? max(1000, 100000 / bootstrapSize) : 100000);
 	string modeStr = Utils::FindProperty(params, "mode", "GaussCosine");
 	to_upper(modeStr);
 	Mode mode;
@@ -202,8 +204,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	int bootstrapSize = Utils::FindIntProperty(params, "bootstrapSize", 0);
-	assert(bootstrapSize >= 0);
 	// Determines whether bootstrap resampling is done for the purpose of
 	// calculating confidence intervals or significance
 	bool confIntOrSignificance = Utils::FindIntProperty(params, "confIntOrSignificance", 1);
@@ -407,10 +407,8 @@ int main(int argc, char *argv[]) {
 					<< m.frequency << " "
 					<< 1 / m.frequency << " "
 					<< m.value << " "
-					<< m.ci.first << " "
-					<< m.ci.second << " "
-					<< 1/m.ci.second << " "
-					<< 1/m.ci.first << endl;
+					<< m.error << " "
+					<< m.error / square(m.frequency) << endl;
 			}
 			output_minima.close();
 			d2.Bootstrap(outputFilePrefix);
@@ -419,14 +417,14 @@ int main(int argc, char *argv[]) {
 				delete dl;
 			}
 			// Zooming into the strongest minimum at smallest coherence length
-			D2Minimum strongestMinimum(numeric_limits<double>::max(), 0, numeric_limits<double>::max(), {0, 0});
+			D2Minimum strongestMinimum(numeric_limits<double>::max(), 0, numeric_limits<double>::max(), 0);
 			for (auto& m : minima) {
 				if (m.coherenceLength < strongestMinimum.coherenceLength
 						|| (m.coherenceLength < strongestMinimum.coherenceLength && m.value < strongestMinimum.value)) {
 					strongestMinimum.frequency = m.frequency;
 					strongestMinimum.value = m.value;
 					strongestMinimum.coherenceLength = m.coherenceLength;
-					strongestMinimum. ci = m.ci;
+					strongestMinimum.error = m.error;
 				}
 			}
 			if (i < numIterations - 1) {

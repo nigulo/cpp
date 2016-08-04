@@ -33,6 +33,7 @@
 #define TAG_LOG_LEN 6
 #define TAG_LOG 7
 
+#define square(x) ((x) * (x))
 
 using namespace std;
 

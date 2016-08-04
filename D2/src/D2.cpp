@@ -12,6 +12,7 @@
 #include <sstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/circular_buffer.hpp>
 #include <iomanip>
 
 using namespace std;
@@ -89,7 +90,7 @@ pair<double, double> D2::Criterion(int bootstrapIndex, double d, double w) {
 		#ifdef _OPENMP
 			#pragma omp parallel for reduction(+:tyv,tav)
 		#endif
-		for (int j = 0; j < td[bootstrapIndex].size(); j++) {
+		for (size_t j = 0; j < td[bootstrapIndex].size(); j++) {
 			double dd = td[bootstrapIndex][j];
 			if (dd <= d) {
 				double ph = dd * w - floor(dd * w);
@@ -108,7 +109,7 @@ pair<double, double> D2::Criterion(int bootstrapIndex, double d, double w) {
 		#ifdef _OPENMP
 			#pragma omp parallel for reduction(+:tyv,tav)
 		#endif
-		for (int j = 0; j < td[bootstrapIndex].size(); j++) {// to jj-1 do begin
+		for (size_t j = 0; j < td[bootstrapIndex].size(); j++) {// to jj-1 do begin
 			double dd = td[bootstrapIndex][j];
 			double ww;
 			if (d > 0.0) {
@@ -176,12 +177,98 @@ void Normalize(vector<D2SpecLine>& spec) {
 	}
 }
 
-// Currently implemented as Frobenius norm
-double D2::DiffNorm(const real y1[], const real y2[], vector<double>& mean1, vector<double>& mean2) const {
-	double norm = 0;
-	int k = 0;
+void D2::UpdateLocalMean(vector<double>& mean, const real yOld[], const real yNew[]) const {
+	if (mean.empty()) {
+		mean.resize(mpDataLoader->GetNumVars() * mpDataLoader->GetDim(), 0);
+	}
 #ifdef _OPENMP
-	#pragma omp parallel for reduction(+:norm,k)
+	#pragma omp parallel for
+#endif
+	for (int j = 0; j < mpDataLoader->GetNumVars() * mpDataLoader->GetDim(); j++) {
+		mean[j] += yNew[j];
+		mean[j] -= yOld[j];
+	}
+}
+
+void D2::Smooth() {
+	vector<double> ma; // moving average (local mean) around data point 1
+	circular_buffer<vector<real>> oldYs(smoothWindowSize+1);
+	auto norm = 2 * smoothWindowSize + 1;
+	for (int i = 0; i < mpDataLoader->GetPageSize(); i++) {
+		auto y = mpDataLoader->GetYToModify(i);
+		if (i < smoothWindowSize) {
+			vector<real> oldY(mpDataLoader->GetNumVars() * mpDataLoader->GetDim());
+			for (int j = 0; j < mpDataLoader->GetNumVars() * mpDataLoader->GetDim(); j++) {
+				oldY.push_back(y[j]);
+			}
+			oldYs.push_back(oldY);
+			continue;
+		}
+		if (i > mpDataLoader->GetPageSize() - smoothWindowSize - 1) {
+			break;
+		}
+		if (i == smoothWindowSize) {
+			vector<real> zeroes(mpDataLoader->GetNumVars() * mpDataLoader->GetDim(), 0);
+			for (int i1 = 0; i1 < 2 * smoothWindowSize + 1; i1++) {
+				UpdateLocalMean(ma, zeroes.data(), mpDataLoader->GetY(i1));
+			}
+		}
+		vector<real> oldY(mpDataLoader->GetNumVars() * mpDataLoader->GetDim());
+		for (int j = 0; j < mpDataLoader->GetNumVars() * mpDataLoader->GetDim(); j++) {
+			oldY.push_back(y[j]);
+			cout << y[j] << ", " << ma[j] / norm << "  ";
+			y[j] -= ma[j] / norm;
+			assert(mpDataLoader->GetY(i)[j] == y[j]);
+		}
+		cout << endl;
+		oldYs.push_back(oldY);
+		assert(oldYs.size() == smoothWindowSize+1);
+		if (i == smoothWindowSize) {
+			for (int j = 0; j < mpDataLoader->GetNumVars() * mpDataLoader->GetDim(); j++) {
+				assert(oldYs.front().data()[j] == mpDataLoader->GetY(i-smoothWindowSize)[j]);
+			}
+		}
+		UpdateLocalMean(ma, oldYs.front().data(), mpDataLoader->GetY(i+smoothWindowSize));
+	}
+
+}
+
+// TODO: Variance calculation must be redesigned (lots of code here duplicates what is also present in DiffNorm)
+void D2::VarCalculation(double* ySum, double* y2Sum) const {
+	vector<double> ma; // moving average (local mean) around data point 1
+	for (int i = 0; i < mpDataLoader->GetPageSize(); i++) {
+		auto y = mpDataLoader->GetY(i);
+		if (smoothWindow > 0) {
+			if (i < smoothWindowSize || i > mpDataLoader->GetPageSize() - smoothWindowSize - 1) {
+				continue;
+			}
+		}
+#ifdef _OPENMP
+	#pragma omp parallel for
+#endif
+		for (int j = 0; j < mpDataLoader->GetNumVars(); j++) {
+			auto offset = j * mpDataLoader->GetDim();
+			auto varScale = varScales[j];
+			auto varRange = varRanges[j];
+			for (int i = 0; i < mpDataLoader->GetDim(); i++) {
+				if (mpDataLoader->IsInRegion(i)) {
+					auto index = offset + i;
+					auto yScaled = y[index] * varScale;
+					if (yScaled >= varRange.first && yScaled <= varRange.second) {
+						ySum[index] += yScaled;
+						y2Sum[index] += yScaled * yScaled;
+					}
+				}
+			}
+		}
+	}
+}
+
+// Currently implemented as Frobenius norm
+double D2::DiffNorm(const real y1[], const real y2[]) const {
+	double norm = 0;
+#ifdef _OPENMP
+	#pragma omp parallel for reduction(+:norm)
 #endif
 	for (int j = 0; j < mpDataLoader->GetNumVars(); j++) {
 		auto offset = j * mpDataLoader->GetDim();
@@ -192,57 +279,17 @@ double D2::DiffNorm(const real y1[], const real y2[], vector<double>& mean1, vec
 				auto index = offset + i;
 				if (y1[index] >= varRange.first && y1[index] <= varRange.second
 						&& y2[index] >= varRange.first && y2[index] <= varRange.second) {
-					if (smoothWindow > 0) {
-						norm += square((y1[index] - y2[index] + (mean2[k]- mean1[k])) * varScale);
-					} else {
-						norm += square((y1[index] - y2[index]) * varScale);
-					}
+					norm += square((y1[index] - y2[index]) * varScale);
 				}
-				k++;
 			}
 		}
-	}
-	if (smoothWindow > 0) {
-		assert(k == mean1.size() && k == mean2.size());
 	}
 	return norm;
 }
 
-void D2::UpdateLocalMean(vector<double>& mean, const real yOld[], const real yNew[]) const {
-	int k = 0;
-	bool empty = mean.empty();
-#ifdef _OPENMP
-	#pragma omp parallel for reduction(+:k)
-#endif
-	for (int j = 0; j < mpDataLoader->GetNumVars(); j++) {
-		auto offset = j * mpDataLoader->GetDim();
-		auto varScale = varScales[j];
-		auto varRange = varRanges[j];
-		for (int i = 0; i < mpDataLoader->GetDim(); i++) {
-			if (mpDataLoader->IsInRegion(i)) {
-				auto index = offset + i;
-				if (!empty) {
-					if (yNew[index] >= varRange.first && yNew[index] <= varRange.second) {
-						mean[k] += yNew[index] * varScale / (2 * smoothWindowSize + 1);
-					}
-					if (yOld[index] >= varRange.first && yOld[index] <= varRange.second) {
-						mean[k] -= yOld[index] * varScale / (2 * smoothWindowSize + 1);
-					}
-				} else {
-					if (yNew[index] >= varRange.first && yNew[index] <= varRange.second) {
-						mean.push_back(yNew[index] * varScale / (2 * smoothWindowSize + 1));
-					} else {
-						mean.push_back(0);
-					}
-				}
-				k++;
-			}
-		}
-	}
-	assert(k == mean.size());
-}
-
 pair<double, double> D2::GetIndexes(int pageSize, int* bsIndexes, int bootstrapIndex, int i) const {
+	assert(i >= 0);
+	assert(i < pageSize);
 	auto ix = i;
 	auto iy = i;
 	if (bootstrapIndex > 0) {
@@ -271,6 +318,16 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 			for (int j = 0; j < dl2.GetPageSize(); j++) {
 				bsIndexes2[bootstrapIndex][j] = uniform_dist2(e1);
 			}
+			if (confIntOrSignificance) {
+				auto sort_fn = [](const void *a, const void *b){
+					  const int *da = (const int *) a;
+					  const int *db = (const int *) b;
+					  return (*da > *db) - (*da < *db);
+					};
+				qsort(bsIndexes1[bootstrapIndex], dl1.GetPageSize(), sizeof (int), sort_fn);
+				qsort(bsIndexes2[bootstrapIndex], dl1.GetPageSize(), sizeof (int), sort_fn);
+			}
+
 		}
 #ifndef _NOMPI
 		for (auto procNo = 1; procNo < GetNumProc(); procNo++) {
@@ -294,23 +351,18 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 #endif
 	}
 	for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize + 1; bootstrapIndex++) {
-		vector<double> ma1; // moving average (local mean) around data point 1
-		//cout << "bootstrapIndex: " << bootstrapIndex << endl;
+		cout << "bootstrapIndex: " << bootstrapIndex << endl;
 		for (int i = 0; i < dl1.GetPageSize(); i++) {
 			if (smoothWindow > 0) {
-				if (i < smoothWindowSize || i > dl1.GetPageSize() - smoothWindowSize - 1) {
+				if (i < smoothWindowSize) {
 					continue;
 				}
-				if (ma1.empty()) {
-					for (int i1 = 0; i1 < 2 * smoothWindowSize + 1; i1++) {
-						auto ixy1 = GetIndexes(dl1.GetPageSize(), (int*) bsIndexes1, bootstrapIndex, i1);
-						auto iy1 = ixy1.second;
-						UpdateLocalMean(ma1, dl1.GetY(iy1), dl1.GetY(iy1));
-					}
-				}
+			}
+			if (i > dl1.GetPageSize() - smoothWindowSize - 1) {
+				break;
 			}
 			int j = 0;
-			if (bootstrapIndex == 0 && dl1.GetPage() == dl2.GetPage()) {
+			if (dl1.GetPage() == dl2.GetPage()) {
 				j = i + 1;
 			}
 			//if (GetProcId() == 0) {
@@ -321,15 +373,11 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 			auto iy = ixy.second;
 			real xiUnscaled = dl1.GetX(ix);
 			real xi = xiUnscaled * tScale;
-			vector<double> ma2 = ma1;  // moving average (local mean) around data point 2
 			for (; j < dl2.GetPageSize(); j++) {
 				if (smoothWindow > 0) {
 					if (j > dl2.GetPageSize() - smoothWindowSize - 1) {
 						break;
 					}
-					auto jy1 = GetIndexes(dl2.GetPageSize(), (int*) bsIndexes2, bootstrapIndex, j-1-smoothWindowSize).second;
-					auto jy2 = GetIndexes(dl2.GetPageSize(), (int*) bsIndexes2, bootstrapIndex, j-1+smoothWindowSize).second;
-					UpdateLocalMean(ma2, dl2.GetY(jy1), dl2.GetY(jy2));
 				}
 				//if (ma2.empty()) {
 				//	for (int j1 = jStart - smoothWindow; j1 < jStart + smoothWindow + 1; j1++) {
@@ -360,7 +408,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 					//int kk = round(a * d + b);
 					int kk = round((d - dbase) * (numCoherenceBins - 1) / (dmax - dbase));
 					//cout << "GetProcId, i, d, kk: " << GetProcId() << ", " << bootstrapIndex << ", " << d << ", " << kk << endl;
-					auto dy2 = DiffNorm(dl1.GetY(iy), dl2.GetY(jy), ma1, ma2);
+					auto dy2 = DiffNorm(dl1.GetY(iy), dl2.GetY(jy));
 					tty[bootstrapIndex * numCoherenceBins + kk] += dy2;
 					tta[bootstrapIndex * numCoherenceBins + kk]++;
 					//cout << "tta[" << kk << "]=" << tta[bootstrapIndex][kk] << endl;
@@ -373,67 +421,10 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 			//if (dl1.GetPage() == 0) {
 			//	cout << "MA " << xi << " " << ma1[0] << endl;
 			//}
-			if (smoothWindow > 0) {
-				auto iy1 = GetIndexes(dl1.GetPageSize(), (int*) bsIndexes1, bootstrapIndex, i-smoothWindowSize).second;
-				auto iy2 = GetIndexes(dl1.GetPageSize(), (int*) bsIndexes1, bootstrapIndex, i+smoothWindowSize).second;
-				UpdateLocalMean(ma1, dl1.GetY(iy1), dl1.GetY(iy2));
-			}
-
 		}
 	}
 	return true;
 }
-
-void D2::VarCalculation(double* ySum, double* y2Sum) const {
-	vector<double> ma; // moving average (local mean) around data point 1
-	for (int i = 0; i < mpDataLoader->GetPageSize(); i++) {
-		auto y = mpDataLoader->GetY(i);
-		if (smoothWindow > 0) {
-			if (i < smoothWindowSize || i > mpDataLoader->GetPageSize() - smoothWindowSize - 1) {
-				continue;
-			}
-			if (ma.empty()) {
-				for (int i1 = 0; i1 < 2 * smoothWindowSize + 1; i1++) {
-					UpdateLocalMean(ma, mpDataLoader->GetY(i1), mpDataLoader->GetY(i1));
-				}
-			}
-		}
-		// ------------------------------------------
-		// This calculation must be redesigned
-		int k = 0;
-		for (int j = 0; j < mpDataLoader->GetNumVars(); j++) {
-			auto offset = j * mpDataLoader->GetDim();
-			auto varScale = varScales[j];
-			auto varRange = varRanges[j];
-			for (int i = 0; i < mpDataLoader->GetDim(); i++) {
-				if (mpDataLoader->IsInRegion(i)) {
-					auto index = offset + i;
-					auto yScaled = y[index] * varScale;
-					if (yScaled >= varRange.first && yScaled <= varRange.second) {
-						if (smoothWindow > 0) {
-							auto yScaledSmooth = yScaled - ma[k];
-							ySum[index] += yScaledSmooth;
-							y2Sum[index] += yScaledSmooth * yScaledSmooth;
-						} else {
-							ySum[index] += yScaled;
-							y2Sum[index] += yScaled * yScaled;
-						}
-					}
-					k++;
-				}
-			}
-		}
-		if (smoothWindow > 0) {
-			assert(k == ma.size());
-			auto iy1 = i-smoothWindowSize;
-			auto iy2 = i+smoothWindowSize;
-			UpdateLocalMean(ma, mpDataLoader->GetY(iy1), mpDataLoader->GetY(iy2));
-		}
-		// ------------------------------------------
-	}
-}
-
-
 
 void D2::CalcDiffNorms() {
 	assert(mpDataLoader); // dataLoader must be present in case diffnorms are not calculated yet
@@ -470,8 +461,10 @@ void D2::CalcDiffNorms() {
 	while (mpDataLoader->Next()) {
 		n += mpDataLoader->GetPageSize();
 		if (smoothWindow > 0) {
+			assert(mpDataLoader->GetPage() == 0); // smoothing supported only in single page mode
 			smoothWindowSize = 0.5 / ((mpDataLoader->GetX(1)-mpDataLoader->GetX(0)) * tScale / smoothWindow);
-			cout << smoothWindowSize << endl;
+			cout << "Smoothing window: " << smoothWindowSize << endl;
+			Smooth();
 		}
 		VarCalculation(ySum, y2Sum);
 		if (!ProcessPage(*mpDataLoader, *mpDataLoader, tty, tta)) {
@@ -670,8 +663,6 @@ double getError(const D2SpecLine& minimum, const vector<D2SpecLine>& spec) {
 		}
 		index++;
 	}
-	double lower = -1;
-	double upper = -1;
 	double sum = 0;
 	double sum2 = 0;
 	if (index < spec.size()) {
@@ -683,7 +674,6 @@ double getError(const D2SpecLine& minimum, const vector<D2SpecLine>& spec) {
 			}
 			sum += sqrt(-2*log(probFact)) * abs(spec[i].frequency - minimum.frequency);
 			sum2 += -2*log(probFact);
-			lower = spec[i].frequency;
 		}
 		for (size_t i = index + 1; i < spec.size(); i++) {
 			double probFact = exp(minimum.tav * (1 - minimum.tav * spec[i].tyv / minimum.tyv / spec[i].tav));
@@ -693,7 +683,6 @@ double getError(const D2SpecLine& minimum, const vector<D2SpecLine>& spec) {
 			}
 			sum += sqrt(-2*log(probFact)) * abs(spec[i].frequency - minimum.frequency);
 			sum2 += -2*log(probFact);
-			lower = spec[i].frequency;
 		}
 	}
 	if (sum > 0) {
@@ -790,12 +779,14 @@ void D2::RemoveSpurious(vector<D2SpecLine>& minima) const {
 
 }
 
+#define OUTPUT_INDEX 0
+
 //TODO: printing the results to file should be taken out of from this method
 const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& outputFilePrefix) {
 	ofstream output;
 	ofstream output_min;
 	ofstream output_max;
-	if (bootstrapIndex == 0) {
+	if (bootstrapIndex == OUTPUT_INDEX) {
 		cout << "dmin = " << dmin << endl;
 		cout << "dmax = " << dmax << endl;
 		cout << "wmin = " << wmin << endl;
@@ -863,7 +854,7 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 			Normalize(spec);
 		}
 
-		if (bootstrapIndex == 0) {
+		if (bootstrapIndex == OUTPUT_INDEX) {
 			if (!differential || i > 0) {
 				//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 				//double integral = 0;
@@ -922,7 +913,7 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 		//cout << endl;
 		//output_mid.close();
 	}
-	if (bootstrapIndex == 0) {
+	if (bootstrapIndex == OUTPUT_INDEX) {
 		output.close();
 		output_min.close();
 		output_max.close();
@@ -944,7 +935,7 @@ void D2::Bootstrap(const string& outputFilePrefix) {
 	if (GetProcId() == 0) {
 		ofstream output_bootstrap(outputFilePrefix + "_bootstrap.csv");
 		for (auto i = 0; i < bootstrapSize; i++) {
-				auto minima = Compute2DSpectrum(i + 1, "");
+				auto minima = Compute2DSpectrum(i + 1, outputFilePrefix);
 				for (auto& m : minima) {
 					output_bootstrap << i << " " << std::setprecision(10) << m.coherenceLength << " " << m.frequency << " " << 1 / m.frequency << " " << m.value << endl;
 				}
