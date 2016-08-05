@@ -215,19 +215,14 @@ void D2::Smooth() {
 		vector<real> oldY(num_vars);
 		for (size_t j = 0; j < num_vars; j++) {
 			oldY[j] = y[j];
-			cout << y[j] << ", " << ma[j] / norm << ", " << oldYs.front().data()[j];
+			//cout << y[j] << ", " << ma[j] / norm << ", " << oldYs.front().data()[j];
 			y[j] -= ma[j] / norm;
 			assert(mpDataLoader->GetY(i)[j] == y[j]);
 		}
-		cout << endl;
+		//cout << endl;
 		assert(oldY.size() == num_vars);
 		oldYs.push_back(oldY);
 		assert(oldYs.size() == smoothWindowSize+1);
-		//if (i == smoothWindowSize * 10) {
-		//	for (size_t j = 0; j < num_vars; j++) {
-		//		assert(oldYs.front().data()[j] == mpDataLoader->GetY(i-smoothWindowSize)[j]);
-		//	}
-		//}
 		updateLocalMean(ma, oldYs.front().data(), mpDataLoader->GetY(i+smoothWindowSize+1));
 	}
 
