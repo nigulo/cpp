@@ -120,7 +120,6 @@ private:
 
     // The norm of the difference of two datasets
     double DiffNorm(const real y1[], const real y2[]) const;
-    void UpdateLocalMean(vector<double>& mean, const real yOld[], const real yNew[]) const;
     bool ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta);
     void VarCalculation(double* ySum, double* y2Sum) const;
     void RemoveSpurious(vector<D2SpecLine>& minima) const;

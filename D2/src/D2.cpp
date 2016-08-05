@@ -177,58 +177,58 @@ void Normalize(vector<D2SpecLine>& spec) {
 	}
 }
 
-void D2::UpdateLocalMean(vector<double>& mean, const real yOld[], const real yNew[]) const {
-	if (mean.empty()) {
-		mean.resize(mpDataLoader->GetNumVars() * mpDataLoader->GetDim(), 0);
-	}
+void updateLocalMean(vector<double>& mean, const real yOld[], const real yNew[]) {
 #ifdef _OPENMP
 	#pragma omp parallel for
 #endif
-	for (int j = 0; j < mpDataLoader->GetNumVars() * mpDataLoader->GetDim(); j++) {
+	for (size_t j = 0; j < mean.size(); j++) {
 		mean[j] += yNew[j];
 		mean[j] -= yOld[j];
 	}
 }
 
 void D2::Smooth() {
-	vector<double> ma; // moving average (local mean) around data point 1
+	const size_t num_vars = mpDataLoader->GetNumVars() * mpDataLoader->GetDim();
+	vector<double> ma(num_vars, 0); // moving average (local mean) around data point 1
 	circular_buffer<vector<real>> oldYs(smoothWindowSize+1);
-	auto norm = 2 * smoothWindowSize + 1;
+	double norm = 2 * smoothWindowSize + 1;
 	for (int i = 0; i < mpDataLoader->GetPageSize(); i++) {
+		if (i > mpDataLoader->GetPageSize() - smoothWindowSize - 2) {
+			break;
+		}
 		auto y = mpDataLoader->GetYToModify(i);
 		if (i < smoothWindowSize) {
-			vector<real> oldY(mpDataLoader->GetNumVars() * mpDataLoader->GetDim());
-			for (int j = 0; j < mpDataLoader->GetNumVars() * mpDataLoader->GetDim(); j++) {
-				oldY.push_back(y[j]);
+			vector<real> oldY(num_vars);
+			for (size_t j = 0; j < num_vars; j++) {
+				oldY[j] = y[j];
 			}
+			assert(oldY.size() == num_vars);
 			oldYs.push_back(oldY);
 			continue;
 		}
-		if (i > mpDataLoader->GetPageSize() - smoothWindowSize - 1) {
-			break;
-		}
 		if (i == smoothWindowSize) {
-			vector<real> zeroes(mpDataLoader->GetNumVars() * mpDataLoader->GetDim(), 0);
+			vector<real> zeroes(num_vars, 0);
 			for (int i1 = 0; i1 < 2 * smoothWindowSize + 1; i1++) {
-				UpdateLocalMean(ma, zeroes.data(), mpDataLoader->GetY(i1));
+				updateLocalMean(ma, zeroes.data(), mpDataLoader->GetY(i1));
 			}
 		}
-		vector<real> oldY(mpDataLoader->GetNumVars() * mpDataLoader->GetDim());
-		for (int j = 0; j < mpDataLoader->GetNumVars() * mpDataLoader->GetDim(); j++) {
-			oldY.push_back(y[j]);
-			cout << y[j] << ", " << ma[j] / norm << "  ";
+		vector<real> oldY(num_vars);
+		for (size_t j = 0; j < num_vars; j++) {
+			oldY[j] = y[j];
+			cout << y[j] << ", " << ma[j] / norm << ", " << oldYs.front().data()[j];
 			y[j] -= ma[j] / norm;
 			assert(mpDataLoader->GetY(i)[j] == y[j]);
 		}
 		cout << endl;
+		assert(oldY.size() == num_vars);
 		oldYs.push_back(oldY);
 		assert(oldYs.size() == smoothWindowSize+1);
-		if (i == smoothWindowSize) {
-			for (int j = 0; j < mpDataLoader->GetNumVars() * mpDataLoader->GetDim(); j++) {
-				assert(oldYs.front().data()[j] == mpDataLoader->GetY(i-smoothWindowSize)[j]);
-			}
-		}
-		UpdateLocalMean(ma, oldYs.front().data(), mpDataLoader->GetY(i+smoothWindowSize));
+		//if (i == smoothWindowSize * 10) {
+		//	for (size_t j = 0; j < num_vars; j++) {
+		//		assert(oldYs.front().data()[j] == mpDataLoader->GetY(i-smoothWindowSize)[j]);
+		//	}
+		//}
+		updateLocalMean(ma, oldYs.front().data(), mpDataLoader->GetY(i+smoothWindowSize+1));
 	}
 
 }
@@ -239,7 +239,10 @@ void D2::VarCalculation(double* ySum, double* y2Sum) const {
 	for (int i = 0; i < mpDataLoader->GetPageSize(); i++) {
 		auto y = mpDataLoader->GetY(i);
 		if (smoothWindow > 0) {
-			if (i < smoothWindowSize || i > mpDataLoader->GetPageSize() - smoothWindowSize - 1) {
+			if (i > mpDataLoader->GetPageSize() - smoothWindowSize - 2) {
+				break;
+			}
+			if (i < smoothWindowSize) {
 				continue;
 			}
 		}
@@ -354,12 +357,12 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 		cout << "bootstrapIndex: " << bootstrapIndex << endl;
 		for (int i = 0; i < dl1.GetPageSize(); i++) {
 			if (smoothWindow > 0) {
+				if (i > dl1.GetPageSize() - smoothWindowSize - 2) {
+					break;
+				}
 				if (i < smoothWindowSize) {
 					continue;
 				}
-			}
-			if (i > dl1.GetPageSize() - smoothWindowSize - 1) {
-				break;
 			}
 			int j = 0;
 			if (dl1.GetPage() == dl2.GetPage()) {
@@ -375,7 +378,7 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 			real xi = xiUnscaled * tScale;
 			for (; j < dl2.GetPageSize(); j++) {
 				if (smoothWindow > 0) {
-					if (j > dl2.GetPageSize() - smoothWindowSize - 1) {
+					if (j > dl2.GetPageSize() - smoothWindowSize - 2) {
 						break;
 					}
 				}
