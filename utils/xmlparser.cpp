@@ -23,7 +23,7 @@ void Parse(TextReader& rReader, XmlParser::XmlElement* p_elem, int depth)
 				Parse(rReader, p_elem->GetSubElements().back(), depth + 1);
 			}
 			switch (rReader.get_node_type()) {
-				case TextReader::Element: {
+				case TextReader::NodeType::Element: {
 					p_elem->AddSubElement(new XmlParser::XmlElement(rReader.get_name(), p_elem));
 					if (rReader.has_attributes()) {
 						rReader.move_to_first_attribute();
@@ -34,7 +34,7 @@ void Parse(TextReader& rReader, XmlParser::XmlElement* p_elem, int depth)
 					}
 					break;
 				}
-				case TextReader::Text:
+				case TextReader::NodeType::Text:
 					p_elem->SetInnerText(rReader.read_string());
 					break;
 				default:
