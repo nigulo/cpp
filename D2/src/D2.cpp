@@ -562,7 +562,7 @@ void D2::CalcDiffNorms() {
 			}
 			if (bootstrapIndex == 0 && saveDiffNorms) {
 				string diffNormsFilePrefix = string(DIFF_NORMS_FILE_PREFIX);
-				ofstream output(diffNormsFilePrefix + "_" + to_string(GetCurrentTime()) + DIFF_NORMS_FILE_SUFFIX);
+				std::ofstream output(diffNormsFilePrefix + "_" + to_string(GetCurrentTime()) + DIFF_NORMS_FILE_SUFFIX);
 				output << varSum << endl;
 				for (int i = 0; i < j; i++) {
 					output << td[0][i] << " " << ty[0][i] << " " << ta[0][i] << endl;
@@ -587,7 +587,7 @@ void D2::LoadDiffNorms() {
 		varSum = 1; // Assuming unit variance by default
 		cout << "Loading diffnorms..." << endl;
 		string diffNormsFile = DIFF_NORMS_FILE;
-		ifstream input(diffNormsFile);
+		std::ifstream input(diffNormsFile);
 		for (string line; getline(input, line);) {
 			std::vector<std::string> words;
 			boost::split(words, line, boost::is_any_of("\t "), boost::token_compress_on);
@@ -781,9 +781,9 @@ void D2::RemoveSpurious(vector<D2SpecLine>& minima) const {
 
 //TODO: printing the results to file should be taken out of from this method
 const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& outputFilePrefix) {
-	ofstream output;
-	ofstream output_min;
-	ofstream output_max;
+	std::ofstream output;
+	std::ofstream output_min;
+	std::ofstream output_max;
 	if (bootstrapIndex == OUTPUT_INDEX) {
 		cout << "dmin = " << dmin << endl;
 		cout << "dmax = " << dmax << endl;
@@ -854,7 +854,7 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 
 		if (bootstrapIndex == OUTPUT_INDEX) {
 			if (!differential || i > 0) {
-				//ofstream output_mid("phasedisp" + to_string(i) + ".csv");
+				//std::ofstream output_mid("phasedisp" + to_string(i) + ".csv");
 				//double integral = 0;
 				auto outputFreqCount = min(numFreqs, 1000);
 				for (int j = 0; j < numFreqs; j++) {
@@ -918,7 +918,7 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 
 		// print some other stats
 
-		ofstream output_stats("stats.csv");
+		std::ofstream output_stats("stats.csv");
 		for (size_t i = 0; i < bimodality.size(); i++) {
 			double d = minCoherence + i * deltac;
 			output_stats << d << " " << bimodality[i] << endl;
@@ -931,7 +931,7 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 
 void D2::Bootstrap(const string& outputFilePrefix) {
 	if (GetProcId() == 0) {
-		ofstream output_bootstrap(outputFilePrefix + "_bootstrap.csv");
+		std::ofstream output_bootstrap(outputFilePrefix + "_bootstrap.csv");
 		for (auto i = 0; i < bootstrapSize; i++) {
 				auto minima = Compute2DSpectrum(i + 1, outputFilePrefix);
 				for (auto& m : minima) {

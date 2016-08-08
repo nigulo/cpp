@@ -400,7 +400,7 @@ int main(int argc, char *argv[]) {
 		if (procId == 0) {
 			auto& minima = d2.Compute2DSpectrum(0, outputFilePrefix);
 
-			ofstream output_minima(outputFilePrefix + "_minima.csv");
+			std::ofstream output_minima(outputFilePrefix + "_minima.csv");
 			for (auto& m : minima) {
 				output_minima
 					<< std::setprecision(10) << m.coherenceLength << " "

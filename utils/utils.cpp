@@ -10,7 +10,7 @@ using namespace boost::filesystem;
 namespace utils {
 
 string Utils::ReadTextFile(const string& rFileName) {
-    ifstream is(rFileName, ifstream::binary);
+    std::ifstream is(rFileName, std::ifstream::binary);
     string str;
     if (is) {
         // get length of file:
@@ -175,7 +175,7 @@ string Utils::GetProperty(const string& rStr, const string& rPropertyName) {
 
 map<string, string> Utils::ReadProperties(const string& rFileName, bool caseSensitive) {
 	map<string, string> retVal;
-	ifstream input(rFileName);
+	std::ifstream input(rFileName);
 	for (string line; getline(input, line);) {
 		//cout << line << endl;
 		std::vector<std::string> words;
