@@ -281,7 +281,7 @@ int main(int argc, char *argv[]) {
 	vector<int> procIds;
 
 	int procSize = 1;
-	for (int i = 0; i < dims.size(); i++) {
+	for (size_t i = 0; i < dims.size(); i++) {
 		assert(dims[i] % numProcs[i] == 0);
 		dimsPerProc.push_back(dims[i] / numProcs[i]);
 		procIds.push_back((procId / procSize) % numProcs[i]);
