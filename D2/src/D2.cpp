@@ -304,26 +304,28 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 	if (dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
 		return false;
 	}
-	int bsIndexes1[bootstrapSize][dl1.GetPageSize()];
-	int bsIndexes2[bootstrapSize][dl2.GetPageSize()];
+	auto dl1Size = dl1.GetPageSize();
+	auto dl2Size = dl2.GetPageSize();
+	int* bsIndexes1 = new int[bootstrapSize * dl1Size];
+	int* bsIndexes2 = new int[bootstrapSize * dl2Size];
 	if (GetProcId() == 0) {
 		uniform_int_distribution<int> uniform_dist1(0, dl1.GetPageSize() - 1);
 		uniform_int_distribution<int> uniform_dist2(0, dl2.GetPageSize() - 1);
 		for (auto bootstrapIndex = 0; bootstrapIndex < bootstrapSize; bootstrapIndex++) {
 			for (int i = 0; i < dl1.GetPageSize(); i++) {
-				bsIndexes1[bootstrapIndex][i] = uniform_dist1(e1);
+				bsIndexes1[bootstrapIndex * dl1Size + i] = uniform_dist1(e1);
 			}
-			for (int j = 0; j < dl2.GetPageSize(); j++) {
-				bsIndexes2[bootstrapIndex][j] = uniform_dist2(e1);
+			for (int i = 0; i < dl2.GetPageSize(); i++) {
+				bsIndexes2[bootstrapIndex * dl2Size + i] = uniform_dist2(e1);
 			}
 			if (confIntOrSignificance) {
-				auto sort_fn = [](const void *a, const void *b){
-					  const int *da = (const int *) a;
-					  const int *db = (const int *) b;
+				auto sort_fn = [](const void* a, const void* b){
+					  const int* da = (const int*) a;
+					  const int* db = (const int*) b;
 					  return (*da > *db) - (*da < *db);
 					};
-				qsort(bsIndexes1[bootstrapIndex], dl1.GetPageSize(), sizeof (int), sort_fn);
-				qsort(bsIndexes2[bootstrapIndex], dl1.GetPageSize(), sizeof (int), sort_fn);
+				qsort(&bsIndexes1[bootstrapIndex * dl1Size], dl1Size, sizeof (int), sort_fn);
+				qsort(&bsIndexes2[bootstrapIndex * dl2Size], dl2Size, sizeof (int), sort_fn);
 			}
 
 		}
@@ -421,6 +423,8 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 			//}
 		}
 	}
+	delete [] bsIndexes1;
+	delete [] bsIndexes2;
 	return true;
 }
 
