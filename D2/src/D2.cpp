@@ -667,7 +667,7 @@ double getError(const D2SpecLine& minimum, const vector<D2SpecLine>& spec) {
 	}
 	double sum = 0;
 	double sum2 = 0;
-	if (index < spec.size()) {
+	if (index < (int) spec.size()) {
 		for (int i = index - 1; i >= 0; i--) {
 			double probFact = exp(minimum.tav * (1 - minimum.tav * spec[i].tyv / minimum.tyv / spec[i].tav));
 			//cout << "Lower: " << spec[i].frequency << " " << spec[i].tyv << " " << spec[i].tav << " " << probFact << endl;
@@ -677,7 +677,7 @@ double getError(const D2SpecLine& minimum, const vector<D2SpecLine>& spec) {
 			sum += sqrt(-2*log(probFact)) * abs(spec[i].frequency - minimum.frequency);
 			sum2 += -2*log(probFact);
 		}
-		for (int i = index + 1; i < spec.size(); i++) {
+		for (int i = index + 1; i < (int) spec.size(); i++) {
 			double probFact = exp(minimum.tav * (1 - minimum.tav * spec[i].tyv / minimum.tyv / spec[i].tav));
 			//cout << "Upper: " << spec[i].frequency << " " << spec[i].tyv << " " << spec[i].tav << " " << probFact << endl;
 			if (probFact < 0.001) {
