@@ -15,6 +15,7 @@
 #include <iostream>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <sstream>
 #include <iomanip>
 
@@ -135,12 +136,14 @@ int main(int argc, char *argv[]) {
 
 	if (procId == 0) {
 		if (argc == 2 && string("-h") == argv[1]) {
-			cout << "Usage: ./D2 [paramfile]\nparamfile defaults to " << PARAMETERS_FILE << endl;
+			cout << "Usage: ./D2 [param file] [params to overwrite]\nparam file defaults to " << PARAMETERS_FILE << endl;
 			return EXIT_SUCCESS;
 		}
 	}
 	currentTime = time(nullptr);
 	paramFileName = argc > 1 ? argv[1] : PARAMETERS_FILE;
+	string cmdLineParams = argc > 2 ? argv[2] : "";
+	boost::replace_all(cmdLineParams, " ", "\n");
 
 	if (procId == 0) {
 		if (!exists(paramFileName)) {
@@ -148,7 +151,11 @@ int main(int argc, char *argv[]) {
 			return EXIT_FAILURE;
 		}
 	}
-	map<string, string> params = Utils::ReadProperties(paramFileName);
+	map<string, string> paramsFromFile = Utils::ReadProperties(paramFileName);
+	map<string, string> params = Utils::ReadPropertiesFromString(cmdLineParams);
+	for(const auto& entry : paramsFromFile) {
+		params.insert({entry.first, entry.second});
+	}
 	double duration = Utils::FindDoubleProperty(params, "duration", 0);
 	double initMinPeriod = Utils::FindDoubleProperty(params, "minPeriod", 2);
 	double initMaxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
