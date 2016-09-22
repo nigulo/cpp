@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <fstream>
+#include <sstream>
 #include <cassert>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -173,9 +174,8 @@ string Utils::GetProperty(const string& rStr, const string& rPropertyName) {
     return str.substr(0, index);
 }
 
-map<string, string> Utils::ReadProperties(const string& rFileName, bool caseSensitive) {
+map<string, string> Utils::ReadPropertiesFromStream(istream& input, bool caseSensitive) {
 	map<string, string> retVal;
-	std::ifstream input(rFileName);
 	for (string line; getline(input, line);) {
 		//cout << line << endl;
 		std::vector<std::string> words;
@@ -201,6 +201,18 @@ map<string, string> Utils::ReadProperties(const string& rFileName, bool caseSens
 			cout << "Skipping line, invalid format: " << line << endl;
 		}
     }
+	return retVal;
+}
+
+map<string, string> Utils::ReadPropertiesFromString(const string& rStr, bool caseSensitive) {
+	std::istringstream input(rStr);
+	map<string, string> retVal = ReadPropertiesFromStream(input, caseSensitive);
+	return retVal;
+}
+
+map<string, string> Utils::ReadProperties(const string& rFileName, bool caseSensitive) {
+	std::ifstream input(rFileName);
+	map<string, string> retVal = ReadPropertiesFromStream(input, caseSensitive);
 	input.close();
 	return retVal;
 }

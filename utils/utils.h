@@ -80,6 +80,8 @@ public:
      **/
     static string GetProperty(const string& rStr, const string& rPropertyName);
 
+    static map<string, string> ReadPropertiesFromStream(istream& input, bool caseSensitive = false);
+    static map<string, string> ReadPropertiesFromString(const string& rStr, bool caseSensitive = false);
     static map<string, string> ReadProperties(const string& rFileName, bool caseSensitive = false);
     static string FindProperty(const map<string, string>& rProperties, const string& key, const string& rDefaultValue = string(), bool caseSensitive = false);
     static int FindIntProperty(const map<string, string>& rProperties, const string& key, int defaultValue, bool caseSensitive = false);
