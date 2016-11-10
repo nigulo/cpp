@@ -252,7 +252,16 @@ int main(int argc, char *argv[]) {
 		cout << "----------------" << endl;
 	}
 
-	string filePath = Utils::FindProperty(params, string("filePath") + to_string(procId), "");
+	string filePath;
+
+	if (numProc == 1) {
+		filePath = Utils::FindProperty(params, string("filePath"), "");
+		if (filePath.empty()) {
+			filePath = Utils::FindProperty(params, string("filePath0"), "");
+		}
+	} else {
+		filePath = Utils::FindProperty(params, string("filePath") + to_string(procId), "");
+	}
 	string outputFilePrefix = Utils::FindProperty(params, string("outputFilePath"), "phasedisp");
 
 	bool saveDiffNorms = Utils::FindIntProperty(params, "saveDiffNorms", 0);
