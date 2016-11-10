@@ -30,9 +30,10 @@ string paramFileName;
 nfsft_plan plan; /* transform plan */
 
 void init(int N /* bandwidth/maximum degree */, int M /* number of nodes */) {
-	//printf("num_threads = %ld\n", nfft_get_num_threads());
+	printf("num_threads = %d\n", omp_get_max_threads());
     /* init */
-    //fftw_init_threads();
+    fftw_init_threads();
+    fftw_plan_with_nthreads(omp_get_max_threads());
     /* precomputation (for fast polynomial transform) */
     nfsft_precompute(N,1000.0,0U,0U);
 
@@ -157,9 +158,21 @@ void loadData(const map<string, string>& params) {
 		thetaIndex = 0;
 		phiIndex = 1;
 	}
+	int thetaDownSample = Utils::FindIntProperty(params, "thetaDownSample", 1);
+	int phiDownSample = Utils::FindIntProperty(params, "phiDownSample", 1);
 
-	int M = dims[thetaIndex] * dims[phiIndex];
-	int N = dims[phiIndex];
+	int numTheta = dims[thetaIndex];
+	int numPhi = dims[phiIndex];
+
+	assert(thetaDownSample > 0 && (numTheta % thetaDownSample == 0));
+	assert(phiDownSample > 0 && (numPhi % phiDownSample == 0));
+
+	numTheta /= thetaDownSample;
+	numPhi /= phiDownSample;
+
+	int M = numTheta * numPhi;
+	int N = numPhi;
+
 	init(N, M);
 
 	vector<vector<pair<int, int>>> regions;
@@ -275,33 +288,36 @@ void loadData(const map<string, string>& params) {
 				//cout << ghost << endl;
 				if (!ghost) {
 					if (coords[rIndex] - numGhost + procMinCoords[rIndex] == layer) {
-						double x1 = -0.5 + longCoef * (coords[phiIndex] - numGhost + procMinCoords[phiIndex]);
-						double x2 = polarGap + latCoef * (coords[thetaIndex] - numGhost + procMinCoords[thetaIndex]);
-						if (x1 < -0.5 || x1 > 0.5) {
-							cout << "x1 out of range: " << x1 << endl;
-							assert(x1 >= -0.5 && x1 <= 0.5);
-						}
-						if (x2 < 0 || x2 > 0.5) {
-							cout << "x2 out of range: " << x2 << endl;
-							assert(x2 >= 0 && x2 <= 0.5);
-						}
-						//cout << "Coords: " << x1 << " " << x2 << "\n";
-						int k;
-						auto dataIter = data.begin();
-						for (k = 0; k < (int) data.size(); k++) {
-							if (data[k][0] > x1 || (data[k][0] == x1 && data[k][1] > x2)) {
-								break;
+						int phiCoord = coords[phiIndex] - numGhost + procMinCoords[phiIndex];
+						int thetaCoord = coords[thetaIndex] - numGhost + procMinCoords[thetaIndex];
+						if ((phiCoord % phiDownSample == 0) && (thetaCoord % thetaDownSample == 0)) {
+							double x1 = -0.5 + longCoef * phiCoord;
+							double x2 = polarGap + latCoef * thetaCoord;
+							if (x1 < -0.5 || x1 > 0.5) {
+								cout << "x1 out of range: " << x1 << endl;
+								assert(x1 >= -0.5 && x1 <= 0.5);
 							}
-							dataIter++;
+							if (x2 < 0 || x2 > 0.5) {
+								cout << "x2 out of range: " << x2 << endl;
+								assert(x2 >= 0 && x2 <= 0.5);
+							}
+							//cout << "Coords: " << x1 << " " << x2 << "\n";
+							int k;
+							auto dataIter = data.begin();
+							for (k = 0; k < (int) data.size(); k++) {
+								if (data[k][0] > x1 || (data[k][0] == x1 && data[k][1] > x2)) {
+									break;
+								}
+								dataIter++;
+							}
+							data.insert(dataIter, {x1, x2, y[i]});
 						}
-						data.insert(dataIter, {x1, x2, y[i]});
 					}
 				}
 			}
 		}
 		ofstream data_out("data.txt");
 		for (auto& elem : data) {
-			assert(m < M);
 			data_out << elem[0] << " " << elem[1] << " " << elem[2] << "\n";
 			plan.x[2*m] = elem[0];
 			plan.x[2*m+1] = elem[1];
@@ -309,6 +325,7 @@ void loadData(const map<string, string>& params) {
 			plan.f[m][1] = 0;
 			m++;
 		}
+		assert(m == M);
 		data_out.flush();
 		data_out.close();
 		/* precomputation (for NFFT, node-dependent) */
@@ -350,30 +367,33 @@ void loadData(const map<string, string>& params) {
 						i1 -= coord;
 						i1 /= dl.GetDims()[j];
 					}
-					double x1 = -0.5 + longCoef * (coords[phiIndex]);
-					double x2 = polarGap + latCoef * (coords[thetaIndex]);
-					if (x1 < -0.5 || x1 > 0.5) {
-						cout << "x1 out of range: " << x1 << endl;
-						assert(x1 >= -0.5 && x1 <= 0.5);
-					}
-					if (x2 < 0 || x2 > 0.5) {
-						cout << "x2 out of range: " << x2 << endl;
-						assert(x2 >= 0 && x2 <= 0.5);
-					}
-					//cout << "Coords: " << x1 << " " << x2 << "\n";
-					int k;
-					auto dataIter = data.begin();
-					for (k = 0; k < (int) data.size(); k++) {
-						if (data[k][0] > x1 || (data[k][0] == x1 && data[k][1] > x2)) {
-							break;
+					int phiCoord = longCoef * coords[phiIndex];
+					int thetaCoord = latCoef * coords[thetaIndex];
+					if ((phiCoord % phiDownSample == 0) && (thetaCoord % thetaDownSample == 0)) {
+						double x1 = -0.5 + phiCoord;
+						double x2 = polarGap + thetaCoord;
+						if (x1 < -0.5 || x1 > 0.5) {
+							cout << "x1 out of range: " << x1 << endl;
+							assert(x1 >= -0.5 && x1 <= 0.5);
 						}
-						dataIter++;
+						if (x2 < 0 || x2 > 0.5) {
+							cout << "x2 out of range: " << x2 << endl;
+							assert(x2 >= 0 && x2 <= 0.5);
+						}
+						//cout << "Coords: " << x1 << " " << x2 << "\n";
+						int k;
+						auto dataIter = data.begin();
+						for (k = 0; k < (int) data.size(); k++) {
+							if (data[k][0] > x1 || (data[k][0] == x1 && data[k][1] > x2)) {
+								break;
+							}
+							dataIter++;
+						}
+						data.insert(dataIter, {x1, x2, y[i]});
 					}
-					data.insert(dataIter, {x1, x2, y[i]});
 				}
 				//ofstream data_out("data" + to_string(t) + ".txt");
 				for (auto& elem : data) {
-					assert(m < M);
 					//data_out << elem[0] << " " << elem[1] << " " << elem[2] << "\n";
 					plan.x[2*m] = elem[0];
 					plan.x[2*m+1] = elem[1];
@@ -381,6 +401,7 @@ void loadData(const map<string, string>& params) {
 					plan.f[m][1] = 0;
 					m++;
 				}
+				assert(m == M);
 				//data_out.flush();
 				//data_out.close();
 				cout << "Transformation for time moment " << timeIndex << endl;
