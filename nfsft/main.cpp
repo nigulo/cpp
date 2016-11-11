@@ -49,16 +49,20 @@ void init(int N /* bandwidth/maximum degree */, int M /* number of nodes */) {
     //    PRE_PHI_HUT | PRE_PSI | FFTW_INIT | FFT_OUT_OF_PLACE, 6);
 }
 
+void finalize() {
+	/* Finalize the plan. */
+	nfsft_finalize(&plan);
+
+	/* Destroy data precomputed for fast polynomial transform. */
+	nfsft_forget();
+
+}
+
 void transform(int suffix = -1) {
     /* precomputation (for NFFT, node-dependent) */
-	nfsft_precompute_x(&plan);
-    /* pseudo-random Fourier coefficients */
-    //for (int k = 0; k <= plan.N; k++) {
-    //    for (int n = -k; n <= k; n++) {
-    //        plan.f_hat[NFSFT_INDEX(k,n,&plan)] =
-    //            nfft_drand48() - 0.5 + _Complex_I*(nfft_drand48() - 0.5);
-    //    }
-	//}
+	if (suffix <= 0) { // first time
+		nfsft_precompute_x(&plan);
+	}
 
     /* Direct adjoint transformation, display result. */
     nfsft_adjoint_direct(&plan);
@@ -96,11 +100,9 @@ void transform(int suffix = -1) {
     reconst_out.flush();
     reconst_out.close();
 
-    /* Finalize the plan. */
-    nfsft_finalize(&plan);
-
-    /* Destroy data precomputed for fast polynomial transform. */
-	nfsft_forget();
+    if (suffix < 0) { // only single transform
+    	finalize();
+    }
 }
 
 void loadTestData() {
@@ -318,6 +320,7 @@ void loadData(const map<string, string>& params) {
 		}
 		ofstream data_out("data.txt");
 		for (auto& elem : data) {
+			assert(m < M);
 			data_out << elem[0] << " " << elem[1] << " " << elem[2] << "\n";
 			plan.x[2*m] = elem[0];
 			plan.x[2*m+1] = elem[1];
@@ -332,6 +335,7 @@ void loadData(const map<string, string>& params) {
 		cout << "Transforming...";
 		cout.flush();
 		transform();
+	    cout << "done." << endl;
 	} else { // TYPE_VIDEO
 		assert(dims.size() == 2);
 		int bufferSize = Utils::FindIntProperty(params, "bufferSize", 100000);
@@ -347,11 +351,12 @@ void loadData(const map<string, string>& params) {
 			//cout << "procId:" << procId << endl;
 			for (int t = 0; t < dl.GetPageSize(); t++) {
 				const auto timeIndex = t + timeOffset;
-				cout << "Reading time moment " << timeIndex << endl;
+				cout << "Reading time moment " << timeIndex << "...";
+				cout.flush();
 				int m = 0;
-				vector<vector<double>> data;
 				real time = dl.GetX(t);
 				auto y = dl.GetY(t);
+				ofstream data_out("data" + to_string(t) + ".txt");
 				for (int i = 0; i < dl.GetDim(); i++) {
 					auto i1 = i;
 					vector<int> coords(dl.GetDims().size());
@@ -367,11 +372,11 @@ void loadData(const map<string, string>& params) {
 						i1 -= coord;
 						i1 /= dl.GetDims()[j];
 					}
-					int phiCoord = longCoef * coords[phiIndex];
-					int thetaCoord = latCoef * coords[thetaIndex];
+					int phiCoord = coords[phiIndex];
+					int thetaCoord = coords[thetaIndex];
 					if ((phiCoord % phiDownSample == 0) && (thetaCoord % thetaDownSample == 0)) {
-						double x1 = -0.5 + phiCoord;
-						double x2 = polarGap + thetaCoord;
+						double x1 = -0.5 + longCoef * phiCoord;
+						double x2 = polarGap + latCoef * thetaCoord;
 						if (x1 < -0.5 || x1 > 0.5) {
 							cout << "x1 out of range: " << x1 << endl;
 							assert(x1 >= -0.5 && x1 <= 0.5);
@@ -381,34 +386,32 @@ void loadData(const map<string, string>& params) {
 							assert(x2 >= 0 && x2 <= 0.5);
 						}
 						//cout << "Coords: " << x1 << " " << x2 << "\n";
-						int k;
-						auto dataIter = data.begin();
-						for (k = 0; k < (int) data.size(); k++) {
-							if (data[k][0] > x1 || (data[k][0] == x1 && data[k][1] > x2)) {
-								break;
-							}
-							dataIter++;
+						assert(m < M);
+						data_out << x1 << " " << x2 << " " << y[i] << endl;
+						if (t == 0) {
+							plan.x[2*m] = x1;
+							plan.x[2*m+1] = x2;
+						} else {
+							assert(plan.x[2*m] == x1);
+							assert(plan.x[2*m+1] == x2);
 						}
-						data.insert(dataIter, {x1, x2, y[i]});
+						plan.f[m][0] = y[i];
+						plan.f[m][1] = 0;
+						m++;
 					}
 				}
-				//ofstream data_out("data" + to_string(t) + ".txt");
-				for (auto& elem : data) {
-					//data_out << elem[0] << " " << elem[1] << " " << elem[2] << "\n";
-					plan.x[2*m] = elem[0];
-					plan.x[2*m+1] = elem[1];
-					plan.f[m][0] = elem[2];
-					plan.f[m][1] = 0;
-					m++;
-				}
 				assert(m == M);
-				//data_out.flush();
-				//data_out.close();
-				cout << "Transformation for time moment " << timeIndex << endl;
+				data_out.flush();
+				data_out.close();
+			    cout << "done." << endl;
+				cout << "Transformation for time moment " << timeIndex << "...";
+				cout.flush();
 				transform(timeIndex);
+			    cout << "done." << endl;
 			}
 			timeOffset += dl.GetPageSize();
 		}
+		finalize();
 	}
 }
 
@@ -437,6 +440,5 @@ int main(int argc, char *argv[]) {
 		}
     	loadData(params);
     #endif
-    cout << "Done!" << endl;
     return EXIT_SUCCESS;
 }
