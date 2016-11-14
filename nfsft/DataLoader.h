@@ -49,14 +49,6 @@ public:
 		return &data[i * (dim * GetNumVars() + 1)];
 	}
 
-	real* GetYToModify(int i) {
-		if (i >= pageSize) {
-			cout << "pageSize, i" << pageSize << ", " << i << endl;
-		}
-		assert(i < pageSize);
-		return &data[i * (dim * GetNumVars() + 1) + 1];
-	}
-
 	int GetPage() const {
 		return page;
 	}

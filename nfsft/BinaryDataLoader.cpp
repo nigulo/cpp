@@ -25,11 +25,16 @@ BinaryDataLoader::BinaryDataLoader(const BinaryDataLoader& dataLoader) : DataLoa
 }
 
 BinaryDataLoader::~BinaryDataLoader() {
+	if (data) {
+		delete[] data;
+	}
 }
 
 
 bool BinaryDataLoader::Next() {
-	delete[] data;
+	if (data) {
+		delete[] data;
+	}
 	if (!input.is_open()) {
 		pageSize = 0;
 		return false;

@@ -30,7 +30,8 @@ string paramFileName;
 nfsft_plan plan; /* transform plan */
 
 void init(int N /* bandwidth/maximum degree */, int M /* number of nodes */) {
-	printf("num_threads = %d\n", omp_get_max_threads());
+	//printf("num_threads = %d\n", omp_get_max_threads());
+    printf("nthreads = %d\n", nfft_get_num_threads());
     /* init */
     fftw_init_threads();
     fftw_plan_with_nthreads(omp_get_max_threads());
@@ -263,6 +264,7 @@ void loadData(const map<string, string>& params) {
 			BinaryDataLoader dl(dataFile, 1000000, dimsPerProc, regions, totalNumVars, varIndices, TYPE_SNAPSHOT);
 			//cout << "procId:" << procId << endl;
 			dl.Next();
+			assert(dl.GetPageSize() == 1);
 			//real time = dl.GetX(0);
 			auto y = dl.GetY(0);
 			for (int i = 0; i < dl.GetDim(); i++) {
@@ -339,22 +341,21 @@ void loadData(const map<string, string>& params) {
 	} else { // TYPE_VIDEO
 		assert(dims.size() == 2);
 		int bufferSize = Utils::FindIntProperty(params, "bufferSize", 100000);
+		varIndices.push_back(0);
+
 		string dataFile = filePath;
 		cout << "Reading: " << dataFile << endl;
 		assert(exists(dataFile));
 		BinaryDataLoader dl(dataFile, bufferSize, dims, regions, 1 /*totalNumVars*/, varIndices, TYPE_VIDEO);
 		int timeOffset = 0;
 		while (dl.Next()) {
-			if (type == TYPE_SNAPSHOT) {
-				assert(dl.GetPageSize() == 1);
-			}
 			//cout << "procId:" << procId << endl;
 			for (int t = 0; t < dl.GetPageSize(); t++) {
 				const auto timeIndex = t + timeOffset;
-				cout << "Reading time moment " << timeIndex << "...";
 				cout.flush();
 				int m = 0;
 				real time = dl.GetX(t);
+				cout << "Reading time moment " << timeIndex << "(" << time << ") ...";
 				auto y = dl.GetY(t);
 				ofstream data_out("data" + to_string(t) + ".txt");
 				for (int i = 0; i < dl.GetDim(); i++) {
