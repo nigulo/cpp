@@ -3,10 +3,6 @@
 #include <stdlib.h>
 #include <string>
 
-//#include <complex.h>
-#include <omp.h>
-#include "nfft3.h" /* NFFT3 header */
-
 #include <fstream>
 #include <vector>
 #include "BinaryDataLoader.h"
@@ -17,6 +13,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include "utils/utils.h"
 #include <iomanip>
+#include "Transformer.h"
 
 //#define TEST
 //#define ONLY_AZIMUTHAL_RECONST
@@ -27,84 +24,6 @@ using namespace boost;
 using namespace boost::filesystem;
 
 string paramFileName;
-nfsft_plan plan; /* transform plan */
-
-void init(int N /* bandwidth/maximum degree */, int M /* number of nodes */) {
-	//printf("num_threads = %d\n", omp_get_max_threads());
-    printf("nthreads = %d\n", nfft_get_num_threads());
-    /* init */
-    fftw_init_threads();
-    fftw_plan_with_nthreads(omp_get_max_threads());
-    /* precomputation (for fast polynomial transform) */
-    nfsft_precompute(N,1000.0,0U,0U);
-
-    /* Initialize transform plan using the guru interface. All input and output
-     * arrays are allocated by nfsft_init_guru(). Computations are performed with
-     * respect to L^2-normalized spherical harmonics Y_k^n. The array of spherical
-     * Fourier coefficients is preserved during transformations. The NFFT uses a
-     * cut-off parameter m = 6. See the NFFT 3 manual for details.
-     */
-    nfsft_init(&plan, N, M);
-    //nfsft_init_guru(&plan, N, M, NFSFT_MALLOC_X | NFSFT_MALLOC_F |
-    //    NFSFT_MALLOC_F_HAT | NFSFT_NORMALIZED | NFSFT_PRESERVE_F_HAT,
-    //    PRE_PHI_HUT | PRE_PSI | FFTW_INIT | FFT_OUT_OF_PLACE, 6);
-}
-
-void finalize() {
-	/* Finalize the plan. */
-	nfsft_finalize(&plan);
-
-	/* Destroy data precomputed for fast polynomial transform. */
-	nfsft_forget();
-
-}
-
-void transform(int suffix = -1) {
-    /* precomputation (for NFFT, node-dependent) */
-	if (suffix <= 0) { // first time
-		nfsft_precompute_x(&plan);
-	}
-
-    /* Direct adjoint transformation, display result. */
-    nfsft_adjoint_direct(&plan);
-
-    string suffixStr;
-    if (suffix >= 0) {
-    	suffixStr = to_string(suffix);
-    }
-
-    ofstream decomp_out(string("decomp") + suffixStr + ".txt");
-    for (int k = 0; k <= plan.N; k++) {
-        for (int n = -k; n <= k; n++) {
-        	decomp_out << k << " " << n << " " << plan.f_hat[NFSFT_INDEX(k,n,&plan)][0] << " " << plan.f_hat[NFSFT_INDEX(k,n,&plan)][1] << "\n";
-        }
-    }
-    decomp_out.flush();
-    decomp_out.close();
-
-	#ifdef ONLY_AZIMUTHAL_RECONST
-    	// Set all nonazimuthal waves to zero
-		for (int k = 0; k <= plan.N; k++) {
-			for (int n = -k+1; n <= k-1; n++) {
-				plan.f_hat[NFSFT_INDEX(k,n,&plan)][0] = 0;
-				plan.f_hat[NFSFT_INDEX(k,n,&plan)][1] = 0;
-			}
-		}
-	#endif
-    /* Direct transformation, display result. */
-    nfsft_trafo_direct(&plan);
-
-    ofstream reconst_out(string("reconst") + suffixStr + ".txt");
-    for (int m = 0; m < plan.M_total; m++) {
-    	reconst_out << plan.x[2*m] << " " << plan.x[2*m + 1] << " " << plan.f[m][0] << " " << plan.f[m][1] << "\n";
-    }
-    reconst_out.flush();
-    reconst_out.close();
-
-    if (suffix < 0) { // only single transform
-    	finalize();
-    }
-}
 
 void loadTestData() {
 	cout << "Generating test data!" << endl;
@@ -113,7 +32,8 @@ void loadTestData() {
 	const int m_theta = 200;
 	int N = m_phi;
 	int M = m_phi * m_theta;
-    init(N, M);
+	Transformer transformer(N, M);
+    transformer.init();
     /* define nodes and data*/
     int m = 0;
     double x1_step = 1.0 / m_phi;
@@ -125,18 +45,20 @@ void loadTestData() {
 	    double x1 = -0.5 + x1_step * i;
 	    for (int j = 0; j < m_theta; j++) {
 		    double x2 = x2_offset + x2_step * j;
-		    plan.x[2*m] = x1;
-		    plan.x[2*m+1] = x2;
+		    //plan.x[2*m] = x1;
+		    //plan.x[2*m+1] = x2;
+		    transformer.setX(m, x1, x2);
 		    double field = /*sin(2*M_PI*(x1+0.5)) +*/ sin(2*2*M_PI*(x1+0.5)) * sin(3*4*M_PI*x2);
-		    plan.f[m][0] = field;// + _Complex_I*0.0;
-		    plan.f[m][1] = 0;// + _Complex_I*0.0;
+		    //plan.f[m][0] = field;// + _Complex_I*0.0;
+		    //plan.f[m][1] = 0;// + _Complex_I*0.0;
+		    transformer.setY(m, field);
 	    	data_out << x1 << " " << x2 << " " << field << endl;
 	    	m++;
 	    }
     }
     data_out.flush();
     data_out.close();
-    transform();
+    transformer.transform();
 
 }
 
@@ -176,7 +98,17 @@ void loadData(const map<string, string>& params) {
 	int M = numTheta * numPhi;
 	int N = numPhi;
 
-	init(N, M);
+	int lMax = Utils::FindIntProperty(params, "lMax", 0);
+	assert(lMax >= 0);
+	if (lMax > 0) {
+		N = min(lMax, N);
+	}
+
+	bool saveData = Utils::FindIntProperty(params, "saveData", 0);
+	bool doReconstruction = Utils::FindIntProperty(params, "doReconstruction", 1);
+
+	Transformer transformer(N, M, doReconstruction);
+	transformer.init();
 
 	vector<vector<pair<int, int>>> regions;
 	regions.push_back(vector<pair<int, int>>());
@@ -324,10 +256,12 @@ void loadData(const map<string, string>& params) {
 		for (auto& elem : data) {
 			assert(m < M);
 			data_out << elem[0] << " " << elem[1] << " " << elem[2] << "\n";
-			plan.x[2*m] = elem[0];
-			plan.x[2*m+1] = elem[1];
-			plan.f[m][0] = elem[2];
-			plan.f[m][1] = 0;
+			transformer.setX(m, elem[0], elem[1]);
+			//plan.x[2*m] = elem[0];
+			//plan.x[2*m+1] = elem[1];
+			transformer.setY(m, elem[2]);
+			//plan.f[m][0] = elem[2];
+			//plan.f[m][1] = 0;
 			m++;
 		}
 		assert(m == M);
@@ -336,7 +270,7 @@ void loadData(const map<string, string>& params) {
 		/* precomputation (for NFFT, node-dependent) */
 		cout << "Transforming...";
 		cout.flush();
-		transform();
+		transformer.transform();
 	    cout << "done." << endl;
 	} else { // TYPE_VIDEO
 		assert(dims.size() == 2);
@@ -357,7 +291,10 @@ void loadData(const map<string, string>& params) {
 				real time = dl.GetX(t);
 				cout << "Reading time moment " << timeIndex << "(" << time << ") ...";
 				auto y = dl.GetY(t);
-				ofstream data_out("data" + to_string(t) + ".txt");
+				ofstream* data_out = nullptr;
+				if (saveData) {
+					data_out = new ofstream("data" + to_string(t) + ".txt");
+				}
 				for (int i = 0; i < dl.GetDim(); i++) {
 					auto i1 = i;
 					vector<int> coords(dl.GetDims().size());
@@ -388,31 +325,38 @@ void loadData(const map<string, string>& params) {
 						}
 						//cout << "Coords: " << x1 << " " << x2 << "\n";
 						assert(m < M);
-						data_out << x1 << " " << x2 << " " << y[i] << endl;
-						if (t == 0) {
-							plan.x[2*m] = x1;
-							plan.x[2*m+1] = x2;
-						} else {
-							assert(plan.x[2*m] == x1);
-							assert(plan.x[2*m+1] == x2);
+						if (data_out) {
+							*data_out << x1 << " " << x2 << " " << y[i] << endl;
 						}
-						plan.f[m][0] = y[i];
-						plan.f[m][1] = 0;
+						if (t == 0) {
+							transformer.setX(m, x1, x2);
+							//plan.x[2*m] = x1;
+							//plan.x[2*m+1] = x2;
+						} else {
+							//assert(plan.x[2*m] == x1);
+							//assert(plan.x[2*m+1] == x2);
+						}
+						transformer.setY(m, y[i]);
+						//plan.f[m][0] = y[i];
+						//plan.f[m][1] = 0;
 						m++;
 					}
 				}
 				assert(m == M);
-				data_out.flush();
-				data_out.close();
+				if (data_out) {
+					data_out->flush();
+					data_out->close();
+					delete data_out;
+				}
 			    cout << "done." << endl;
 				cout << "Transformation for time moment " << timeIndex << "...";
 				cout.flush();
-				transform(timeIndex);
+				transformer.transform(timeIndex);
 			    cout << "done." << endl;
 			}
 			timeOffset += dl.GetPageSize();
 		}
-		finalize();
+		transformer.finalize();
 	}
 }
 
