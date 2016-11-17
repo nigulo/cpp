@@ -7,6 +7,7 @@
 
 #include <omp.h>
 #include "Transformer.h"
+#include <iostream>
 
 Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, bool doReconstruction) :
 	N(N),

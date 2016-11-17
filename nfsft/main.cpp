@@ -289,7 +289,7 @@ void loadData(const map<string, string>& params) {
 				cout.flush();
 				int m = 0;
 				real time = dl.GetX(t);
-				cout << "Reading time moment " << timeIndex << "(" << time << ") ...";
+				cout << "Reading time moment " << timeIndex << "(" << time << ")...";
 				auto y = dl.GetY(t);
 				ofstream* data_out = nullptr;
 				if (saveData) {

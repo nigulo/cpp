@@ -34,6 +34,7 @@ BinaryDataLoader::~BinaryDataLoader() {
 bool BinaryDataLoader::Next() {
 	if (data) {
 		delete[] data;
+		data = nullptr;
 	}
 	if (!input.is_open()) {
 		pageSize = 0;
