@@ -7,10 +7,16 @@
 
 using namespace std;
 
-enum Mode {
-	Box,
-	Gauss,
-	GaussCosine
+enum PhaseSelFn {
+	PhaseSelFnBox,
+	PhaseSelFnGauss,
+	PhaseSelFnCosine
+};
+
+enum TimeSelFn {
+	TimeSelFnNone,
+	TimeSelFnBox,
+	TimeSelFnGauss,
 };
 
 class D2SpecLine {
@@ -47,7 +53,8 @@ public:
 	double minCoherence;
 	double maxCoherence;
     int numFreqs;
-	Mode mode;
+	PhaseSelFn phaseSelFn;
+	TimeSelFn timeSelFn;
 	bool normalize;
 	bool relative;
 	bool differential;
@@ -73,7 +80,9 @@ private:
 	const int phaseBins = 50;
 	const double epsilon = 0.1;
 
-	double epslim, eps, ln2, lnp;
+	double eps;
+	double ln2;
+	double lnp;
 
 	// Square differences, coherence bin lengths and counts
 	// Index 0 represents actual data, the rest is bootstrap data
@@ -105,7 +114,7 @@ public:
     D2(DataLoader* pDataLoader, double duration, 
     		double minPeriod, double maxPeriod,
     		double minCoherence, double maxCoherence, int numFreqs,
-			Mode mode, bool normalize, bool relative,
+			PhaseSelFn phaseSelFn, TimeSelFn timeSelFn, bool normalize, bool relative,
 			double tScale, double startTime, const vector<double>& varScales,
 			const vector<pair<double, double>>& varRanges, bool removeSpurious,
 			int bootstrapSize, bool saveDiffNorms, bool saveParameters);

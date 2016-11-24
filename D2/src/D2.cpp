@@ -23,7 +23,7 @@ D2::D2(DataLoader* pDataLoader,
 		double duration,
 		double minPeriod, double maxPeriod,
 		double minCoherence, double maxCoherence, int numFreqs,
-		Mode mode, bool normalize, bool relative,
+		PhaseSelFn phaseSelFn, TimeSelFn timeSelFn, bool normalize, bool relative,
 		double tScale, double startTime,
 		const vector<double>& varScales, const vector<pair<double, double>>& varRanges,
 		bool removeSpurious, int bootstrapSize, bool saveDiffNorms, bool saveParameters) :
@@ -31,7 +31,8 @@ D2::D2(DataLoader* pDataLoader,
 			minCoherence(minCoherence),
 			maxCoherence(maxCoherence),
 			numFreqs(numFreqs),
-			mode(mode),
+			phaseSelFn(phaseSelFn),
+			timeSelFn(timeSelFn),
 			normalize(normalize),
 			relative(relative),
 			tScale(tScale),
@@ -77,7 +78,6 @@ D2::D2(DataLoader* pDataLoader,
 
 	freqStep = (wmax - wmin) / (numFreqs - 1);
 	eps = epsilon;
-	epslim = 1.0 - eps;
 	ln2 = sqrt(log(2.0));
 	lnp = ln2 / eps;
 }
@@ -85,70 +85,56 @@ D2::D2(DataLoader* pDataLoader,
 pair<double, double> D2::Criterion(int bootstrapIndex, double d, double w) {
 	double tyv = 0;
 	int tav = 0;
-	switch (mode) {
-	case Box:
-		#ifdef _OPENMP
-			#pragma omp parallel for reduction(+:tyv,tav)
-		#endif
-		for (size_t j = 0; j < td[bootstrapIndex].size(); j++) {
-			double dd = td[bootstrapIndex][j];
-			if (dd <= d) {
-				double ph = dd * w - floor(dd * w);
-				if (ph < 0) {
-					ph = ph + 1;
-				}
-				if (ph < eps || ph > epslim) {
-					tyv += ty[bootstrapIndex][j];
-					tav += ta[bootstrapIndex][j];
-				}
-			}
-		}
-		break;
-	case Gauss:
-	case GaussCosine:
-		#ifdef _OPENMP
-			#pragma omp parallel for reduction(+:tyv,tav)
-		#endif
-		for (size_t j = 0; j < td[bootstrapIndex].size(); j++) {// to jj-1 do begin
-			double dd = td[bootstrapIndex][j];
-			double ww;
-			if (d > 0.0) {
+	#ifdef _OPENMP
+		#pragma omp parallel for reduction(+:tyv,tav)
+	#endif
+	for (size_t j = 0; j < td[bootstrapIndex].size(); j++) {// to jj-1 do begin
+		double dd = td[bootstrapIndex][j];
+		double ww;
+		if (timeSelFn == TimeSelFnGauss) {
+			if (d > 0) {
 				ww = exp(-square(ln2 * dd / d));
 			} else {
-				ww = 0.0;
+				ww = 0;
 			}
-			double ph = dd * w - floor(dd * w);
-			if (ph < 0.0) {
-				ph = ph + 1;
-			}
-			if (ph > 0.5) {
-				ph = 1.0 - ph;
-			}
-			bool closeInPhase = true;
-			double wp;
-			if (mode == Gauss) {
-				closeInPhase = ph < eps || ph > epslim;
-				wp = exp(-square(lnp * ph));
-			} else {
-				const double df = 0.5; // With this value we have wp = 1 + 2 cos (2 pi w (ti - tj))
-				if (ph >= df) {
-					wp = 0;
-				} else if (ph == 0) {
-					wp = 1;
-				} else {
-					wp = 2 * cos(M_PI * ph / df) + 1;
-				}
-				if (std::isnan(wp)) {
-					wp = 0;
-					cout << "wp is still nan" << endl;
-				}
-			}
-			if (closeInPhase) {
-				tyv += ww * wp * ty[bootstrapIndex][j];
-				tav += ww * wp * ta[bootstrapIndex][j];
-			}
+		} else if (timeSelFn == TimeSelFnBox) {
+			ww = dd <= d ? 1 : 0;
+		} else { // TimeSelFnNone
+			ww = 1;
 		}
-		break;
+		double ph = dd * w - floor(dd * w);
+		if (ph < 0.0) {
+			ph = ph + 1;
+		}
+		if (ph > 0.5) {
+			ph = 1.0 - ph;
+		}
+		bool closeInPhase = true;
+		double wp;
+		if (phaseSelFn == PhaseSelFnGauss) {
+			closeInPhase = ph < eps;
+			wp = exp(-square(lnp * ph));
+		} else if (phaseSelFn == PhaseSelFnCosine) {
+			const double df = 0.5; // With this value we have wp = 1 + 2 cos (2 pi w (ti - tj))
+			if (ph >= df) {
+				wp = 0;
+			} else if (ph == 0) {
+				wp = 1;
+			} else {
+				wp = 2 * cos(M_PI * ph / df) + 1;
+			}
+			if (std::isnan(wp)) {
+				wp = 0;
+				cout << "wp is still nan" << endl;
+			}
+		} else { //PhaseSelFnBox
+			closeInPhase = ph < eps;
+			wp = 1;
+		}
+		if (closeInPhase) {
+			tyv += ww * wp * ty[bootstrapIndex][j];
+			tav += ww * wp * ta[bootstrapIndex][j];
+		}
 	}
 	return {tyv, tav};
 }
@@ -222,7 +208,7 @@ void D2::Smooth() {
 		//cout << endl;
 		assert(oldY.size() == num_vars);
 		oldYs.push_back(oldY);
-		assert(oldYs.size() == smoothWindowSize+1);
+		assert((int) oldYs.size() == smoothWindowSize+1);
 		updateLocalMean(ma, oldYs.front().data(), mpDataLoader->GetY(i+smoothWindowSize+1));
 	}
 

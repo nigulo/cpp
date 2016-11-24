@@ -164,19 +164,58 @@ int main(int argc, char *argv[]) {
 	int bootstrapSize = Utils::FindIntProperty(params, "bootstrapSize", 0);
 	assert(bootstrapSize >= 0);
 	int numFreqs = Utils::FindIntProperty(params, "numFreqs", bootstrapSize > 0 ? max(1000, 100000 / bootstrapSize) : 100000);
-	string modeStr = Utils::FindProperty(params, "mode", "GaussCosine");
-	to_upper(modeStr);
-	Mode mode;
-	if (modeStr == "BOX") {
-		mode = Mode::Box;
-	} else if (modeStr == "GAUSS") {
-		mode = Mode::Gauss;
-	} else if (modeStr == "GAUSSCOSINE" ||modeStr == "GAUSSWITHCOSINE") {
-		mode = Mode::GaussCosine;
+
+	string phaseSelFnStr = Utils::FindProperty(params, "phaseSelFn", "Cosine");
+	to_upper(phaseSelFnStr);
+	PhaseSelFn phaseSelFn;
+	if (phaseSelFnStr == "BOX") {
+		phaseSelFn = PhaseSelFnBox;
+	} else if (phaseSelFnStr == "GAUSS") {
+		phaseSelFn = PhaseSelFnGauss;
+	} else if (phaseSelFnStr == "COSINE") {
+		phaseSelFn = PhaseSelFnCosine;
 	} else {
-		cerr << "Invalid mode" << endl;
+		cerr << "Invalid phaseSelFn" << endl;
 		assert(false);
 	}
+
+	string timeSelFnStr = Utils::FindProperty(params, "timeSelFn", "Gauss");
+	to_upper(timeSelFnStr);
+	TimeSelFn timeSelFn;
+	if (timeSelFnStr == "NONE") {
+		timeSelFn = TimeSelFnNone;
+	} else if (timeSelFnStr == "BOX") {
+		timeSelFn = TimeSelFnBox;
+	} else if (phaseSelFnStr == "GAUSS") {
+		timeSelFn = TimeSelFnGauss;
+	} else {
+		cerr << "Invalid timeSelFn" << endl;
+		assert(false);
+	}
+	if (timeSelFn == TimeSelFnNone) {
+		minCoherence = 0;
+		maxCoherence = 0;
+	}
+	//-------------------------------------------------------------
+	// For backward compatibility
+	string modeStr = Utils::FindProperty(params, "mode", "");
+	if (modeStr.length() > 0) {
+		to_upper(modeStr);
+		if (modeStr == "BOX") {
+			phaseSelFn = PhaseSelFnBox;
+			timeSelFn = TimeSelFnBox;
+		} else if (modeStr == "GAUSS") {
+			phaseSelFn = PhaseSelFnGauss;
+			timeSelFn = TimeSelFnGauss;
+		} else if (modeStr == "GAUSSCOSINE" ||modeStr == "GAUSSWITHCOSINE") {
+			phaseSelFn = PhaseSelFnCosine;
+			timeSelFn = TimeSelFnGauss;
+		} else {
+			cerr << "Invalid mode" << endl;
+			assert(false);
+		}
+	}
+	//-------------------------------------------------------------
 	bool normalize = Utils::FindIntProperty(params, "normalize", 0);
 	bool relative = Utils::FindIntProperty(params, "relative", 1);
 	bool differential = Utils::FindIntProperty(params, "differential", false);
@@ -238,7 +277,8 @@ int main(int argc, char *argv[]) {
 		cout << "minCoherence   " << minCoherence << endl;
 		cout << "maxCoherence   " << maxCoherence << endl;
 		cout << "numFreqs       " << numFreqs << endl;
-		cout << "mode           " << mode << endl;
+		cout << "phaseSelFn     " << phaseSelFn << endl;
+		cout << "timeSelFn      " << timeSelFn << endl;
 		cout << "normalize      " << normalize << endl;
 		cout << "relative       " << relative << endl;
 		cout << "differential   " << differential << endl;
@@ -402,7 +442,7 @@ int main(int argc, char *argv[]) {
 
 		}
 
-		D2 d2(dl, duration, minPeriod, maxPeriod, minCoherence, maxCoherence, numFreqs, mode,
+		D2 d2(dl, duration, minPeriod, maxPeriod, minCoherence, maxCoherence, numFreqs, phaseSelFn, timeSelFn,
 				normalize, relative, tScale, startTime, varScales, varRanges, removeSpurious,
 				bootstrapSize, saveDiffNorms, saveParameters);
 		d2.confIntOrSignificance = confIntOrSignificance;
