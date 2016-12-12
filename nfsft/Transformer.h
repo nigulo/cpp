@@ -15,7 +15,7 @@ using namespace std;
 
 class Transformer {
 public:
-	Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, bool doReconstruction = true);
+	Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, bool doReconstruction = true, bool decompOrPower = true);
 	virtual ~Transformer();
 
 	void init();
@@ -38,8 +38,9 @@ private:
 	const int M;
 	nfsft_plan plan; /* transform plan */
 
-	ofstream decomp_out;
+	ofstream result_out;
 	ofstream* reconst_out;
+	bool decompOrPower;
 };
 
 #endif /* TRANSFORMER_H_ */

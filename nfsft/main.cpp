@@ -106,8 +106,9 @@ void loadData(const map<string, string>& params) {
 
 	bool saveData = Utils::FindIntProperty(params, "saveData", 0);
 	bool doReconstruction = Utils::FindIntProperty(params, "doReconstruction", 1);
+	bool decompOrPower = Utils::FindIntProperty(params, "decompOrPower", 0);
 
-	Transformer transformer(N, M, doReconstruction);
+	Transformer transformer(N, M, doReconstruction, decompOrPower);
 	transformer.init();
 
 	vector<vector<pair<int, int>>> regions;
@@ -276,6 +277,8 @@ void loadData(const map<string, string>& params) {
 		assert(dims.size() == 2);
 		int bufferSize = Utils::FindIntProperty(params, "bufferSize", 100000);
 		varIndices.push_back(0);
+		int startTime = Utils::FindIntProperty(params, "startTime", 0);
+		int endTime = Utils::FindIntProperty(params, "endTime", -1);
 
 		string dataFile = filePath;
 		cout << "Reading: " << dataFile << endl;
@@ -285,6 +288,12 @@ void loadData(const map<string, string>& params) {
 		while (dl.Next()) {
 			//cout << "procId:" << procId << endl;
 			for (int t = 0; t < dl.GetPageSize(); t++) {
+				if (t + timeOffset < startTime) {
+					continue;
+				}
+				if (endTime >= 0 && t + timeOffset > endTime) {
+					break;
+				}
 				const auto timeIndex = t + timeOffset;
 				cout.flush();
 				int m = 0;
@@ -355,6 +364,9 @@ void loadData(const map<string, string>& params) {
 			    cout << "done." << endl;
 			}
 			timeOffset += dl.GetPageSize();
+			if (endTime >= 0 && timeOffset > endTime) {
+				break;
+			}
 		}
 		transformer.finalize();
 	}

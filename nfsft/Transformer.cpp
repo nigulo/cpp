@@ -9,11 +9,12 @@
 #include "Transformer.h"
 #include <iostream>
 
-Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, bool doReconstruction) :
+Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, bool doReconstruction, bool decompOrPower) :
 	N(N),
 	M(M),
-	decomp_out("decomp.txt"),
-	reconst_out(nullptr) {
+	result_out("result.txt"),
+	reconst_out(nullptr),
+	decompOrPower(decompOrPower) {
 	if (doReconstruction) {
 		reconst_out = new ofstream("reconst.txt");
 	}
@@ -21,7 +22,7 @@ Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number o
 }
 
 Transformer::~Transformer() {
-    decomp_out.close();
+    result_out.close();
     if (reconst_out) {
 		reconst_out->close();
 		delete reconst_out;
@@ -74,11 +75,22 @@ void Transformer::transform(int timeMoment) {
 
     //ofstream decomp_out(string("decomp") + suffixStr + ".txt");
     for (int k = 0; k <= plan.N; k++) {
+    	double power = 0;
         for (int n = -k; n <= k; n++) {
-        	decomp_out << timeMomentStr << k << " " << n << " " << plan.f_hat[NFSFT_INDEX(k, n, &plan)][0] << " " << plan.f_hat[NFSFT_INDEX(k, n, &plan)][1] << endl;
+        	if (decompOrPower) {
+        		result_out << timeMomentStr << k << " " << n << " " << plan.f_hat[NFSFT_INDEX(k, n, &plan)][0] << " " << plan.f_hat[NFSFT_INDEX(k, n, &plan)][1] << endl;
+        	} else {
+        		auto re = plan.f_hat[NFSFT_INDEX(k, n, &plan)][0];
+        		auto im = plan.f_hat[NFSFT_INDEX(k, n, &plan)][1];
+        		power += re * re + im * im;
+        	}
         }
+        power /= (2 * k + 1);
+    	if (!decompOrPower) {
+    		result_out << timeMomentStr << k << " " << power << endl;
+    	}
     }
-    decomp_out.flush();
+    result_out.flush();
 
 	//#ifdef ONLY_AZIMUTHAL_RECONST
     //	// Set all nonazimuthal waves to zero
