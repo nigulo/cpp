@@ -70,3 +70,22 @@ DataLoader::~DataLoader() {
 
 }
 
+tuple<real, real, int> DataLoader::CalcRangeAndLength() const {
+	assert(page == -1);
+	DataLoader* dl = Clone();
+	real startTime = 0;
+	real endTime = 0;
+	int dataLen = 0;
+	bool first = true;
+	while (dl->Next()) {
+		if (first) {
+			startTime = dl->GetX(0);
+			first = false;
+		}
+		endTime = dl->GetX(dl->GetPageSize() - 1);
+		dataLen += dl->GetPageSize();
+	}
+	delete dl;
+	return tuple<real, real, int>(startTime, endTime, dataLen);
+}
+

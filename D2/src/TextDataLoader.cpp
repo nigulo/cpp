@@ -21,6 +21,7 @@ TextDataLoader::~TextDataLoader() {
 bool TextDataLoader::Next() {
 	if (data) {
 		delete[] data;
+		data = nullptr;
 	}
 	if (!input.is_open()) {
 		pageSize = 0;

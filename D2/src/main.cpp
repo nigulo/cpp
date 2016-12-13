@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
 	double initMinPeriod = Utils::FindDoubleProperty(params, "minPeriod", 2);
 	double initMaxPeriod = Utils::FindDoubleProperty(params, "maxPeriod", 10);
 	double minCoherence = Utils::FindDoubleProperty(params, "minCoherence", 3);
-	double maxCoherence = Utils::FindDoubleProperty(params, "maxCoherence", 30);
+	double maxCoherence = Utils::FindDoubleProperty(params, "maxCoherence", 0);
 	int bootstrapSize = Utils::FindIntProperty(params, "bootstrapSize", 0);
 	assert(bootstrapSize >= 0);
 	int numFreqs = Utils::FindIntProperty(params, "numFreqs", bootstrapSize > 0 ? max(1000, 100000 / bootstrapSize) : 100000);
@@ -191,10 +191,6 @@ int main(int argc, char *argv[]) {
 	} else {
 		cerr << "Invalid timeSelFn" << endl;
 		assert(false);
-	}
-	if (timeSelFn == TimeSelFnNone) {
-		minCoherence = 0;
-		maxCoherence = 0;
 	}
 	//-------------------------------------------------------------
 	// For backward compatibility
@@ -274,8 +270,12 @@ int main(int argc, char *argv[]) {
 		cout << "duration       " << duration << endl;
 		cout << "minPeriod      " << initMinPeriod << endl;
 		cout << "maxPeriod      " << initMaxPeriod << endl;
-		cout << "minCoherence   " << minCoherence << endl;
-		cout << "maxCoherence   " << maxCoherence << endl;
+		if (timeSelFn != TimeSelFnNone) {
+			cout << "minCoherence   " << minCoherence << endl;
+		}
+		if (timeSelFn != TimeSelFnNone && maxCoherence > 0) {
+			cout << "maxCoherence   " << maxCoherence << endl;
+		}
 		cout << "numFreqs       " << numFreqs << endl;
 		cout << "phaseSelFn     " << phaseSelFn << endl;
 		cout << "timeSelFn      " << timeSelFn << endl;
@@ -440,6 +440,21 @@ int main(int argc, char *argv[]) {
 				dl = new TextDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
 			}
 
+		}
+		if (timeSelFn == TimeSelFnNone || maxCoherence == 0) {
+			auto rangeAndLen = dl->CalcRangeAndLength();
+			cout << "dataRange     " << get<0>(rangeAndLen) << " - " << get<1>(rangeAndLen) << endl;
+			cout << "dataLength     " << get<2>(rangeAndLen) << endl;
+			auto timeRange = (get<1>(rangeAndLen) - get<0>(rangeAndLen)) * tScale;
+			maxCoherence = timeRange;
+			if (relative) {
+				maxCoherence /= maxPeriod;
+			}
+			if (timeSelFn == TimeSelFnNone) {
+				minCoherence = maxCoherence;
+				cout << "minCoherence   " << minCoherence << endl;
+			}
+			cout << "maxCoherence   " << maxCoherence << endl;
 		}
 
 		D2 d2(dl, duration, minPeriod, maxPeriod, minCoherence, maxCoherence, numFreqs, phaseSelFn, timeSelFn,

@@ -15,6 +15,7 @@
 #include <utility>
 #include <random>
 #include <iostream>
+#include <tuple>
 
 using namespace std;
 
@@ -143,6 +144,8 @@ public:
 	bool IsInRegion(int i) const {
 		return inRegion[i];
 	}
+
+	tuple<real /*startTime*/, real /*endTime*/, int /*length*/> CalcRangeAndLength() const;
 
 	/*
 	void ShufflePage(default_random_engine& e1) {

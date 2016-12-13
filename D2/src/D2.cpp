@@ -51,11 +51,15 @@ D2::D2(DataLoader* pDataLoader,
 	wmax = 1.0 / minPeriod;
 	wmin = 1.0 / maxPeriod;
 
-	dmin = minCoherence * (relative ? minPeriod : 1);
 	dmax = maxCoherence * (relative ? maxPeriod : 1);
 	if (duration > 0 && dmax > duration * tScale) {
 		dmax = duration * tScale;
 		this->maxCoherence = floor(duration * tScale / maxPeriod);
+	}
+	if (timeSelFn == TimeSelFnNone) {
+		dmin = dmax;
+	} else {
+		dmin = minCoherence * (relative ? minPeriod : 1);
 	}
 	dbase = dmin / 10;
 	dmaxUnscaled = dmax / tScale;
@@ -287,7 +291,7 @@ pair<double, double> D2::GetIndexes(int pageSize, int* bsIndexes, int bootstrapI
 
 
 bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
-	if (dmaxUnscaled > 0 && dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
+	if (dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
 		return false;
 	}
 	auto dl1Size = dl1.GetPageSize();
@@ -383,21 +387,14 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 				//	}
 				//}
 				real d = xj - xi;
-				if (bootstrapSize == 0 && ((dmax > 0 && d > dmax) || xjUnscaled > endTime)) {
+				if (bootstrapSize == 0 && (d > dmax || xjUnscaled > endTime)) {
 					//cout << "Breaking GetProcId, i, d: " << GetProcId() << ", " << bootstrapIndex << ", " << d << endl;
 					break;
 				}
-				if (xiUnscaled >= startTime && (d >= dbase && (d <= dmax || dmax == 0) && xjUnscaled <= endTime)) {
-					//numCoherenceBins = round(phaseBins * (dmax - dbase) * wmax);
-					//a = (numCoherenceBins - 1.0) / (dmax - dbase);
-					//b = -dbase * a;
-					//int kk = round(a * d + b);
-					double kkd = (d - dbase) * (numCoherenceBins - 1);
-					if (dmax > 0) {
-						kkd /= (dmax - dbase);
-					}
-					int kk = round(kkd);
+				if (xiUnscaled >= startTime && (d >= dbase && d <= dmax && xjUnscaled <= endTime)) {
+					int kk = round((d - dbase) * (numCoherenceBins - 1) / (dmax - dbase));
 					//cout << "GetProcId, i, d, kk: " << GetProcId() << ", " << bootstrapIndex << ", " << d << ", " << kk << endl;
+					assert(kk >= 0 && kk < numCoherenceBins);
 					auto dy2 = DiffNorm(dl1.GetY(iy), dl2.GetY(jy));
 					tty[bootstrapIndex * numCoherenceBins + kk] += dy2;
 					tta[bootstrapIndex * numCoherenceBins + kk]++;
