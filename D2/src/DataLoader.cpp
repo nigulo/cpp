@@ -64,5 +64,9 @@ DataLoader::~DataLoader() {
 	if (inRegion) {
 		delete[] inRegion;
 	}
+	if (data) {
+		delete[] data;
+	}
+
 }
 

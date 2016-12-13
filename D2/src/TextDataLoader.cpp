@@ -19,7 +19,9 @@ TextDataLoader::~TextDataLoader() {
 }
 
 bool TextDataLoader::Next() {
-	delete[] data;
+	if (data) {
+		delete[] data;
+	}
 	if (!input.is_open()) {
 		pageSize = 0;
 		return false;

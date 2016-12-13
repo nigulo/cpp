@@ -287,7 +287,7 @@ pair<double, double> D2::GetIndexes(int pageSize, int* bsIndexes, int bootstrapI
 
 
 bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
-	if (dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
+	if (dmaxUnscaled > 0 && dl2.GetX(0) - dl1.GetX(dl1.GetPageSize() - 1) > dmaxUnscaled) {
 		return false;
 	}
 	auto dl1Size = dl1.GetPageSize();
@@ -383,16 +383,20 @@ bool D2::ProcessPage(DataLoader& dl1, DataLoader& dl2, double* tty, int* tta) {
 				//	}
 				//}
 				real d = xj - xi;
-				if (bootstrapSize == 0 && (d > dmax || xjUnscaled > endTime)) {
+				if (bootstrapSize == 0 && ((dmax > 0 && d > dmax) || xjUnscaled > endTime)) {
 					//cout << "Breaking GetProcId, i, d: " << GetProcId() << ", " << bootstrapIndex << ", " << d << endl;
 					break;
 				}
-				if (xiUnscaled >= startTime && (d >= dbase && d <= dmax && xjUnscaled <= endTime)) {
+				if (xiUnscaled >= startTime && (d >= dbase && (d <= dmax || dmax == 0) && xjUnscaled <= endTime)) {
 					//numCoherenceBins = round(phaseBins * (dmax - dbase) * wmax);
 					//a = (numCoherenceBins - 1.0) / (dmax - dbase);
 					//b = -dbase * a;
 					//int kk = round(a * d + b);
-					int kk = round((d - dbase) * (numCoherenceBins - 1) / (dmax - dbase));
+					double kkd = (d - dbase) * (numCoherenceBins - 1);
+					if (dmax > 0) {
+						kkd /= (dmax - dbase);
+					}
+					int kk = round(kkd);
 					//cout << "GetProcId, i, d, kk: " << GetProcId() << ", " << bootstrapIndex << ", " << d << ", " << kk << endl;
 					auto dy2 = DiffNorm(dl1.GetY(iy), dl2.GetY(jy));
 					tty[bootstrapIndex * numCoherenceBins + kk] += dy2;

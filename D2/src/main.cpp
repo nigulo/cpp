@@ -186,7 +186,7 @@ int main(int argc, char *argv[]) {
 		timeSelFn = TimeSelFnNone;
 	} else if (timeSelFnStr == "BOX") {
 		timeSelFn = TimeSelFnBox;
-	} else if (phaseSelFnStr == "GAUSS") {
+	} else if (timeSelFnStr == "GAUSS") {
 		timeSelFn = TimeSelFnGauss;
 	} else {
 		cerr << "Invalid timeSelFn" << endl;
