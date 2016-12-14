@@ -440,6 +440,8 @@ int main(int argc, char *argv[]) {
 				dl = new TextDataLoader(filePath, bufferSize, dimsPerProc, regions, totalNumVars, varIndices);
 			}
 
+		} else {
+			cout << filePath << " does not exist" << endl;
 		}
 		if (timeSelFn == TimeSelFnNone || maxCoherence == 0) {
 			auto rangeAndLen = dl->CalcRangeAndLength();

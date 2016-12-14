@@ -61,7 +61,7 @@ D2::D2(DataLoader* pDataLoader,
 	} else {
 		dmin = minCoherence * (relative ? minPeriod : 1);
 	}
-	dbase = dmin / 10;
+	dbase = 0;//dmin / 10;
 	dmaxUnscaled = dmax / tScale;
 
 	if (dmax < dmin || this->maxCoherence < this->minCoherence) {

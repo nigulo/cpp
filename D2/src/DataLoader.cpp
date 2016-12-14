@@ -77,14 +77,14 @@ tuple<real, real, int> DataLoader::CalcRangeAndLength() const {
 	real endTime = 0;
 	int dataLen = 0;
 	bool first = true;
-	while (dl->Next()) {
+	do {
 		if (first) {
 			startTime = dl->GetX(0);
 			first = false;
 		}
 		endTime = dl->GetX(dl->GetPageSize() - 1);
 		dataLen += dl->GetPageSize();
-	}
+	} while (dl->Next());
 	delete dl;
 	return tuple<real, real, int>(startTime, endTime, dataLen);
 }
