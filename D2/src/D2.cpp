@@ -884,15 +884,15 @@ const vector<D2Minimum> D2::Compute2DSpectrum(int bootstrapIndex, const string& 
 				}
 				for (auto& m : minima) {
 					if (bootstrapIndex == 0) {
-						auto error = getError(m, spec);
-						if (error > 0) {
-							allMinima.push_back(D2Minimum(d, m.frequency, m.value, error));
-							if (error <= freqStep) {
-								cout << "Possibly too wide confidence interval estimated for minimum at d=" << d << ", f=" <<  m.frequency << endl;
-							}
-						} else {
-							cout << "Skipping insignificant minimum at d=" << d << ", f=" <<  m.frequency << endl;
-						}
+						//auto error = getError(m, spec);
+						//if (error > 0) {
+							allMinima.push_back(D2Minimum(d, m.frequency, m.value, 0));//error));
+						//	if (error <= freqStep) {
+						//		cout << "Possibly too wide confidence interval estimated for minimum at d=" << d << ", f=" <<  m.frequency << endl;
+						//	}
+						//} else {
+						//	cout << "Skipping insignificant minimum at d=" << d << ", f=" <<  m.frequency << endl;
+						//}
 					} else {
 						allMinima.push_back(D2Minimum(d, m.frequency, m.value, 0));
 					}
