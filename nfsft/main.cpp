@@ -337,7 +337,7 @@ void loadData(const map<string, string>& params) {
 						if (data_out) {
 							*data_out << x1 << " " << x2 << " " << y[i] << endl;
 						}
-						if (t == 0) {
+						if (t == startTime) {
 							transformer.setX(m, x1, x2);
 							//plan.x[2*m] = x1;
 							//plan.x[2*m+1] = x2;
