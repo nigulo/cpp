@@ -41,6 +41,7 @@ private:
 	ofstream result_out;
 	ofstream* reconst_out;
 	bool decompOrPower;
+	bool doReconstruction;
 };
 
 #endif /* TRANSFORMER_H_ */

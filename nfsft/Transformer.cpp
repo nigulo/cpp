@@ -14,19 +14,13 @@ Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number o
 	M(M),
 	result_out("result.txt"),
 	reconst_out(nullptr),
-	decompOrPower(decompOrPower) {
-	if (doReconstruction) {
-		reconst_out = new ofstream("reconst.txt");
-	}
+	decompOrPower(decompOrPower),
+	doReconstruction(doReconstruction) {
 
 }
 
 Transformer::~Transformer() {
     result_out.close();
-    if (reconst_out) {
-		reconst_out->close();
-		delete reconst_out;
-    }
 }
 
 void Transformer::init() {
@@ -101,16 +95,17 @@ void Transformer::transform(int timeMoment) {
 	//		}
 	//	}
 	//#endif
-
-    if (reconst_out) {
+	if (doReconstruction) {
+		ofstream reconst_out("reconst" + (timeMoment >= 0 ? to_string(timeMoment) : "") + ".txt");
 		/* Direct transformation, display result. */
 		nfsft_trafo_direct(&plan);
 
 		//ofstream reconst_out(string("reconst") + suffixStr + ".txt");
 		for (int m = 0; m < plan.M_total; m++) {
-			*reconst_out << timeMomentStr << plan.x[2*m] << " " << plan.x[2*m + 1] << " " << plan.f[m][0] << " " << plan.f[m][1] << endl;
+			reconst_out << plan.x[2*m] << " " << plan.x[2*m + 1] << " " << plan.f[m][0] << " " << plan.f[m][1] << endl;
 		}
-		reconst_out->flush();
+		reconst_out.flush();
+		reconst_out.close();
     }
 
     if (timeMoment < 0) { // only single transform
