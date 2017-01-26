@@ -20,7 +20,10 @@ public:
 	DataLoader(const map<string, string>& params);
 	virtual ~DataLoader();
 
-	virtual void load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*val*/)> f) = 0;
+	const vector<int>& getDims() const {
+		return dims;
+	}
+
 protected:
 	map<string, string> params;
 	vector<int> dims;

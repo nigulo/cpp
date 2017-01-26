@@ -23,7 +23,7 @@ VideoSliceLoader::VideoSliceLoader(const map<string, string>& params) : DataLoad
 VideoSliceLoader::~VideoSliceLoader() {
 }
 
-void VideoSliceLoader::load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*val*/)> f) {
+void VideoSliceLoader::load(std::function<void(int /*time*/, int /*theta*/, int /*phi*/, double /*val*/)> f) {
 	assert(dims.size() == 2);
 	int bufferSize = Utils::FindIntProperty(params, "bufferSize", 100000);
 	varIndices.push_back(0);

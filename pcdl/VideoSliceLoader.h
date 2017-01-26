@@ -17,7 +17,7 @@ public:
 	VideoSliceLoader(const map<string, string>& params);
 	virtual ~VideoSliceLoader();
 public:
-	void load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*val*/)> f);
+	void load(std::function<void(int /*time*/, int /*theta*/, int /*phi*/, double /*val*/)> f);
 };
 }
 #endif /* VIDEOSLICELOADER_H_ */
