@@ -19,6 +19,8 @@
 
 using namespace std;
 
+namespace pcdl {
+
 typedef float real;
 
 #define RECORDHEADER true
@@ -129,5 +131,5 @@ private:
 	bool* inRegion;
 
 };
-
+}
 #endif /* SRC_BINARYDATALOADER_H_ */

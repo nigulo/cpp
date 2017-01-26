@@ -1,6 +1,6 @@
 #include "BinaryDataLoader.h"
 #include <iostream>
-using namespace std;
+using namespace pcdl;
 
 BinaryDataLoader::BinaryDataLoader(const string& fileName, int bufferSize,
 		const vector<int>& dims,

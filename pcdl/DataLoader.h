@@ -14,6 +14,7 @@
 
 using namespace std;
 
+namespace pcdl {
 class DataLoader {
 public:
 	DataLoader(const map<string, string>& params);
@@ -33,5 +34,5 @@ protected:
 	double polarGap;
 	string filePath;
 };
-
+}
 #endif /* DATALOADER_H_ */

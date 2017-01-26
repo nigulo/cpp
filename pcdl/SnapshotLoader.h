@@ -10,6 +10,8 @@
 
 #include "DataLoader.h"
 
+namespace pcdl {
+
 class SnapshotLoader : public DataLoader {
 public:
 	SnapshotLoader(const map<string, string>& params);
@@ -17,5 +19,7 @@ public:
 public:
 	void load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*val*/)> f);
 };
+
+}
 
 #endif /* SNAPSHOTLOADER_H_ */

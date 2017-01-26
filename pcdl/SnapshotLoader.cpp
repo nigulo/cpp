@@ -15,6 +15,7 @@
 using namespace utils;
 using namespace boost;
 using namespace boost::filesystem;
+using namespace pcdl;
 
 SnapshotLoader::SnapshotLoader(const map<string, string>& params) : DataLoader(params) {
 }

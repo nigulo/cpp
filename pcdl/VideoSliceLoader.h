@@ -10,6 +10,8 @@
 
 #include "DataLoader.h"
 
+namespace pcdl {
+
 class VideoSliceLoader : public DataLoader {
 public:
 	VideoSliceLoader(const map<string, string>& params);
@@ -17,5 +19,5 @@ public:
 public:
 	void load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*val*/)> f);
 };
-
+}
 #endif /* VIDEOSLICELOADER_H_ */

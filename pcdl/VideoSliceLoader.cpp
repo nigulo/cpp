@@ -15,6 +15,7 @@
 using namespace utils;
 using namespace boost;
 using namespace boost::filesystem;
+using namespace pcdl;
 
 VideoSliceLoader::VideoSliceLoader(const map<string, string>& params) : DataLoader(params) {
 }

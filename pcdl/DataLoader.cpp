@@ -14,6 +14,7 @@
 using namespace utils;
 using namespace boost;
 using namespace boost::filesystem;
+using namespace pcdl;
 
 DataLoader::DataLoader(const map<string, string>& params) : params(params) {
 	string strDims = Utils::FindProperty(params, "dims", "1");
