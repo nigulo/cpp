@@ -49,6 +49,32 @@ Mat rotate(const Mat& src, double angle) {
 	return dst;
 }
 
+Mat calcDistances(const Mat& mat) {
+	Mat dists = Mat::zeros(mat.rows, mat.cols, mat.type());
+	for (int col = 0; col < mat.cols; col++) {
+		bool inGranule = mat.at<char>(0, col);
+		int dist = 0;
+		int startRow = 0;
+		int row;
+		for (row = 1; row < mat.rows; row++) {
+			if (mat.at<char>(row, col) == inGranule) {
+				dist++;
+			} else {
+				for (int row1 = startRow; row1 < row; row1++) {
+					dists.at<char>(row1, col) = dist;
+				}
+				dist = 0;
+				startRow = row;
+				inGranule = !inGranule;
+			}
+		}
+		for (int row1 = startRow; row1 < row; row1++) {
+			dists.at<char>(row1, col) = dist;
+		}
+	}
+	return dists;
+}
+
 int main(int argc, char *argv[]) {
 	if (argc == 2 && string("-h") == argv[1]) {
 		cout << "Usage: ./D2 [param file] [params to overwrite]\nparam file defaults to " << "parameters.txt" << endl;
@@ -75,18 +101,35 @@ int main(int argc, char *argv[]) {
 	auto numPhi = dims[2];
 
 	Mat matrices[numR];
+	int rows = ceil(((double) numTheta) * sqrt(2));
+	int cols = ceil(((double) numPhi) * sqrt(2));
+
+	int rowOffset = (rows - numTheta) / 2;
+	int colOffset = (cols - numPhi) / 2;
+
 	for (int i = 0; i < numR; i++) {
-		matrices[i] = Mat::zeros(numTheta*sqrt(2), numPhi*sqrt(2), CV_8S);
+		matrices[i] = Mat::zeros(rows, cols, CV_8S);
 	}
 
-	loader.load([&matrices](int t, int r, int theta, int phi, double field) {
+	loader.load([&matrices, rowOffset, colOffset](int t, int r, int theta, int phi, double field) {
 		auto& mat = matrices[r];
 		if (field > 0) {
-			mat.at<char>(theta, phi) = 1;
+			mat.at<char>(theta + rowOffset, phi + colOffset) = 1;
 		} else {
 			// already initialized to zero;
 		}
 	});
+
+	for (auto& mat : matrices) {
+		for (double angle = 0; angle < 360; angle += 1) {
+			Mat matRotated;
+			if (angle > 0) {
+				matRotated = rotate(mat, angle);
+			} else {
+				matRotated = mat;
+			}
+		}
+	}
 
 	return 0;
 }
