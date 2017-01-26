@@ -1,0 +1,21 @@
+/*
+ * SnapshotLoader.h
+ *
+ *  Created on: Jan 26, 2017
+ *      Author: nigul
+ */
+
+#ifndef SNAPSHOTLOADER_H_
+#define SNAPSHOTLOADER_H_
+
+#include "DataLoader.h"
+
+class SnapshotLoader : public DataLoader {
+public:
+	SnapshotLoader(const map<string, string>& params);
+	virtual ~SnapshotLoader();
+public:
+	void load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*val*/)> f);
+};
+
+#endif /* SNAPSHOTLOADER_H_ */
