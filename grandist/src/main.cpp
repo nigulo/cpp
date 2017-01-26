@@ -120,6 +120,7 @@ int main(int argc, char *argv[]) {
 		}
 	});
 
+	Rect cropRect(rowOffset, colOffset, rowOffset + rows, colOffset + cols);
 	for (auto& mat : matrices) {
 		for (double angle = 0; angle < 360; angle += 1) {
 			Mat matRotated;
@@ -128,6 +129,11 @@ int main(int argc, char *argv[]) {
 			} else {
 				matRotated = mat;
 			}
+			Mat dists = calcDistances(matRotated);
+			if (angle > 0) {
+				dists = rotate(dists, -angle);
+			}
+			Mat croppedDists = dists(cropRect);
 		}
 	}
 
