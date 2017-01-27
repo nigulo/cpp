@@ -23,7 +23,7 @@ VideoSliceLoader::VideoSliceLoader(const map<string, string>& params) : DataLoad
 VideoSliceLoader::~VideoSliceLoader() {
 }
 
-void VideoSliceLoader::load(std::function<void(int /*time*/, int /*theta*/, int /*phi*/, double /*val*/)> f) {
+void VideoSliceLoader::load(std::function<void(int /*y*/, int /*z*/, double /*val*/)> f1, std::function<void(int /*time*/)> f2) {
 	assert(dims.size() == 2);
 	int bufferSize = Utils::FindIntProperty(params, "bufferSize", 100000);
 	varIndices.push_back(0);
@@ -48,7 +48,7 @@ void VideoSliceLoader::load(std::function<void(int /*time*/, int /*theta*/, int 
 			cout.flush();
 			real time = dl.GetX(t);
 			cout << "Reading time moment " << timeIndex << "(" << time << ")...";
-			auto y = dl.GetY(t);
+			auto value = dl.GetY(t);
 			for (int i = 0; i < dl.GetDim(); i++) {
 				auto i1 = i;
 				vector<int> coords(dl.GetDims().size());
@@ -64,12 +64,13 @@ void VideoSliceLoader::load(std::function<void(int /*time*/, int /*theta*/, int 
 					i1 -= coord;
 					i1 /= dl.GetDims()[j];
 				}
-				int phiCoord = coords[phiIndex];
-				int thetaCoord = coords[thetaIndex];
-				if ((phiCoord % phiDownSample == 0) && (thetaCoord % thetaDownSample == 0)) {
-					f(t, thetaCoord, phiCoord, y[i]);
+				int y = coords[yIndex];
+				int z = coords[zIndex];
+				if ((y % yDownSample == 0) && (z % zDownSample == 0)) {
+					f1(y / yDownSample, z / zDownSample, value[i]);
 				}
 			}
+			f2(t);
 		}
 		timeOffset += dl.GetPageSize();
 		if (endTime >= 0 && timeOffset > endTime) {

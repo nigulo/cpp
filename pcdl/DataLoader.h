@@ -20,21 +20,21 @@ public:
 	DataLoader(const map<string, string>& params);
 	virtual ~DataLoader();
 
-	const vector<int>& getDims() const {
-		return dims;
+	const vector<int>& getDimsDownSampled() const {
+		return dimsDownSampled;
 	}
 
 protected:
 	map<string, string> params;
 	vector<int> dims;
-	int thetaIndex;
-	int phiIndex;
+	vector<int> dimsDownSampled;
+	int yIndex;
+	int zIndex;
 	vector<int> varIndices;
-	int thetaDownSample;
-	int phiDownSample;
+	int yDownSample;
+	int zDownSample;
 
 	vector<vector<pair<int, int>>> regions;
-	double polarGap;
 	string filePath;
 };
 }

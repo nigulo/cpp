@@ -27,30 +27,35 @@ DataLoader::DataLoader(const map<string, string>& params) : params(params) {
 		}
 	}
 
-	assert(dims.size() >= 2);
+	assert(dims.size() == 2 || dims.size() == 3);
 
-	thetaIndex = 1;
-	phiIndex = 2;
+	yIndex = 1;
+	zIndex = 2;
 	if (dims.size() == 2) {
-		thetaIndex = 0;
-		phiIndex = 1;
+		yIndex = 0;
+		zIndex = 1;
 	}
-	thetaDownSample = Utils::FindIntProperty(params, "thetaDownSample", 1);
-	phiDownSample = Utils::FindIntProperty(params, "phiDownSample", 1);
+	yDownSample = Utils::FindIntProperty(params, "yDownSample", 1);
+	zDownSample = Utils::FindIntProperty(params, "zDownSample", 1);
 
-	int numTheta = dims[thetaIndex];
-	int numPhi = dims[phiIndex];
+	// Just for backward compatibility
+	int thetaDownSample = Utils::FindIntProperty(params, "thetaDownSample", 0);
+	int phiDownSample = Utils::FindIntProperty(params, "phiDownSample", 0);
+	if (thetaDownSample > 0) {
+		yDownSample = thetaDownSample;
+	}
+	if (phiDownSample > 0) {
+		zDownSample = phiDownSample;
+	}
 
-	assert(thetaDownSample > 0 && (numTheta % thetaDownSample == 0));
-	assert(phiDownSample > 0 && (numPhi % phiDownSample == 0));
+	assert(yDownSample > 0 && (dims[yIndex] % yDownSample == 0));
+	assert(zDownSample > 0 && (dims[zIndex] % zDownSample == 0));
 
-	numTheta /= thetaDownSample;
-	numPhi /= phiDownSample;
+	dimsDownSampled[0] = dims[0]; // x (if present, otherwise y)
+	dimsDownSampled[yIndex] = dims[yIndex] / yDownSample;
+	dimsDownSampled[zIndex] = dims[zIndex] / zDownSample;
 
 	regions.push_back(vector<pair<int, int>>());
-
-	polarGap = Utils::FindDoubleProperty(params, "polarGap", 15);
-	polarGap /= 360; // Convert to NFSFT units
 
 	filePath = Utils::FindProperty(params, string("filePath"), "");
 	assert(filePath.size() > 0);

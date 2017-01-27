@@ -17,7 +17,7 @@ public:
 	SnapshotLoader(const map<string, string>& params);
 	virtual ~SnapshotLoader();
 public:
-	void load(std::function<void(int /*time*/, int /*r*/, int /*theta*/, int /*phi*/, double /*val*/)> f);
+	void load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*z*/, double /*val*/)> f);
 };
 
 }

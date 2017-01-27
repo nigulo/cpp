@@ -23,9 +23,9 @@ SnapshotLoader::SnapshotLoader(const map<string, string>& params) : DataLoader(p
 SnapshotLoader::~SnapshotLoader() {
 }
 
-void SnapshotLoader::load(std::function<void(int /*time*/, int /*r*/, int /*theta*/, int /*phi*/, double /*val*/)> f) {
+void SnapshotLoader::load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*z*/, double /*val*/)> f) {
 	assert(dims.size() == 3);
-	const int rIndex = 0;
+	const int xIndex = 0;
 	int numGhost = Utils::FindIntProperty(params, "numGhost", 3);
 	string strNumProcs = Utils::FindProperty(params, "numProcs", "1");
 	vector<string> numProcsStr;
@@ -87,7 +87,7 @@ void SnapshotLoader::load(std::function<void(int /*time*/, int /*r*/, int /*thet
 		dl.Next();
 		assert(dl.GetPageSize() == 1);
 		//real time = dl.GetX(0);
-		auto y = dl.GetY(0);
+		auto value = dl.GetY(0);
 		for (int i = 0; i < dl.GetDim(); i++) {
 			auto i1 = i;
 			vector<int> coords(3);
@@ -112,13 +112,12 @@ void SnapshotLoader::load(std::function<void(int /*time*/, int /*r*/, int /*thet
 			}
 			//cout << ghost << endl;
 			if (!ghost) {
-				auto rCoord = coords[rIndex] - numGhost + procMinCoords[rIndex];
-				if (layer < 0 || rCoord == layer) {
-					int phiCoord = coords[phiIndex] - numGhost + procMinCoords[phiIndex];
-					int thetaCoord = coords[thetaIndex] - numGhost + procMinCoords[thetaIndex];
-					if ((phiCoord % phiDownSample == 0) && (thetaCoord % thetaDownSample == 0)) {
-						//cout << "Coords: " << x1 << " " << x2 << "\n";
-						f(timeMoment, rCoord, thetaCoord, phiCoord, y[i]);
+				auto x = coords[xIndex] - numGhost + procMinCoords[xIndex];
+				if (layer < 0 || x == layer) {
+					int y = coords[yIndex] - numGhost + procMinCoords[yIndex];
+					int z = coords[zIndex] - numGhost + procMinCoords[zIndex];
+					if ((y % yDownSample == 0) && (z % zDownSample == 0)) {
+						f(timeMoment, x, y / yDownSample, z / zDownSample, value[i]);
 					}
 				}
 			}
