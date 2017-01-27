@@ -1,12 +1,5 @@
-//============================================================================
-// Name        : garndist.cpp
-// Author      : 
-// Version     :
-// Copyright   : Your copyright notice
-// Description : Hello World in C++, Ansi-style
-//============================================================================
-
 #include <iostream>
+#include <fstream>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <opencv2/gpu/gpu.hpp>
@@ -21,6 +14,8 @@ using namespace boost::filesystem;
 using namespace cv;
 using namespace utils;
 using namespace pcdl;
+
+#define DEBUG
 
 Mat rotate(const Mat& src, double angle) {
 	Mat dst;
@@ -50,7 +45,7 @@ Mat rotate(const Mat& src, double angle) {
 }
 
 Mat calcDistances(const Mat& mat) {
-	Mat dists = Mat::zeros(mat.rows, mat.cols, mat.type());
+	Mat dists = Mat::zeros(mat.rows, mat.cols, CV_32S);
 	for (int col = 0; col < mat.cols; col++) {
 		bool inGranule = mat.at<char>(0, col);
 		int dist = 0;
@@ -95,23 +90,24 @@ int main(int argc, char *argv[]) {
 		params.insert({entry.first, entry.second});
 	}
 	SnapshotLoader loader(params);
-	auto& dims = loader.getDims();
-	auto numR = dims[0];
-	auto numTheta = dims[1];
-	auto numPhi = dims[2];
+	auto& dims = loader.getDimsDownSampled();
+	auto numX = dims[0];
+	auto numY = dims[1];
+	auto numZ = dims[2];
 
-	Mat matrices[numR];
-	int rows = ceil(((double) numTheta) * sqrt(2));
-	int cols = ceil(((double) numPhi) * sqrt(2));
+	Mat matrices[numX];
+	int rows = ceil(((double) numY) * sqrt(2));
+	int cols = ceil(((double) numZ) * sqrt(2));
 
-	int rowOffset = (rows - numTheta) / 2;
-	int colOffset = (cols - numPhi) / 2;
+	int rowOffset = (rows - numY) / 2;
+	int colOffset = (cols - numZ) / 2;
 
-	for (int i = 0; i < numR; i++) {
+	for (int i = 0; i < numX; i++) {
 		matrices[i] = Mat::zeros(rows, cols, CV_8S);
 	}
 
-	loader.load([&matrices, rowOffset, colOffset](int t, int r, int theta, int phi, double field) {
+	int tLast = -1;
+	loader.load([&tLast, &matrices, rowOffset, colOffset](int t, int r, int theta, int phi, double field) {
 		auto& mat = matrices[r];
 		if (field > 0) {
 			mat.at<char>(theta + rowOffset, phi + colOffset) = 1;
@@ -121,7 +117,10 @@ int main(int argc, char *argv[]) {
 	});
 
 	Rect cropRect(rowOffset, colOffset, rowOffset + rows, colOffset + cols);
+	int x = 0;
 	for (auto& mat : matrices) {
+		ofstream output(string("dists") + to_string(x) + ".txt");
+		Mat l;
 		for (double angle = 0; angle < 360; angle += 1) {
 			Mat matRotated;
 			if (angle > 0) {
@@ -129,12 +128,42 @@ int main(int argc, char *argv[]) {
 			} else {
 				matRotated = mat;
 			}
+			#ifdef DEBUG
+				imwrite(string("granules") + to_string(x) + "_" + to_string(angle) + ".png", matRotated);
+			#endif
 			Mat dists = calcDistances(matRotated);
 			if (angle > 0) {
 				dists = rotate(dists, -angle);
 			}
-			Mat croppedDists = dists(cropRect);
+			Mat lNew = dists(cropRect);
+			if (angle == 0) {
+				// First time
+				l = lNew;
+			} else {
+				for (int i = 0; i < lNew.rows; i++) {
+					for (int j = 0; j < lNew.cols; j++) {
+						int newDist = lNew.at<int>(i, j);
+						if (mat.at<char>(i + rowOffset, j + colOffset)) {
+							if (newDist > l.at<int>(i, j)) {
+								// in granule and new distance is longer
+								l.at<int>(i, j) = newDist;
+							}
+						} else {
+							if (newDist < l.at<int>(i, j)) {
+								// intergranular and new distance is shorter
+								l.at<int>(i, j) = newDist;
+							}
+						}
+					}
+				}
+			}
+			#ifdef DEBUG
+				output << l << endl;
+			#endif
 		}
+		output << l << endl;
+		output.close();
+		x++;
 	}
 
 	return 0;
