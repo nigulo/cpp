@@ -9,25 +9,24 @@
 #include "Transformer.h"
 #include <iostream>
 
-Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, const string& resultOut, const path& reconstOut, bool decompOrPower) :
+Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, const string& resultOut, const string& reconstOut, bool decompOrPower) :
 	N(N),
 	M(M),
 	result_out(resultOut),
 	reconst_out(nullptr),
-	decompOrPower(decompOrPower),
-#ifdef BOOST_FILESYSTEM_VER2
-	reconstOutDir(reconstOut.parent_path().directory_string()),
-	reconstOutStem(reconstOut.stem()),
-	reconstOutExt(reconstOut.extension()) {
-#else
-	reconstOutDir(reconstOut.parent_path().string()),
-	reconstOutStem(reconstOut.stem().string()),
-	reconstOutExt(reconstOut.extension().string()) {
-#endif
+	decompOrPower(decompOrPower) {
+	if (!reconstOut.empty()) {
+		reconst_out = new ofstream(reconstOut);
+	}
+
 }
 
 Transformer::~Transformer() {
     result_out.close();
+    if (reconst_out) {
+		reconst_out->close();
+		delete reconst_out;
+    }
 }
 
 void Transformer::init() {
@@ -102,17 +101,14 @@ void Transformer::transform(int timeMoment) {
 	//		}
 	//	}
 	//#endif
-	if (!reconstOutStem.empty()) {
-		ofstream reconst_out((reconstOutDir.empty() ? "" :reconstOutDir + "/") + reconstOutStem + (timeMoment >= 0 ? to_string(timeMoment) : "") + reconstOutExt);
+	if (reconst_out) {
 		/* Direct transformation, display result. */
 		nfsft_trafo_direct(&plan);
 
-		//ofstream reconst_out(string("reconst") + suffixStr + ".txt");
 		for (int m = 0; m < plan.M_total; m++) {
-			reconst_out << plan.x[2*m] << " " << plan.x[2*m + 1] << " " << plan.f[m][0] << " " << plan.f[m][1] << endl;
+			*reconst_out << timeMomentStr << plan.x[2*m] << " " << plan.x[2*m + 1] << " " << plan.f[m][0] << " " << plan.f[m][1] << endl;
 		}
-		reconst_out.flush();
-		reconst_out.close();
+		reconst_out->flush();
     }
 
     if (timeMoment < 0) { // only single transform
