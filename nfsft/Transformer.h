@@ -10,12 +10,15 @@
 
 #include "nfft3.h" /* NFFT3 header */
 #include <fstream>
+#include <boost/filesystem.hpp>
+
+using namespace boost::filesystem;
 
 using namespace std;
 
 class Transformer {
 public:
-	Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, bool doReconstruction = true, bool decompOrPower = true);
+	Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, const string& resultOut, const path& reconstOut, bool decompOrPower = true);
 	virtual ~Transformer();
 
 	void init();
@@ -41,7 +44,9 @@ private:
 	ofstream result_out;
 	ofstream* reconst_out;
 	bool decompOrPower;
-	bool doReconstruction;
+	string reconstOutDir;
+	string reconstOutStem;
+	string reconstOutExt;
 };
 
 #endif /* TRANSFORMER_H_ */

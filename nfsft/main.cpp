@@ -15,7 +15,7 @@
 #include <iomanip>
 #include "Transformer.h"
 
-//#define TEST
+#define TEST
 //#define ONLY_AZIMUTHAL_RECONST
 
 using namespace utils;
@@ -25,14 +25,22 @@ using namespace boost::filesystem;
 
 string paramFileName;
 
-void loadTestData() {
+#define RESULTS_OUT "resultsOut"
+#define DATA_OUT "dataOut"
+#define RECONST_OUT "reconstOut"
+
+#define RESULTS_TXT "results.txt"
+#define DATA_TXT "data.txt"
+#define RECONST_TXT "reconst.txt"
+
+void loadTestData(const map<string, string>& params) {
 	cout << "Generating test data!" << endl;
-    ofstream data_out("data.txt");
+    ofstream data_out(Utils::FindProperty(params, string(DATA_OUT), DATA_TXT));
 	const int m_phi = 75;
 	const int m_theta = 200;
 	int N = m_phi;
 	int M = m_phi * m_theta;
-	Transformer transformer(N, M);
+	Transformer transformer(N, M, Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT), path(Utils::FindProperty(params, RECONST_OUT, RECONST_TXT)));
     transformer.init();
     /* define nodes and data*/
     int m = 0;
@@ -107,8 +115,8 @@ void loadData(const map<string, string>& params) {
 	bool saveData = Utils::FindIntProperty(params, "saveData", 0);
 	bool doReconstruction = Utils::FindIntProperty(params, "doReconstruction", 1);
 	bool decompOrPower = Utils::FindIntProperty(params, "decompOrPower", 0);
-
-	Transformer transformer(N, M, doReconstruction, decompOrPower);
+	Transformer transformer(N, M, Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT),
+		doReconstruction ? path(Utils::FindProperty(params, RECONST_OUT, RECONST_TXT)) : path(""), decompOrPower);
 	transformer.init();
 
 	vector<vector<pair<int, int>>> regions;
@@ -127,7 +135,10 @@ void loadData(const map<string, string>& params) {
 		type = TYPE_VIDEO;
 	}
 
-	string filePath = Utils::FindProperty(params, string("filePath"), "");
+	string resultsOut = Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT);
+	string reconstOut = Utils::FindProperty(params, RECONST_OUT, RECONST_TXT);
+	path dataOut(Utils::FindProperty(params, DATA_OUT, DATA_TXT));
+	string filePath = Utils::FindProperty(params, "filePath", "");
 	assert(filePath.size() > 0);
 
 	vector<int> varIndices;
@@ -253,7 +264,7 @@ void loadData(const map<string, string>& params) {
 				}
 			}
 		}
-		ofstream data_out("data.txt");
+		ofstream data_out(dataOut.string());
 		for (auto& elem : data) {
 			assert(m < M);
 			data_out << elem[0] << " " << elem[1] << " " << elem[2] << "\n";
@@ -285,6 +296,22 @@ void loadData(const map<string, string>& params) {
 		assert(exists(dataFile));
 		BinaryDataLoader dl(dataFile, bufferSize, dims, regions, 1 /*totalNumVars*/, varIndices, TYPE_VIDEO);
 		int timeOffset = 0;
+
+		#ifdef BOOST_FILESYSTEM_VER2
+			string dataOutDir = dataOut.parent_path().directory_string();
+			string dataOutStem = dataOut.stem();
+			string dataOutExt = dataOut.extension();
+		#else
+			string dataOutDir = dataOut.parent_path().string();
+			string dataOutStem = dataOut.stem().string();
+			string dataOutExt = dataOut.extension().string();
+		#endif
+		if (!dataOutDir.empty()) {
+			dataOutDir += "/";
+		}
+		cout << "dataOutDir:" << dataOutDir << endl;
+		cout << "dataOutStem:" << dataOutStem << endl;
+		cout << "dataOutExt:" << dataOutExt << endl;
 		while (dl.Next()) {
 			//cout << "procId:" << procId << endl;
 			for (int t = 0; t < dl.GetPageSize(); t++) {
@@ -302,7 +329,7 @@ void loadData(const map<string, string>& params) {
 				auto y = dl.GetY(t);
 				ofstream* data_out = nullptr;
 				if (saveData) {
-					data_out = new ofstream("data" + to_string(t) + ".txt");
+					data_out = new ofstream(dataOutDir +  dataOutStem + to_string(t) + dataOutExt);
 				}
 				for (int i = 0; i < dl.GetDim(); i++) {
 					auto i1 = i;
@@ -373,10 +400,6 @@ void loadData(const map<string, string>& params) {
 }
 
 int main(int argc, char *argv[]) {
-
-    #ifdef TEST
-    	loadTestData();
-    #else
 		if (argc == 2 && string("-h") == argv[1]) {
 			cout << "Usage: ./D2 [param file] [params to overwrite]\nparam file defaults to " << "parameters.txt" << endl;
 			return EXIT_SUCCESS;
@@ -395,6 +418,10 @@ int main(int argc, char *argv[]) {
 		for (const auto& entry : paramsFromFile) {
 			params.insert({entry.first, entry.second});
 		}
+
+    #ifdef TEST
+    	loadTestData(params);
+    #else
     	loadData(params);
     #endif
     return EXIT_SUCCESS;

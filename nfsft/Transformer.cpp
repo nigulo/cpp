@@ -9,14 +9,21 @@
 #include "Transformer.h"
 #include <iostream>
 
-Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, bool doReconstruction, bool decompOrPower) :
+Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, const string& resultOut, const path& reconstOut, bool decompOrPower) :
 	N(N),
 	M(M),
-	result_out("result.txt"),
+	result_out(resultOut),
 	reconst_out(nullptr),
 	decompOrPower(decompOrPower),
-	doReconstruction(doReconstruction) {
-
+#ifdef BOOST_FILESYSTEM_VER2
+	reconstOutDir(reconstOut.parent_path().directory_string()),
+	reconstOutStem(reconstOut.stem()),
+	reconstOutExt(reconstOut.extension()) {
+#else
+	reconstOutDir(reconstOut.parent_path().string()),
+	reconstOutStem(reconstOut.stem().string()),
+	reconstOutExt(reconstOut.extension().string()) {
+#endif
 }
 
 Transformer::~Transformer() {
@@ -95,8 +102,8 @@ void Transformer::transform(int timeMoment) {
 	//		}
 	//	}
 	//#endif
-	if (doReconstruction) {
-		ofstream reconst_out("reconst" + (timeMoment >= 0 ? to_string(timeMoment) : "") + ".txt");
+	if (!reconstOutStem.empty()) {
+		ofstream reconst_out((reconstOutDir.empty() ? "" :reconstOutDir + "/") + reconstOutStem + (timeMoment >= 0 ? to_string(timeMoment) : "") + reconstOutExt);
 		/* Direct transformation, display result. */
 		nfsft_trafo_direct(&plan);
 
