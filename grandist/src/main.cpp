@@ -2,7 +2,9 @@
 #include <fstream>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#ifdef GPU
 #include <opencv2/gpu/gpu.hpp>
+#endif
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include "utils/utils.h"
