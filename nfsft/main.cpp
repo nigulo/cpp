@@ -40,7 +40,7 @@ void loadTestData(const map<string, string>& params) {
 	const int m_theta = 200;
 	int N = m_phi;
 	int M = m_phi * m_theta;
-	Transformer transformer(N, M, Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT), path(Utils::FindProperty(params, RECONST_OUT, RECONST_TXT)));
+	Transformer transformer(N, M, Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT), Utils::FindProperty(params, RECONST_OUT, RECONST_TXT));
     transformer.init();
     /* define nodes and data*/
     int m = 0;
@@ -116,7 +116,7 @@ void loadData(const map<string, string>& params) {
 	bool doReconstruction = Utils::FindIntProperty(params, "doReconstruction", 1);
 	bool decompOrPower = Utils::FindIntProperty(params, "decompOrPower", 0);
 	Transformer transformer(N, M, Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT),
-		doReconstruction ? path(Utils::FindProperty(params, RECONST_OUT, RECONST_TXT)) : path(""), decompOrPower);
+		doReconstruction ? Utils::FindProperty(params, RECONST_OUT, RECONST_TXT) : "", decompOrPower);
 	transformer.init();
 
 	vector<vector<pair<int, int>>> regions;
@@ -135,8 +135,6 @@ void loadData(const map<string, string>& params) {
 		type = TYPE_VIDEO;
 	}
 
-	string resultsOut = Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT);
-	string reconstOut = Utils::FindProperty(params, RECONST_OUT, RECONST_TXT);
 	path dataOut(Utils::FindProperty(params, DATA_OUT, DATA_TXT));
 	string filePath = Utils::FindProperty(params, "filePath", "");
 	assert(filePath.size() > 0);
@@ -309,9 +307,6 @@ void loadData(const map<string, string>& params) {
 		if (!dataOutDir.empty()) {
 			dataOutDir += "/";
 		}
-		cout << "dataOutDir:" << dataOutDir << endl;
-		cout << "dataOutStem:" << dataOutStem << endl;
-		cout << "dataOutExt:" << dataOutExt << endl;
 		while (dl.Next()) {
 			//cout << "procId:" << procId << endl;
 			for (int t = 0; t < dl.GetPageSize(); t++) {
@@ -329,7 +324,7 @@ void loadData(const map<string, string>& params) {
 				auto y = dl.GetY(t);
 				ofstream* data_out = nullptr;
 				if (saveData) {
-					data_out = new ofstream(dataOutDir +  dataOutStem + to_string(t) + dataOutExt);
+					data_out = new ofstream(dataOutDir + dataOutStem + to_string(t) + dataOutExt);
 				}
 				for (int i = 0; i < dl.GetDim(); i++) {
 					auto i1 = i;
@@ -400,24 +395,24 @@ void loadData(const map<string, string>& params) {
 }
 
 int main(int argc, char *argv[]) {
-		if (argc == 2 && string("-h") == argv[1]) {
-			cout << "Usage: ./D2 [param file] [params to overwrite]\nparam file defaults to " << "parameters.txt" << endl;
-			return EXIT_SUCCESS;
-		}
-		string paramFileName = argc > 1 ? argv[1] : "parameters.txt";
-		string cmdLineParams = argc > 2 ? argv[2] : "";
-		boost::replace_all(cmdLineParams, " ", "\n");
+	if (argc == 2 && string("-h") == argv[1]) {
+		cout << "Usage: ./D2 [param file] [params to overwrite]\nparam file defaults to " << "parameters.txt" << endl;
+		return EXIT_SUCCESS;
+	}
+	string paramFileName = argc > 1 ? argv[1] : "parameters.txt";
+	string cmdLineParams = argc > 2 ? argv[2] : "";
+	boost::replace_all(cmdLineParams, " ", "\n");
 
-		if (!exists(paramFileName)) {
-			cout << "Cannot find " << paramFileName << endl;
-			return EXIT_FAILURE;
-		}
+	if (!exists(paramFileName)) {
+		cout << "Cannot find " << paramFileName << endl;
+		return EXIT_FAILURE;
+	}
 
-		map<string, string> paramsFromFile = Utils::ReadProperties(paramFileName);
-		map<string, string> params = Utils::ReadPropertiesFromString(cmdLineParams);
-		for (const auto& entry : paramsFromFile) {
-			params.insert({entry.first, entry.second});
-		}
+	map<string, string> paramsFromFile = Utils::ReadProperties(paramFileName);
+	map<string, string> params = Utils::ReadPropertiesFromString(cmdLineParams);
+	for (const auto& entry : paramsFromFile) {
+		params.insert({entry.first, entry.second});
+	}
 
     #ifdef TEST
     	loadTestData(params);
