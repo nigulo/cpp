@@ -18,6 +18,21 @@ BinaryDataLoader::BinaryDataLoader(const string& fileName, int bufferSize,
 			data(nullptr),
 			pageSize(0)	,
 			type(type) {
+	assert(!(mode & ios::out)); // Don't allow write mode
+	assert(bufferSize > 0);
+	assert(input.is_open());
+	dim = 1;
+	for (auto dimx : dims) {
+		dim *= dimx;
+	}
+	for (int varIndex : varIndices) {
+		assert(varIndex < GetTotalNumVars());
+	}
+	inRegion = new bool[dim];
+	for (int i = 0; i < dim; i++) {
+		inRegion[i] = InRegion(i);
+	}
+
 }
 
 // Creates new DataLoader with the current page set to the next page of input DataLoader
@@ -122,7 +137,7 @@ bool BinaryDataLoader::Next() {
 				assert(numBytesRead == 4);
 				//cout << "recordsize: " << recordSize << endl;
 
-				assert(recordSize == 792);
+				assert(recordSize == 1712);//792);
 				input.read((char*) (data + dataOffset++), sizeof (real)); // time
 				numBytesRead = input.gcount();
 				assert(numBytesRead == 4);

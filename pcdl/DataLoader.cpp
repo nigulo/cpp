@@ -10,6 +10,7 @@
 #include <cassert>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#include <iostream>
 
 using namespace utils;
 using namespace boost;
@@ -51,13 +52,14 @@ DataLoader::DataLoader(const map<string, string>& params) : params(params) {
 	assert(yDownSample > 0 && (dims[yIndex] % yDownSample == 0));
 	assert(zDownSample > 0 && (dims[zIndex] % zDownSample == 0));
 
+	dimsDownSampled.resize(zIndex + 1);
 	dimsDownSampled[0] = dims[0]; // x (if present, otherwise y)
 	dimsDownSampled[yIndex] = dims[yIndex] / yDownSample;
 	dimsDownSampled[zIndex] = dims[zIndex] / zDownSample;
 
 	regions.push_back(vector<pair<int, int>>());
 
-	filePath = Utils::FindProperty(params, string("filePath"), "");
+	filePath = Utils::FindProperty(params, "filePath", "");
 	assert(filePath.size() > 0);
 
 }

@@ -56,7 +56,7 @@ void SnapshotLoader::load(std::function<void(int /*time*/, int /*x*/, int /*y*/,
 	assert(timeMoment >= 0);
 
 	//double wedgeAngle = Utils::FindDoubleProperty(params, "wedgeAngle", 90);
-	int totalNumVars = Utils::FindIntProperty(params, "numVars", 1);
+	int totalNumVars = Utils::FindIntProperty(params, "numVars", 10);
 
 	int varIndex = Utils::FindIntProperty(params, "varIndex", 0);
 	varIndices.push_back(varIndex);
