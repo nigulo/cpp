@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 		assert(y < mat.rows);
 		assert(z < mat.cols);
 		if (field > 0) {
-			mat.at<MAT_TYPE>(y + rowOffset, z + colOffset) = 1;
+			mat.at<MAT_TYPE>(y + rowOffset, z + colOffset) = 255;
 		} else {
 			// already initialized to zero;
 		}
@@ -136,6 +136,9 @@ int main(int argc, char *argv[]) {
 	Rect cropRect(colOffset, rowOffset, numZ, numY);
 	int x = 0;
 	for (auto& mat : matrices) {
+		if (x % 10 != 0) {
+			continue;
+		}
 		ofstream output(string("dists") + to_string(x) + ".txt");
 		Mat l;
 		for (double angle = 0; angle < 360; angle += 1) {
