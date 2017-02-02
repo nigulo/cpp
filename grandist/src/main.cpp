@@ -18,6 +18,7 @@ using namespace utils;
 using namespace pcdl;
 
 #define DEBUG
+typedef float MAT_TYPE;
 
 Mat rotate(const Mat& src, double angle) {
 	Mat dst;
@@ -47,28 +48,39 @@ Mat rotate(const Mat& src, double angle) {
 }
 
 Mat calcDistances(const Mat& mat) {
-	Mat dists = Mat::zeros(mat.rows, mat.cols, CV_32S);
+	//cout << "calcDistances1" << endl;
+	Mat dists = Mat::zeros(mat.rows, mat.cols, CV_32F);//, CV_32S);
+	//cout << "calcDistances2" << endl;
 	for (int col = 0; col < mat.cols; col++) {
-		bool inGranule = mat.at<char>(0, col);
+		//cout << "calcDistances3 " << col << endl;
+		bool inGranule = mat.at<MAT_TYPE>(0, col);
 		int dist = 0;
 		int startRow = 0;
 		int row;
+		//cout << "calcDistances4 " << col << endl;
 		for (row = 1; row < mat.rows; row++) {
-			if (mat.at<char>(row, col) == inGranule) {
+			//cout << "calcDistances5 " << col << " " << row << endl;
+			if (mat.at<MAT_TYPE>(row, col) == inGranule) {
+				//cout << "calcDistances6 " << col << " " << row << endl;
 				dist++;
 			} else {
+				//cout << "calcDistances7 " << col << " " << row << endl;
 				for (int row1 = startRow; row1 < row; row1++) {
-					dists.at<char>(row1, col) = dist;
+					dists.at<MAT_TYPE>(row1, col) = dist;
 				}
+				//cout << "calcDistances8 " << col << " " << row << endl;
 				dist = 0;
 				startRow = row;
 				inGranule = !inGranule;
 			}
 		}
+		//cout << "calcDistances9 " << col << endl;
 		for (int row1 = startRow; row1 < row; row1++) {
-			dists.at<char>(row1, col) = dist;
+			dists.at<MAT_TYPE>(row1, col) = dist;
 		}
+		//cout << "calcDistances10 " << col << endl;
 	}
+	//cout << "calcDistances11" << endl;
 	return dists;
 }
 
@@ -105,33 +117,34 @@ int main(int argc, char *argv[]) {
 	int colOffset = (cols - numZ) / 2;
 
 	for (int i = 0; i < numX; i++) {
-		matrices[i] = Mat::zeros(rows, cols, CV_8S);
+		matrices[i] = Mat::zeros(rows, cols, CV_32F);//CV_8S);
 	}
 
 	int tLast = -1;
-	loader.load([&tLast, &matrices, rowOffset, colOffset](int t, int r, int theta, int phi, double field) {
-		auto& mat = matrices[r];
+	loader.load([&numX, &tLast, &matrices, rowOffset, colOffset](int t, int x, int y, int z, double field) {
+		auto& mat = matrices[x];
+		assert(x < numX);
+		assert(y < mat.rows);
+		assert(z < mat.cols);
 		if (field > 0) {
-			mat.at<char>(theta + rowOffset, phi + colOffset) = 1;
+			mat.at<MAT_TYPE>(y + rowOffset, z + colOffset) = 1;
 		} else {
 			// already initialized to zero;
 		}
 	});
 
-	Rect cropRect(rowOffset, colOffset, rowOffset + rows, colOffset + cols);
+	Rect cropRect(colOffset, rowOffset, numZ, numY);
 	int x = 0;
 	for (auto& mat : matrices) {
 		ofstream output(string("dists") + to_string(x) + ".txt");
 		Mat l;
 		for (double angle = 0; angle < 360; angle += 1) {
-			Mat matRotated;
-			if (angle > 0) {
-				matRotated = rotate(mat, angle);
-			} else {
-				matRotated = mat;
-			}
+			Mat mat1 = mat.clone();
+			Mat matRotated = angle > 0 ? rotate(mat1, angle) : mat1;
 			#ifdef DEBUG
-				imwrite(string("granules") + to_string(x) + "_" + to_string(angle) + ".png", matRotated);
+				if (((int) angle) % 45 == 0) {
+					imwrite(string("granules") + to_string(x) + "_" + to_string((int) angle) + ".png", matRotated);
+				}
 			#endif
 			Mat dists = calcDistances(matRotated);
 			if (angle > 0) {
@@ -144,16 +157,16 @@ int main(int argc, char *argv[]) {
 			} else {
 				for (int i = 0; i < lNew.rows; i++) {
 					for (int j = 0; j < lNew.cols; j++) {
-						int newDist = lNew.at<int>(i, j);
-						if (mat.at<char>(i + rowOffset, j + colOffset)) {
-							if (newDist > l.at<int>(i, j)) {
+						int newDist = lNew.at<MAT_TYPE>(i, j);
+						if (mat.at<MAT_TYPE>(i + rowOffset, j + colOffset)) {
+							if (newDist > l.at<MAT_TYPE>(i, j)) {
 								// in granule and new distance is longer
-								l.at<int>(i, j) = newDist;
+								l.at<MAT_TYPE>(i, j) = newDist;
 							}
 						} else {
-							if (newDist < l.at<int>(i, j)) {
+							if (newDist < l.at<MAT_TYPE>(i, j)) {
 								// intergranular and new distance is shorter
-								l.at<int>(i, j) = newDist;
+								l.at<MAT_TYPE>(i, j) = newDist;
 							}
 						}
 					}
