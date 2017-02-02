@@ -137,6 +137,7 @@ int main(int argc, char *argv[]) {
 	int x = 0;
 	for (auto& mat : matrices) {
 		if (x % 10 != 0) {
+			x++;
 			continue;
 		}
 		ofstream output(string("dists") + to_string(x) + ".txt");
