@@ -15,7 +15,7 @@
 #include <iomanip>
 #include "Transformer.h"
 
-#define TEST
+//#define TEST
 //#define ONLY_AZIMUTHAL_RECONST
 
 using namespace utils;
@@ -35,7 +35,7 @@ string paramFileName;
 
 void loadTestData(const map<string, string>& params) {
 	cout << "Generating test data!" << endl;
-    ofstream data_out(Utils::FindProperty(params, string(DATA_OUT), DATA_TXT));
+    std::ofstream data_out(Utils::FindProperty(params, string(DATA_OUT), DATA_TXT));
 	const int m_phi = 75;
 	const int m_theta = 200;
 	int N = m_phi;
@@ -139,6 +139,14 @@ void loadData(const map<string, string>& params) {
 	string filePath = Utils::FindProperty(params, "filePath", "");
 	assert(filePath.size() > 0);
 
+	string strPrec = Utils::FindProperty(params, "precision", "single");
+	to_lower(strPrec);
+	assert(strPrec == "single" || strPrec == "double");
+	Precision prec = SinglePrecision;
+	if (strPrec == "double") {
+		prec = DoublePrecision;
+	}
+
 	vector<int> varIndices;
 
     /* define nodes and data*/
@@ -203,7 +211,7 @@ void loadData(const map<string, string>& params) {
 			string dataFile = filePath + "proc" + to_string(procId) + "/VAR" + to_string(timeMoment);
 			cout << "Reading: " << dataFile << endl;
 			assert(exists(dataFile));
-			BinaryDataLoader dl(dataFile, 1000000, dimsPerProc, regions, totalNumVars, varIndices, TYPE_SNAPSHOT);
+			BinaryDataLoader dl(dataFile, 1000000, dimsPerProc, regions, totalNumVars, varIndices, TYPE_SNAPSHOT, prec);
 			//cout << "procId:" << procId << endl;
 			dl.Next();
 			assert(dl.GetPageSize() == 1);
@@ -256,13 +264,20 @@ void loadData(const map<string, string>& params) {
 								}
 								dataIter++;
 							}
-							data.insert(dataIter, {x1, x2, y[i]});
+							double field;
+							if (prec == SinglePrecision) {
+								field = ((float*) y)[i];
+							} else {
+								field = ((double*) y)[i];
+							}
+
+							data.insert(dataIter, {x1, x2, field});
 						}
 					}
 				}
 			}
 		}
-		ofstream data_out(dataOut.string());
+		std::ofstream data_out(dataOut.string());
 		for (auto& elem : data) {
 			assert(m < M);
 			data_out << elem[0] << " " << elem[1] << " " << elem[2] << "\n";
@@ -292,7 +307,7 @@ void loadData(const map<string, string>& params) {
 		string dataFile = filePath;
 		cout << "Reading: " << dataFile << endl;
 		assert(exists(dataFile));
-		BinaryDataLoader dl(dataFile, bufferSize, dims, regions, 1 /*totalNumVars*/, varIndices, TYPE_VIDEO);
+		BinaryDataLoader dl(dataFile, bufferSize, dims, regions, 1 /*totalNumVars*/, varIndices, TYPE_VIDEO, prec);
 		int timeOffset = 0;
 
 		#ifdef BOOST_FILESYSTEM_VER2
@@ -319,12 +334,12 @@ void loadData(const map<string, string>& params) {
 				const auto timeIndex = t + timeOffset;
 				cout.flush();
 				int m = 0;
-				real time = dl.GetX(t);
+				double time = dl.GetX(t);
 				cout << "Reading time moment " << timeIndex << "(" << time << ")...";
 				auto y = dl.GetY(t);
-				ofstream* data_out = nullptr;
+				std::ofstream* data_out = nullptr;
 				if (saveData) {
-					data_out = new ofstream(dataOutDir + dataOutStem + to_string(t) + dataOutExt);
+					data_out = new std::ofstream(dataOutDir + dataOutStem + to_string(t) + dataOutExt);
 				}
 				for (int i = 0; i < dl.GetDim(); i++) {
 					auto i1 = i;
@@ -356,8 +371,14 @@ void loadData(const map<string, string>& params) {
 						}
 						//cout << "Coords: " << x1 << " " << x2 << "\n";
 						assert(m < M);
+						double field;
+						if (prec == SinglePrecision) {
+							field = ((float*) y)[i];
+						} else {
+							field = ((double*) y)[i];
+						}
 						if (data_out) {
-							*data_out << x1 << " " << x2 << " " << y[i] << endl;
+							*data_out << x1 << " " << x2 << " " << field << endl;
 						}
 						if (t == startTime) {
 							transformer.setX(m, x1, x2);
@@ -367,7 +388,7 @@ void loadData(const map<string, string>& params) {
 							//assert(plan.x[2*m] == x1);
 							//assert(plan.x[2*m+1] == x2);
 						}
-						transformer.setY(m, y[i]);
+						transformer.setY(m, field);
 						//plan.f[m][0] = y[i];
 						//plan.f[m][1] = 0;
 						m++;
