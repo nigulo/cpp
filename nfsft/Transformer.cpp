@@ -45,6 +45,8 @@ void Transformer::init() {
      * cut-off parameter m = 6. See the NFFT 3 manual for details.
      */
     nfsft_init(&plan, N, M);
+    //nfsft_init_advanced(&plan, N, M, NFSFT_MALLOC_X | NFSFT_MALLOC_F |
+    //		NFSFT_MALLOC_F_HAT | NFSFT_NORMALIZED | NFSFT_PRESERVE_F_HAT);
     //nfsft_init_guru(&plan, N, M, NFSFT_MALLOC_X | NFSFT_MALLOC_F |
     //    NFSFT_MALLOC_F_HAT | NFSFT_NORMALIZED | NFSFT_PRESERVE_F_HAT,
     //    PRE_PHI_HUT | PRE_PSI | FFTW_INIT | FFT_OUT_OF_PLACE, 6);
@@ -65,7 +67,7 @@ void Transformer::transform(int timeMoment) {
 		nfsft_precompute_x(&plan);
 	}
 
-    /* Direct adjoint transformation, display result. */
+    /* Direct adjoint transformation */
     nfsft_adjoint_direct(&plan);
 
     string timeMomentStr;
@@ -73,7 +75,7 @@ void Transformer::transform(int timeMoment) {
     	timeMomentStr = to_string(timeMoment) + " ";
     }
 
-    //ofstream decomp_out(string("decomp") + suffixStr + ".txt");
+    //double integral = 0;
     for (int k = 0; k <= plan.N; k++) {
     	double power = 0;
         for (int n = -k; n <= k; n++) {
@@ -89,8 +91,10 @@ void Transformer::transform(int timeMoment) {
     	if (!decompOrPower) {
     		result_out << timeMomentStr << k << " " << power << endl;
     	}
+    	//integral += power;
     }
     result_out.flush();
+    //cout << "Decomposition integral: " << integral << endl;
 
 	//#ifdef ONLY_AZIMUTHAL_RECONST
     //	// Set all nonazimuthal waves to zero

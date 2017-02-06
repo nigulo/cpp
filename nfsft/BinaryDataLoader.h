@@ -47,7 +47,7 @@ public:
 	}
 
 
-	double GetX(int i) const {
+	double GetX(size_t i) const {
 		assert(i < pageSize);
 		if (sizeOfReal == sizeof (float)) {
 			return ((float*) data)[i * (dim * GetNumVars() + 1) + dim * GetNumVars()];
@@ -57,7 +57,7 @@ public:
 	}
 
 
-	const char* GetY(int i) const {
+	const char* GetY(size_t i) const {
 		assert(i < pageSize);
 		if (sizeOfReal == sizeof (float)) {
 			return (const char*) &((float*) data)[i * (dim * GetNumVars() + 1)];

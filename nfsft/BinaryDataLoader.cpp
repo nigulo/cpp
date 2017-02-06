@@ -89,8 +89,9 @@ bool BinaryDataLoader::Next() {
 		return false;
 	}
 	page++;
-	int varSize = dim * GetNumVars() + 1;
-	int dataPageSize = bufferSize * varSize;
+	size_t varSize = dim * GetNumVars() + 1;
+	size_t dataPageSize = bufferSize * varSize;
+	assert(dataPageSize * sizeOfReal < 4294967296 && "Decrease bufferSize"); // 4GB
 	data = new char[dataPageSize * sizeOfReal];
 	if (RECORDHEADER) {
 		assert(sizeof (int) == 4);

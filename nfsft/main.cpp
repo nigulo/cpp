@@ -45,27 +45,32 @@ void loadTestData(const map<string, string>& params) {
     /* define nodes and data*/
     int m = 0;
     double x1_step = 1.0 / m_phi;
-    double pole_dist = 15;
+    double pole_dist = 0;//15;
     double x2_range = 0.5 * (180 - 2 * pole_dist) / 180;
     double x2_offset = 0.5 * pole_dist / 180;
     double x2_step = x2_range / m_theta;
+    //double integral = 0;
+    //double dPhi = 2 * M_PI * x1_step;
+    //double dTheta = 2 * M_PI * x2_step;
     for (int i = 0; i < m_phi; i++) {
 	    double x1 = -0.5 + x1_step * i;
 	    for (int j = 0; j < m_theta; j++) {
 		    double x2 = x2_offset + x2_step * j;
-		    //plan.x[2*m] = x1;
-		    //plan.x[2*m+1] = x2;
 		    transformer.setX(m, x1, x2);
 		    double field = /*sin(2*M_PI*(x1+0.5)) +*/ sin(2*2*M_PI*(x1+0.5)) * sin(3*4*M_PI*x2);
-		    //plan.f[m][0] = field;// + _Complex_I*0.0;
-		    //plan.f[m][1] = 0;// + _Complex_I*0.0;
 		    transformer.setY(m, field);
 	    	data_out << x1 << " " << x2 << " " << field << endl;
 	    	m++;
+	    	//double theta = M_PI * 2 * x2;
+	    	//double dOmega = sin(theta) * dTheta * dPhi;
+	    	//integral += field * field * dOmega;
 	    }
     }
+    //integral /= 4 * M_PI;
+    //cout << "Field integral: " << integral << endl;
     data_out.flush();
     data_out.close();
+
     transformer.transform();
 
 }
@@ -79,7 +84,6 @@ void loadData(const map<string, string>& params) {
 	for (vector<string>::iterator it = dimsStr.begin() ; it != dimsStr.end(); ++it) {
 		if ((*it).length() != 0) {
 			dims.push_back(stoi(*it));
-			//dims.insert(dims.begin(), stoi(*it));
 		}
 	}
 
@@ -148,6 +152,7 @@ void loadData(const map<string, string>& params) {
 	}
 
 	vector<int> varIndices;
+	int bufferSize = Utils::FindIntProperty(params, "bufferSize", prec == SinglePrecision ? 8000 : 4000);
 
     /* define nodes and data*/
 	if (type == TYPE_SNAPSHOT) {
@@ -195,14 +200,11 @@ void loadData(const map<string, string>& params) {
 			vector<int> procPositions;
 			int procSize = 1;
 			for (size_t i = 0; i < dims.size(); i++) {
-			//for (int i = dims.size() - 1; i >= 0; i--) {
 				int procPos = (procId / procSize) % numProcs[i];
 				procPositions.push_back(procPos);
 				procSize *= numProcs[i];
 				int procMinCoord = procPos * (dimsPerProc[i] - 2 * numGhost);
-				//procMinCoords.insert(procMinCoords.begin(), procMinCoord);
 				procMinCoords.push_back(procMinCoord);
-				//cout << "PROC" << procId << " minCoord for " << i << ": " << procMinCoord << "\n";
 			}
 
 			if (filePath[filePath.length() - 1] != '/') {
@@ -211,24 +213,17 @@ void loadData(const map<string, string>& params) {
 			string dataFile = filePath + "proc" + to_string(procId) + "/VAR" + to_string(timeMoment);
 			cout << "Reading: " << dataFile << endl;
 			assert(exists(dataFile));
-			BinaryDataLoader dl(dataFile, 1000000, dimsPerProc, regions, totalNumVars, varIndices, TYPE_SNAPSHOT, prec);
+			BinaryDataLoader dl(dataFile, bufferSize, dimsPerProc, regions, totalNumVars, varIndices, TYPE_SNAPSHOT, prec);
 			//cout << "procId:" << procId << endl;
 			dl.Next();
 			assert(dl.GetPageSize() == 1);
-			//real time = dl.GetX(0);
 			auto y = dl.GetY(0);
 			for (int i = 0; i < dl.GetDim(); i++) {
 				auto i1 = i;
 				vector<int> coords(3);
-				//cout << "coords= ";
 				for (int j = 0; j < (int) dl.GetDims().size(); j++) {
 					int coord = i1 % dl.GetDims()[j];
-					//cout << coord << ", ";
 					coords[j] = coord;
-					//if (j == thetaIndex && (procPositions[j] % 2) != 0) {
-					//	//cout << procPositions[j] << endl;
-					//	coords[j] = dl.GetDims()[j] - coords[j] - 1;
-					//}
 					i1 -= coord;
 					i1 /= dl.GetDims()[j];
 				}
@@ -239,7 +234,6 @@ void loadData(const map<string, string>& params) {
 						break;
 					}
 				}
-				//cout << ghost << endl;
 				if (!ghost) {
 					if (coords[rIndex] - numGhost + procMinCoords[rIndex] == layer) {
 						int phiCoord = coords[phiIndex] - numGhost + procMinCoords[phiIndex];
@@ -255,7 +249,6 @@ void loadData(const map<string, string>& params) {
 								cout << "x2 out of range: " << x2 << endl;
 								assert(x2 >= 0 && x2 <= 0.5);
 							}
-							//cout << "Coords: " << x1 << " " << x2 << "\n";
 							int k;
 							auto dataIter = data.begin();
 							for (k = 0; k < (int) data.size(); k++) {
@@ -282,11 +275,7 @@ void loadData(const map<string, string>& params) {
 			assert(m < M);
 			data_out << elem[0] << " " << elem[1] << " " << elem[2] << "\n";
 			transformer.setX(m, elem[0], elem[1]);
-			//plan.x[2*m] = elem[0];
-			//plan.x[2*m+1] = elem[1];
 			transformer.setY(m, elem[2]);
-			//plan.f[m][0] = elem[2];
-			//plan.f[m][1] = 0;
 			m++;
 		}
 		assert(m == M);
@@ -299,7 +288,6 @@ void loadData(const map<string, string>& params) {
 	    cout << "done." << endl;
 	} else { // TYPE_VIDEO
 		assert(dims.size() == 2);
-		int bufferSize = Utils::FindIntProperty(params, "bufferSize", 100000);
 		varIndices.push_back(0);
 		int startTime = Utils::FindIntProperty(params, "startTime", 0);
 		int endTime = Utils::FindIntProperty(params, "endTime", -1);
@@ -323,8 +311,7 @@ void loadData(const map<string, string>& params) {
 			dataOutDir += "/";
 		}
 		while (dl.Next()) {
-			//cout << "procId:" << procId << endl;
-			for (int t = 0; t < dl.GetPageSize(); t++) {
+			for (size_t t = 0; t < dl.GetPageSize(); t++) {
 				if (t + timeOffset < startTime) {
 					continue;
 				}
@@ -339,20 +326,14 @@ void loadData(const map<string, string>& params) {
 				auto y = dl.GetY(t);
 				std::ofstream* data_out = nullptr;
 				if (saveData) {
-					data_out = new std::ofstream(dataOutDir + dataOutStem + to_string(t) + dataOutExt);
+					data_out = new std::ofstream(dataOutDir + dataOutStem + to_string(timeIndex) + dataOutExt);
 				}
 				for (int i = 0; i < dl.GetDim(); i++) {
 					auto i1 = i;
 					vector<int> coords(dl.GetDims().size());
-					//cout << "coords= ";
 					for (int j = 0; j < (int) dl.GetDims().size(); j++) {
 						int coord = i1 % dl.GetDims()[j];
-						//cout << coord << ", ";
 						coords[j] = coord;
-						//if (j == thetaIndex && (procPositions[j] % 2) != 0) {
-						//	//cout << procPositions[j] << endl;
-						//	coords[j] = dl.GetDims()[j] - coords[j] - 1;
-						//}
 						i1 -= coord;
 						i1 /= dl.GetDims()[j];
 					}
@@ -369,7 +350,6 @@ void loadData(const map<string, string>& params) {
 							cout << "x2 out of range: " << x2 << endl;
 							assert(x2 >= 0 && x2 <= 0.5);
 						}
-						//cout << "Coords: " << x1 << " " << x2 << "\n";
 						assert(m < M);
 						double field;
 						if (prec == SinglePrecision) {
@@ -382,11 +362,6 @@ void loadData(const map<string, string>& params) {
 						}
 						if (t == startTime) {
 							transformer.setX(m, x1, x2);
-							//plan.x[2*m] = x1;
-							//plan.x[2*m+1] = x2;
-						} else {
-							//assert(plan.x[2*m] == x1);
-							//assert(plan.x[2*m+1] == x2);
 						}
 						transformer.setY(m, field);
 						//plan.f[m][0] = y[i];
