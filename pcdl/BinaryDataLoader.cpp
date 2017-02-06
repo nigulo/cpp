@@ -5,19 +5,20 @@ using namespace pcdl;
 BinaryDataLoader::BinaryDataLoader(const string& fileName, int bufferSize,
 		const vector<int>& dims,
 		const vector<vector<pair<int, int>>>& regions,
-		int totalNumVars, const vector<int>& varIndices, int type) :
-			fileName(fileName),
-			bufferSize(bufferSize),
-			mode(ios::in | ios::binary),
-			dims(dims),
-			regions(regions),
-			totalNumVars(totalNumVars),
-			varIndices(varIndices),
-			input(fileName, mode),
-			page(-1),
-			data(nullptr),
-			pageSize(0)	,
-			type(type) {
+		int totalNumVars, const vector<int>& varIndices, int type, Precision prec) :
+		fileName(fileName),
+		bufferSize(bufferSize),
+		mode(ios::in | ios::binary),
+		dims(dims),
+		regions(regions),
+		totalNumVars(totalNumVars),
+		varIndices(varIndices),
+		input(fileName, mode),
+		page(-1),
+		data(nullptr),
+		pageSize(0)	,
+		type(type),
+		sizeOfReal(prec == SinglePrecision ? sizeof(float) : sizeof (double)) {
 	assert(!(mode & ios::out)); // Don't allow write mode
 	assert(bufferSize > 0);
 	assert(input.is_open());
@@ -49,7 +50,8 @@ BinaryDataLoader::BinaryDataLoader(const BinaryDataLoader& dataLoader) :
 		data(nullptr),
 		pageSize(0),
 		dim(dataLoader.dim),
-		type(dataLoader.type) {
+		type(dataLoader.type),
+		sizeOfReal(dataLoader.sizeOfReal) {
 
 	assert(input.is_open());
 	inRegion = new bool[dim];
@@ -59,9 +61,9 @@ BinaryDataLoader::BinaryDataLoader(const BinaryDataLoader& dataLoader) :
 
 	if (dataLoader.page >= 0) {
 		if (RECORDHEADER) {
-			input.seekg((dataLoader.page + 1) * bufferSize * ((dim * totalNumVars + 1) * sizeof (real) + 16), ios::cur);
+			input.seekg((dataLoader.page + 1) * bufferSize * ((dim * totalNumVars + 1) * sizeOfReal + 16), ios::cur);
 		} else {
-			input.seekg((dataLoader.page + 1) * bufferSize * (dim * totalNumVars + 1) * sizeof (real), ios::cur);
+			input.seekg((dataLoader.page + 1) * bufferSize * (dim * totalNumVars + 1) * sizeOfReal, ios::cur);
 		}
 	}
 	page = dataLoader.page;
@@ -91,9 +93,10 @@ bool BinaryDataLoader::Next() {
 		return false;
 	}
 	page++;
-	int varSize = dim * GetNumVars() + 1;
-	int dataPageSize = bufferSize * varSize;
-	data = new real[dataPageSize];
+	size_t varSize = dim * GetNumVars() + 1;
+	size_t dataPageSize = bufferSize * varSize;
+	assert(dataPageSize * sizeOfReal < 4294967296 && "Decrease bufferSize"); // 4GB
+	data = new char[dataPageSize * sizeOfReal];
 	if (RECORDHEADER) {
 		assert(sizeof (int) == 4);
 		int i = 0;
@@ -109,24 +112,24 @@ bool BinaryDataLoader::Next() {
 			assert(numBytesRead == 4);
 			//cout << "dim, totalnumvars, recordsize: " << dim << " " << totalNumVars << " " << recordSize << endl;
 			if (type == TYPE_VIDEO) {
-				recordSize -= 2 * sizeof (real); // time and position are included in the block
+				recordSize -= 2 * sizeOfReal; // time and position are included in the block
 			}
-			assert(recordSize == (sizeof (real) * (dim * totalNumVars)));
+			assert(recordSize == (sizeOfReal * (dim * totalNumVars)));
 			int lastVarIndex = 0;
 			for (int varIndex : GetVarIndices()) {
 				assert(varIndex >= lastVarIndex);
 				if (varIndex - lastVarIndex != 0) {
-					input.seekg((varIndex - lastVarIndex) * dim * sizeof (real), ios::cur);
+					input.seekg((varIndex - lastVarIndex) * dim * sizeOfReal, ios::cur);
 				}
-				input.read((char*) (data + dataOffset), dim * sizeof (real));
+				input.read(data + dataOffset, dim * sizeOfReal);
 				numBytesRead = input.gcount();
-				assert(numBytesRead == dim * sizeof (real));
+				assert(numBytesRead == dim * sizeOfReal);
 				lastVarIndex = varIndex + 1;
-				dataOffset += dim;
+				dataOffset += dim * sizeOfReal;
 			}
-			assert(recordSize >= lastVarIndex * dim * sizeof (real));
-			if (recordSize - lastVarIndex * dim * sizeof (real) != 0) {
-				input.seekg(recordSize - lastVarIndex * dim * sizeof (real), ios::cur);
+			assert(recordSize >= lastVarIndex * dim * sizeOfReal);
+			if (recordSize - lastVarIndex * dim * sizeOfReal != 0) {
+				input.seekg(recordSize - lastVarIndex * dim * sizeOfReal, ios::cur);
 			}
 			if (type == TYPE_SNAPSHOT) {
 				input.read((char*) &recordSize, 4);
@@ -138,18 +141,20 @@ bool BinaryDataLoader::Next() {
 				//cout << "recordsize: " << recordSize << endl;
 
 				assert(recordSize == 1712);//792);
-				input.read((char*) (data + dataOffset++), sizeof (real)); // time
+				input.read(data + dataOffset, sizeOfReal); // time
+				dataOffset += sizeOfReal;
 				numBytesRead = input.gcount();
-				assert(numBytesRead == 4);
-				input.seekg((recordSize - 1) * sizeof (real), ios::cur);
+				assert(numBytesRead == sizeOfReal);
+				input.seekg((recordSize - 1) * sizeOfReal, ios::cur);
 				//input.read((char*) &recordSize, 4);
 				//numBytesRead = input.gcount();
 				//assert(numBytesRead == 4);
 			} else {
-				input.read((char*) (data + dataOffset++), sizeof (real)); // time
+				input.read(data + dataOffset, sizeOfReal); // time
+				dataOffset += sizeOfReal;
 				numBytesRead = input.gcount();
-				assert(numBytesRead == 4);
-				input.seekg(sizeof (real), ios::cur); // skip position
+				assert(numBytesRead == sizeOfReal);
+				input.seekg(sizeOfReal, ios::cur); // skip position
 				input.read((char*) &recordSize, 4);
 				numBytesRead = input.gcount();
 				assert(numBytesRead == 4);
@@ -158,11 +163,11 @@ bool BinaryDataLoader::Next() {
 		}
 		pageSize = i;
 	} else {
-		input.read((char*) data, (sizeof (real)) * dataPageSize);
+		input.read(data, (sizeOfReal) * dataPageSize);
 		int numBytesRead = input.gcount();
-		if (numBytesRead < (sizeof (real)) * dataPageSize) {
-			assert(numBytesRead % ((sizeof (real)) * varSize) == 0);
-			pageSize = numBytesRead / ((sizeof (real)) * varSize);
+		if (numBytesRead < (sizeOfReal) * dataPageSize) {
+			assert(numBytesRead % ((sizeOfReal) * varSize) == 0);
+			pageSize = numBytesRead / ((sizeOfReal) * varSize);
 			input.close();
 		} else {
 			pageSize = bufferSize;

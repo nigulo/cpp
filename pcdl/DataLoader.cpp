@@ -62,6 +62,15 @@ DataLoader::DataLoader(const map<string, string>& params) : params(params) {
 	filePath = Utils::FindProperty(params, "filePath", "");
 	assert(filePath.size() > 0);
 
+	string strPrec = Utils::FindProperty(params, "precision", "single");
+	to_lower(strPrec);
+	assert(strPrec == "single" || strPrec == "double");
+	prec = SinglePrecision;
+	if (strPrec == "double") {
+		prec = DoublePrecision;
+	}
+	bufferSize = Utils::FindIntProperty(params, "bufferSize", prec == SinglePrecision ? 8000 : 4000);
+
 }
 
 

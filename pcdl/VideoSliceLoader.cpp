@@ -6,7 +6,6 @@
  */
 
 #include "VideoSliceLoader.h"
-#include "BinaryDataLoader.h"
 #include "utils.h"
 #include <cassert>
 #include <boost/filesystem.hpp>
@@ -25,7 +24,6 @@ VideoSliceLoader::~VideoSliceLoader() {
 
 void VideoSliceLoader::load(std::function<void(int /*y*/, int /*z*/, double /*val*/)> f1, std::function<void(int /*time*/)> f2) {
 	assert(dims.size() == 2);
-	int bufferSize = Utils::FindIntProperty(params, "bufferSize", 100000);
 	varIndices.push_back(0);
 	int startTime = Utils::FindIntProperty(params, "startTime", 0);
 	int endTime = Utils::FindIntProperty(params, "endTime", -1);
@@ -33,7 +31,7 @@ void VideoSliceLoader::load(std::function<void(int /*y*/, int /*z*/, double /*va
 	string dataFile = filePath;
 	cout << "Reading: " << dataFile << endl;
 	assert(exists(dataFile));
-	BinaryDataLoader dl(dataFile, bufferSize, dims, regions, 1 /*totalNumVars*/, varIndices, TYPE_VIDEO);
+	BinaryDataLoader dl(dataFile, bufferSize, dims, regions, 1 /*totalNumVars*/, varIndices, TYPE_VIDEO, prec);
 	int timeOffset = 0;
 	while (dl.Next()) {
 		//cout << "procId:" << procId << endl;
@@ -46,9 +44,9 @@ void VideoSliceLoader::load(std::function<void(int /*y*/, int /*z*/, double /*va
 			}
 			const auto timeIndex = t + timeOffset;
 			cout.flush();
-			real time = dl.GetX(t);
+			double time = dl.GetX(t);
 			cout << "Reading time moment " << timeIndex << "(" << time << ")...";
-			auto value = dl.GetY(t);
+			auto values = dl.GetY(t);
 			for (int i = 0; i < dl.GetDim(); i++) {
 				auto i1 = i;
 				vector<int> coords(dl.GetDims().size());
@@ -67,10 +65,16 @@ void VideoSliceLoader::load(std::function<void(int /*y*/, int /*z*/, double /*va
 				int y = coords[yIndex];
 				int z = coords[zIndex];
 				if ((y % yDownSample == 0) && (z % zDownSample == 0)) {
-					f1(y / yDownSample, z / zDownSample, value[i]);
+					double value;
+					if (prec == SinglePrecision) {
+						value = ((float*) values)[i];
+					} else {
+						value = ((double*) values)[i];
+					}
+					f1(y / yDownSample, z / zDownSample, value);
 				}
 			}
-			f2(t);
+			f2(timeIndex);
 		}
 		timeOffset += dl.GetPageSize();
 		if (endTime >= 0 && timeOffset > endTime) {

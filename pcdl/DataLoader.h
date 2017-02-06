@@ -11,6 +11,7 @@
 #include <map>
 #include <vector>
 #include <functional>
+#include "BinaryDataLoader.h"
 
 using namespace std;
 
@@ -36,6 +37,8 @@ protected:
 
 	vector<vector<pair<int, int>>> regions;
 	string filePath;
+	Precision prec;
+	int bufferSize;
 };
 }
 #endif /* DATALOADER_H_ */

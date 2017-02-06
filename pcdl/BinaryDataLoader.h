@@ -21,18 +21,21 @@ using namespace std;
 
 namespace pcdl {
 
-typedef float real;
-
 #define RECORDHEADER true
 #define TYPE_SNAPSHOT 0
 #define TYPE_VIDEO 1
+
+enum Precision {
+	SinglePrecision,
+	DoublePrecision
+};
 
 class BinaryDataLoader {
 public:
 	BinaryDataLoader(const string& fileName, int bufferSize,
 			const vector<int>& dims,
 			const vector<vector<pair<int, int>>>& regions,
-			int totalNumVars, const vector<int>& varIndices, int type);
+			int totalNumVars, const vector<int>& varIndices, int type, Precision prec);
 	BinaryDataLoader(const BinaryDataLoader& dataLoader);
 	virtual ~BinaryDataLoader();
 
@@ -45,14 +48,24 @@ public:
 		return fileName;
 	}
 
-	real GetX(int i) const {
+
+	double GetX(size_t i) const {
 		assert(i < pageSize);
-		return data[i * (dim * GetNumVars() + 1) + dim * GetNumVars()];
+		if (sizeOfReal == sizeof (float)) {
+			return ((float*) data)[i * (dim * GetNumVars() + 1) + dim * GetNumVars()];
+		} else {
+			return ((double*) data)[i * (dim * GetNumVars() + 1) + dim * GetNumVars()];
+		}
 	}
 
-	const real* GetY(int i) const {
+
+	const char* GetY(size_t i) const {
 		assert(i < pageSize);
-		return &data[i * (dim * GetNumVars() + 1)];
+		if (sizeOfReal == sizeof (float)) {
+			return (const char*) &((float*) data)[i * (dim * GetNumVars() + 1)];
+		} else {
+			return (const char*) &((double*) data)[i * (dim * GetNumVars() + 1)];
+		}
 	}
 
 	int GetPage() const {
@@ -125,10 +138,11 @@ private:
 	vector<int> varIndices;
 	ifstream input;
 	int page;
-	real* data;
+	char* data;
 	int pageSize;
 	int dim;
 	bool* inRegion;
+	unsigned sizeOfReal;
 
 };
 }

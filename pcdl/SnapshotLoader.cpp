@@ -6,7 +6,6 @@
  */
 
 #include "SnapshotLoader.h"
-#include "BinaryDataLoader.h"
 #include "utils.h"
 #include <cassert>
 #include <boost/filesystem.hpp>
@@ -82,12 +81,12 @@ void SnapshotLoader::load(std::function<void(int /*time*/, int /*x*/, int /*y*/,
 		string dataFile = filePath + "proc" + to_string(procId) + "/VAR" + to_string(timeMoment);
 		cout << "Reading: " << dataFile << endl;
 		assert(exists(dataFile));
-		BinaryDataLoader dl(dataFile, 1000000, dimsPerProc, regions, totalNumVars, varIndices, TYPE_SNAPSHOT);
+		BinaryDataLoader dl(dataFile, bufferSize, dimsPerProc, regions, totalNumVars, varIndices, TYPE_SNAPSHOT, prec);
 		//cout << "procId:" << procId << endl;
 		dl.Next();
 		assert(dl.GetPageSize() == 1);
 		//real time = dl.GetX(0);
-		auto value = dl.GetY(0);
+		auto values = dl.GetY(0);
 		for (int i = 0; i < dl.GetDim(); i++) {
 			auto i1 = i;
 			vector<int> coords(3);
@@ -117,7 +116,13 @@ void SnapshotLoader::load(std::function<void(int /*time*/, int /*x*/, int /*y*/,
 					int y = coords[yIndex] - numGhost + procMinCoords[yIndex];
 					int z = coords[zIndex] - numGhost + procMinCoords[zIndex];
 					if ((y % yDownSample == 0) && (z % zDownSample == 0)) {
-						f(timeMoment, x, y / yDownSample, z / zDownSample, value[i]);
+						double value;
+						if (prec == SinglePrecision) {
+							value = ((float*) values)[i];
+						} else {
+							value = ((double*) values)[i];
+						}
+						f(timeMoment, x, y / yDownSample, z / zDownSample, value);
 					}
 				}
 			}
