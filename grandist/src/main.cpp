@@ -104,50 +104,61 @@ int main(int argc, char *argv[]) {
 		params.insert({entry.first, entry.second});
 	}
 	SnapshotLoader loader(params);
+
+	int verticalCoord = Utils::FindIntProperty(params, "verticalCoord", 0);
+	int fstCoord = verticalCoord == 0 ? 1 : (verticalCoord == 1 ? 2 : 0);;
+	int sndCoord = verticalCoord == 0 ? 2 : (verticalCoord == 1 ? 0 : 1);
+
+	assert(verticalCoord >= 0 && verticalCoord <= 2);
 	auto& dims = loader.getDimsDownSampled();
-	auto numX = dims[0];
-	auto numY = dims[1];
-	auto numZ = dims[2];
+	//auto numX = dims[0];
+	//auto numY = dims[1];
+	//auto numZ = dims[2];
 
-	Mat matrices[numX];
-	int rows = ceil(((double) numY) * sqrt(2));
-	int cols = ceil(((double) numZ) * sqrt(2));
+	auto depth = dims[verticalCoord];
+	auto width = dims[fstCoord];
+	auto height = dims[sndCoord];
 
-	int rowOffset = (rows - numY) / 2;
-	int colOffset = (cols - numZ) / 2;
+	Mat matrices[dims[verticalCoord]];
+	int rows = ceil(((double) height) * sqrt(2));
+	int cols = ceil(((double) width) * sqrt(2));
 
-	for (int i = 0; i < numX; i++) {
+	int rowOffset = (rows - height) / 2;
+	int colOffset = (cols - width) / 2;
+
+	for (int i = 0; i < depth; i++) {
 		matrices[i] = Mat::zeros(rows, cols, CV_32F);//CV_8S);
 	}
 
-	int tLast = -1;
-	loader.load([&numX, &tLast, &matrices, rowOffset, colOffset](int t, int x, int y, int z, double field) {
-		auto& mat = matrices[x];
-		assert(x < numX);
+	//int tLast = -1;
+	loader.load([&dims, verticalCoord, fstCoord, sndCoord, &matrices, rowOffset, colOffset](int t, int x, int y, int z, double field) {
+		int coord[] = {x, y, z};
+		assert(coord[verticalCoord] < dims[verticalCoord]);
+		auto& mat = matrices[coord[verticalCoord]];
 		assert(y < mat.rows);
 		assert(z < mat.cols);
 		if (field > 0) {
-			mat.at<MAT_TYPE>(y + rowOffset, z + colOffset) = 255;
+			mat.at<MAT_TYPE>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = 255;
 		} else {
 			// already initialized to zero;
 		}
 	});
 
-	Rect cropRect(colOffset, rowOffset, numZ, numY);
-	int x = 0;
+	Rect cropRect(colOffset, rowOffset, width, height);
+	int layer = 0;
 	for (auto& mat : matrices) {
-		if (x % 10 != 0) {
-			x++;
+		if (layer % 10 != 0) {
+			layer++;
 			continue;
 		}
-		ofstream output(string("dists") + to_string(x) + ".txt");
+		ofstream output(string("dists") + to_string(layer) + ".txt");
 		Mat l;
 		for (double angle = 0; angle < 360; angle += 1) {
 			Mat mat1 = mat.clone();
 			Mat matRotated = angle > 0 ? rotate(mat1, angle) : mat1;
 			#ifdef DEBUG
-				if (((int) angle) % 45 == 0) {
-					imwrite(string("granules") + to_string(x) + "_" + to_string((int) angle) + ".png", matRotated);
+				if (angle == 0) {
+					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", matRotated);
 				}
 			#endif
 			Mat dists = calcDistances(matRotated);
@@ -177,12 +188,15 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			#ifdef DEBUG
-				output << l << endl;
+			//	output << l << endl;
 			#endif
 		}
 		output << l << endl;
 		output.close();
-		x++;
+		double min, max;
+		minMaxLoc(l, &min, &max);
+		imwrite(string("dists") + to_string(layer) + ".png", (l - min) * 255 / (max - min));
+		layer++;
 	}
 
 	return 0;
