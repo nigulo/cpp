@@ -29,9 +29,11 @@ protected:
 	map<string, string> params;
 	vector<int> dims;
 	vector<int> dimsDownSampled;
+	int xIndex;
 	int yIndex;
 	int zIndex;
 	vector<int> varIndices;
+	int xDownSample;
 	int yDownSample;
 	int zDownSample;
 

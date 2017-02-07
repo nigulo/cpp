@@ -30,12 +30,16 @@ DataLoader::DataLoader(const map<string, string>& params) : params(params) {
 
 	assert(dims.size() == 2 || dims.size() == 3);
 
+	xIndex = 0;
 	yIndex = 1;
 	zIndex = 2;
 	if (dims.size() == 2) {
+		xIndex = -1;
 		yIndex = 0;
 		zIndex = 1;
 	}
+
+	xDownSample = Utils::FindIntProperty(params, "xDownSample", 1);
 	yDownSample = Utils::FindIntProperty(params, "yDownSample", 1);
 	zDownSample = Utils::FindIntProperty(params, "zDownSample", 1);
 
@@ -49,6 +53,9 @@ DataLoader::DataLoader(const map<string, string>& params) : params(params) {
 		zDownSample = phiDownSample;
 	}
 
+	if (xIndex > 0) {
+		assert(xDownSample > 0 && (dims[xIndex] % xDownSample == 0));
+	}
 	assert(yDownSample > 0 && (dims[yIndex] % yDownSample == 0));
 	assert(zDownSample > 0 && (dims[zIndex] % zDownSample == 0));
 

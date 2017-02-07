@@ -17,6 +17,10 @@ using namespace boost::filesystem;
 using namespace pcdl;
 
 SnapshotLoader::SnapshotLoader(const map<string, string>& params) : DataLoader(params) {
+	assert(dims.size() == 3);
+	assert(xIndex == 0);
+	assert(yIndex == 1);
+	assert(zIndex == 2);
 }
 
 SnapshotLoader::~SnapshotLoader() {
@@ -24,7 +28,6 @@ SnapshotLoader::~SnapshotLoader() {
 
 void SnapshotLoader::load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*z*/, double /*val*/)> f) {
 	assert(dims.size() == 3);
-	const int xIndex = 0;
 	int numGhost = Utils::FindIntProperty(params, "numGhost", 3);
 	string strNumProcs = Utils::FindProperty(params, "numProcs", "1");
 	vector<string> numProcsStr;
@@ -50,7 +53,6 @@ void SnapshotLoader::load(std::function<void(int /*time*/, int /*x*/, int /*y*/,
 	auto numProc = accumulate(numProcs.begin(), numProcs.end(), 1, multiplies<int>());
 	//cout << "numProc:" << numProc << endl;
 
-	int layer = Utils::FindIntProperty(params, "layer", -1);
 	int timeMoment = Utils::FindIntProperty(params, "timeMoment", -1);
 	assert(timeMoment >= 0);
 
@@ -112,18 +114,16 @@ void SnapshotLoader::load(std::function<void(int /*time*/, int /*x*/, int /*y*/,
 			//cout << ghost << endl;
 			if (!ghost) {
 				auto x = coords[xIndex] - numGhost + procMinCoords[xIndex];
-				if (layer < 0 || x == layer) {
-					int y = coords[yIndex] - numGhost + procMinCoords[yIndex];
-					int z = coords[zIndex] - numGhost + procMinCoords[zIndex];
-					if ((y % yDownSample == 0) && (z % zDownSample == 0)) {
-						double value;
-						if (prec == SinglePrecision) {
-							value = ((float*) values)[i];
-						} else {
-							value = ((double*) values)[i];
-						}
-						f(timeMoment, x, y / yDownSample, z / zDownSample, value);
+				int y = coords[yIndex] - numGhost + procMinCoords[yIndex];
+				int z = coords[zIndex] - numGhost + procMinCoords[zIndex];
+				if ((x % xDownSample == 0) && (y % yDownSample == 0) && (z % zDownSample == 0)) {
+					double value;
+					if (prec == SinglePrecision) {
+						value = ((float*) values)[i];
+					} else {
+						value = ((double*) values)[i];
 					}
+					f(timeMoment, x, y / yDownSample, z / zDownSample, value);
 				}
 			}
 		}
