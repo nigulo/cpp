@@ -46,23 +46,22 @@ public:
 		return fileName;
 	}
 
-
-	double GetX(size_t i) const {
+	double GetX(int i) const {
 		assert(i < pageSize);
 		if (sizeOfReal == sizeof (float)) {
-			return ((float*) data)[i * (dim * GetNumVars() + 1) + dim * GetNumVars()];
+			return ((float*) data)[((size_t) i) * (dim * GetNumVars() + 1) + dim * GetNumVars()];
 		} else {
-			return ((double*) data)[i * (dim * GetNumVars() + 1) + dim * GetNumVars()];
+			return ((double*) data)[((size_t) i) * (dim * GetNumVars() + 1) + dim * GetNumVars()];
 		}
 	}
 
 
-	const char* GetY(size_t i) const {
+	const char* GetY(int i) const {
 		assert(i < pageSize);
 		if (sizeOfReal == sizeof (float)) {
-			return (const char*) &((float*) data)[i * (dim * GetNumVars() + 1)];
+			return (const char*) &((float*) data)[((size_t) i) * (dim * GetNumVars() + 1)];
 		} else {
-			return (const char*) &((double*) data)[i * (dim * GetNumVars() + 1)];
+			return (const char*) &((double*) data)[((size_t) i) * (dim * GetNumVars() + 1)];
 		}
 	}
 
