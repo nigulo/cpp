@@ -20,6 +20,9 @@ using namespace pcdl;
 #define DEBUG
 typedef float MAT_TYPE;
 
+#define OUT_GRANULE 1
+#define IN_GRANULE 2
+
 Mat rotate(const Mat& src, double angle) {
 	Mat dst;
 	// Create a destination to paint the source into.
@@ -47,20 +50,40 @@ Mat rotate(const Mat& src, double angle) {
 	return dst;
 }
 
-Mat calcDistances(const Mat& mat) {
+bool inDomain(const Mat& mat, int row, int col) {
+	return mat.at<MAT_TYPE>(row, col) == IN_GRANULE || mat.at<MAT_TYPE>(row, col) == OUT_GRANULE;
+}
+
+Mat calcDistances(const Mat& mat, bool periodic) {
 	//cout << "calcDistances1" << endl;
 	Mat dists = Mat::zeros(mat.rows, mat.cols, CV_32F);//, CV_32S);
 	//cout << "calcDistances2" << endl;
 	for (int col = 0; col < mat.cols; col++) {
 		//cout << "calcDistances3 " << col << endl;
-		bool inGranule = mat.at<MAT_TYPE>(0, col);
+		bool inGranule = mat.at<MAT_TYPE>(0, col) == IN_GRANULE;
 		int dist = 0;
+		int domainStart = mat.rows;
 		int startRow = 0;
 		int row;
 		//cout << "calcDistances4 " << col << endl;
 		for (row = 1; row < mat.rows; row++) {
+			if (!inDomain(mat, row, col)) { // This point not in domain
+				if (inDomain(mat, row - 1, col)) { // Previous point in domain
+					// Going out of domain from bottom
+					break;
+				}
+				// Still not entered the domain
+				continue;
+			}
+			if (!inDomain(mat, row - 1, col)) { // Previous point not in domain
+				// Entering domain from top
+				domainStart = row;
+				startRow = row;
+				inGranule = mat.at<MAT_TYPE>(row, col) == IN_GRANULE;
+				continue;
+			}
 			//cout << "calcDistances5 " << col << " " << row << endl;
-			if (mat.at<MAT_TYPE>(row, col) == inGranule) {
+			if ((mat.at<MAT_TYPE>(row, col) == IN_GRANULE) == inGranule) {
 				//cout << "calcDistances6 " << col << " " << row << endl;
 				dist++;
 			} else {
@@ -75,8 +98,24 @@ Mat calcDistances(const Mat& mat) {
 			}
 		}
 		//cout << "calcDistances9 " << col << endl;
-		for (int row1 = startRow; row1 < row; row1++) {
-			dists.at<MAT_TYPE>(row1, col) = dist;
+		if (periodic) {
+			int domainEnd = row;
+			int endRow;
+			for (endRow = domainStart; endRow < startRow && (mat.at<MAT_TYPE>(endRow, col) == IN_GRANULE) == inGranule; endRow++) {
+				dist++;
+			}
+			//cout << "calcDistances9.5 " << endRow << endl;
+			for (int row1 = domainStart; row1 < endRow; row1++) {
+				dists.at<MAT_TYPE>(row1, col) = dist;
+			}
+			//cout << "calcDistances9.7 " << col << endl;
+			for (int row1 = startRow; row1 < domainEnd; row1++) {
+				dists.at<MAT_TYPE>(row1, col) = dist;
+			}
+		} else {
+			for (int row1 = startRow; row1 < row; row1++) {
+				dists.at<MAT_TYPE>(row1, col) = dist;
+			}
 		}
 		//cout << "calcDistances10 " << col << endl;
 	}
@@ -105,7 +144,9 @@ int main(int argc, char *argv[]) {
 	}
 	SnapshotLoader loader(params);
 
-	int verticalCoord = Utils::FindIntProperty(params, "verticalCoord", 0);
+	bool periodic = Utils::FindIntProperty(params, "periodic", 1);
+
+	int verticalCoord = Utils::FindIntProperty(params, "verticalCoord", 2);
 	int fstCoord = verticalCoord == 0 ? 1 : (verticalCoord == 1 ? 2 : 0);;
 	int sndCoord = verticalCoord == 0 ? 2 : (verticalCoord == 1 ? 0 : 1);
 
@@ -138,9 +179,9 @@ int main(int argc, char *argv[]) {
 		assert(y < mat.rows);
 		assert(z < mat.cols);
 		if (field > 0) {
-			mat.at<MAT_TYPE>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = 255;
+			mat.at<MAT_TYPE>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = IN_GRANULE;
 		} else {
-			// already initialized to zero;
+			mat.at<MAT_TYPE>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = OUT_GRANULE;
 		}
 	});
 
@@ -158,10 +199,10 @@ int main(int argc, char *argv[]) {
 			Mat matRotated = angle > 0 ? rotate(mat1, angle) : mat1;
 			#ifdef DEBUG
 				if (angle == 0) {
-					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", matRotated);
+					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
 				}
 			#endif
-			Mat dists = calcDistances(matRotated);
+			Mat dists = calcDistances(matRotated, periodic);
 			if (angle > 0) {
 				dists = rotate(dists, -angle);
 			}
@@ -173,7 +214,7 @@ int main(int argc, char *argv[]) {
 				for (int i = 0; i < lNew.rows; i++) {
 					for (int j = 0; j < lNew.cols; j++) {
 						int newDist = lNew.at<MAT_TYPE>(i, j);
-						if (mat.at<MAT_TYPE>(i + rowOffset, j + colOffset)) {
+						if (mat.at<MAT_TYPE>(i + rowOffset, j + colOffset) == IN_GRANULE) {
 							if (newDist > l.at<MAT_TYPE>(i, j)) {
 								// in granule and new distance is longer
 								l.at<MAT_TYPE>(i, j) = newDist;
