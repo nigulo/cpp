@@ -23,7 +23,7 @@ typedef float MAT_TYPE;
 #define OUT_GRANULE 1
 #define IN_GRANULE 2
 
-Mat rotate(const Mat& src, double angle) {
+Mat rotate(const Mat& src, double angle, bool dists) {
 	Mat dst;
 	// Create a destination to paint the source into.
 	dst.create(src.size(), src.type());
@@ -44,7 +44,7 @@ Mat rotate(const Mat& src, double angle) {
 		/// Get the rotation matrix with the specifications above
 		rot_mat = getRotationMatrix2D(center, angle, 1.0);
 		/// Rotate the warped image
-		warpAffine(src, dst, rot_mat, src.size());
+		warpAffine(src, dst, rot_mat, src.size(), dists ? INTER_LINEAR : INTER_NEAREST);
 
 	#endif
 	return dst;
@@ -54,10 +54,14 @@ bool inDomain(const Mat& mat, int row, int col) {
 	return mat.at<MAT_TYPE>(row, col) == IN_GRANULE || mat.at<MAT_TYPE>(row, col) == OUT_GRANULE;
 }
 
-Mat calcDistances(const Mat& mat, bool periodic) {
+pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 	//cout << "calcDistances1" << endl;
-	Mat dists = Mat::zeros(mat.rows, mat.cols, CV_32F);//, CV_32S);
+	Mat innerDists = Mat::zeros(mat.rows, mat.cols, CV_32F);//, CV_32S);
+	Mat outerDists = Mat::ones(mat.rows, mat.cols, CV_32F);//, CV_32S);
 	//cout << "calcDistances2" << endl;
+	//if (log) {
+	//	cout << "Rows: " << mat.rows << endl;
+	//}
 	for (int col = 0; col < mat.cols; col++) {
 		//cout << "calcDistances3 " << col << endl;
 		bool inGranule = mat.at<MAT_TYPE>(0, col) == IN_GRANULE;
@@ -69,6 +73,9 @@ Mat calcDistances(const Mat& mat, bool periodic) {
 		for (row = 1; row < mat.rows; row++) {
 			if (!inDomain(mat, row, col)) { // This point not in domain
 				if (inDomain(mat, row - 1, col)) { // Previous point in domain
+					//if (log) {
+					//	cout << "Going out of domain: col=" << col << ", row = " << row << ", " << mat.at<MAT_TYPE>(row, col) << endl;
+					//}
 					// Going out of domain from bottom
 					break;
 				}
@@ -76,6 +83,9 @@ Mat calcDistances(const Mat& mat, bool periodic) {
 				continue;
 			}
 			if (!inDomain(mat, row - 1, col)) { // Previous point not in domain
+				//if (log) {
+				//	cout << "Entering domain: col=" << col << ", row = " << row << endl;
+				//}
 				// Entering domain from top
 				domainStart = row;
 				startRow = row;
@@ -88,6 +98,7 @@ Mat calcDistances(const Mat& mat, bool periodic) {
 				dist++;
 			} else {
 				//cout << "calcDistances7 " << col << " " << row << endl;
+				Mat& dists = inGranule ? innerDists : outerDists;
 				for (int row1 = startRow; row1 < row; row1++) {
 					dists.at<MAT_TYPE>(row1, col) = dist;
 				}
@@ -98,6 +109,7 @@ Mat calcDistances(const Mat& mat, bool periodic) {
 			}
 		}
 		//cout << "calcDistances9 " << col << endl;
+		Mat& dists = inGranule ? innerDists : outerDists;
 		if (periodic) {
 			int domainEnd = row;
 			int endRow;
@@ -120,7 +132,7 @@ Mat calcDistances(const Mat& mat, bool periodic) {
 		//cout << "calcDistances10 " << col << endl;
 	}
 	//cout << "calcDistances11" << endl;
-	return dists;
+	return make_pair(innerDists, outerDists);
 }
 
 int main(int argc, char *argv[]) {
@@ -188,41 +200,55 @@ int main(int argc, char *argv[]) {
 	Rect cropRect(colOffset, rowOffset, width, height);
 	int layer = 0;
 	for (auto& mat : matrices) {
-		if (layer % 10 != 0) {
+		if (layer != 280) {
 			layer++;
 			continue;
 		}
 		ofstream output(string("dists") + to_string(layer) + ".txt");
-		Mat l;
+		Mat lInner;
+		Mat lOuter;
 		for (double angle = 0; angle < 360; angle += 1) {
 			Mat mat1 = mat.clone();
-			Mat matRotated = angle > 0 ? rotate(mat1, angle) : mat1;
+			Mat matRotated = angle > 0 ? rotate(mat1, angle, false) : mat1;
+			//#ifdef DEBUG
+			//	if (layer == 280 && ((int) angle) % 10 == 0) {
+			//		imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
+			//	}
+			//#endif
+			auto dists = calcDistances(matRotated, false);
+			auto innerDists = dists.first;
+			auto outerDists = dists.second;
 			#ifdef DEBUG
-				if (angle == 0) {
-					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
+				if (layer == 280 && ((int) angle) % 10 == 0) {
+					double min1, max1;
+					minMaxLoc(innerDists, &min1, &max1);
+					imwrite(string("dists") + to_string(layer) + "_" + to_string((int) angle) + ".png", (innerDists - min1) * 255 / (max1 - min1));
 				}
 			#endif
-			Mat dists = calcDistances(matRotated, periodic);
 			if (angle > 0) {
-				dists = rotate(dists, -angle);
+				innerDists = rotate(innerDists, -angle, true);
+				outerDists = rotate(outerDists, -angle, true);
 			}
-			Mat lNew = dists(cropRect);
+			Mat lNewInner = innerDists(cropRect);
+			Mat lNewOuter = outerDists(cropRect);
 			if (angle == 0) {
 				// First time
-				l = lNew;
+				lInner = lNewInner;
+				lOuter = lNewOuter;
 			} else {
-				for (int i = 0; i < lNew.rows; i++) {
-					for (int j = 0; j < lNew.cols; j++) {
-						int newDist = lNew.at<MAT_TYPE>(i, j);
+				for (int i = 0; i < lNewInner.rows; i++) {
+					for (int j = 0; j < lNewInner.cols; j++) {
 						if (mat.at<MAT_TYPE>(i + rowOffset, j + colOffset) == IN_GRANULE) {
-							if (newDist > l.at<MAT_TYPE>(i, j)) {
+							int newDist = lNewInner.at<MAT_TYPE>(i, j);
+							if (newDist > lInner.at<MAT_TYPE>(i, j)) {
 								// in granule and new distance is longer
-								l.at<MAT_TYPE>(i, j) = newDist;
+								lInner.at<MAT_TYPE>(i, j) = newDist;
 							}
 						} else {
-							if (newDist < l.at<MAT_TYPE>(i, j)) {
+							int newDist = lNewOuter.at<MAT_TYPE>(i, j);
+							if (newDist < lOuter.at<MAT_TYPE>(i, j)) {
 								// intergranular and new distance is shorter
-								l.at<MAT_TYPE>(i, j) = newDist;
+								lOuter.at<MAT_TYPE>(i, j) = newDist;
 							}
 						}
 					}
@@ -232,11 +258,13 @@ int main(int argc, char *argv[]) {
 			//	output << l << endl;
 			#endif
 		}
-		output << l << endl;
-		output.close();
+		//output << lInner << endl;
+		//output.close();
 		double min, max;
-		minMaxLoc(l, &min, &max);
-		imwrite(string("dists") + to_string(layer) + ".png", (l - min) * 255 / (max - min));
+		minMaxLoc(lInner, &min, &max);
+		imwrite(string("inner_dists") + to_string(layer) + ".png", (lInner - min) * 255 / (max - min));
+		minMaxLoc(lOuter, &min, &max);
+		imwrite(string("outer_dists") + to_string(layer) + ".png", (lOuter - min) * 255 / (max - min));
 		layer++;
 	}
 
