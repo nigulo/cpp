@@ -32,6 +32,7 @@ typedef int MAT_TYPE_INT;
 #define OUT_GRANULE 1 ///< The point is inside granule
 #define IN_GRANULE 2 ///< The point is outside of the
 
+#define DELTA_ANGLE 1.0 ///< The angle increment used in rotations
 /**
  * Rotates the matrix
  * @param[in] src matrix to rotate
@@ -284,6 +285,13 @@ int main(int argc, char *argv[]) {
 	}
 	SnapshotLoader loader(params);
 
+	int fromLayer = Utils::FindIntProperty(params, "fromLayer", 1);
+	int toLayer = Utils::FindIntProperty(params, "toLayer", 0);
+	int step = Utils::FindIntProperty(params, "step", 10);
+	assert(fromLayer >= 0);
+	assert(toLayer == 0 || toLayer >= fromLayer);
+	assert(step > 0);
+
 	bool periodic = Utils::FindIntProperty(params, "periodic", 1);
 
 	int verticalCoord = Utils::FindIntProperty(params, "verticalCoord", 2);
@@ -337,10 +345,14 @@ int main(int argc, char *argv[]) {
 	Rect cropRect(colOffset, rowOffset, width, height);
 	int layer = 0;
 	for (auto& mat : matrices) {
-		if (layer != 280) {
+		if (layer < fromLayer || (layer - fromLayer) % step != 0) {
 			layer++;
 			continue;
 		}
+		if (toLayer != 0 && layer > toLayer) {
+			break;
+		}
+		cout << "Processing layer " << layer << endl;
 		if (periodic) {
 			tileMatrix(mat, height, width);
 		}
@@ -348,11 +360,11 @@ int main(int argc, char *argv[]) {
 		ofstream output(string("dists") + to_string(layer) + ".txt");
 		Mat lInner;
 		Mat lOuter;
-		for (double angle = 0; angle < 360; angle += 1) {
+		for (double angle = 0; angle < 360; angle += DELTA_ANGLE) {
 			Mat mat1 = mat.clone();
 			Mat matRotated = angle > 0 ? rotate(mat1, angle, false) : mat1;
 			#ifdef DEBUG
-				if (layer == 280 && ((int) angle) % 10 == 0) {
+				if (((int) angle) % 10 == 0) {
 					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
 				}
 			#endif
@@ -360,7 +372,7 @@ int main(int argc, char *argv[]) {
 			auto innerDists = dists.first;
 			auto outerDists = dists.second;
 			#ifdef DEBUG
-				if (layer == 280 && ((int) angle) % 10 == 0) {
+				if (((int) angle) % 10 == 0) {
 					double min1, max1;
 					minMaxLoc(innerDists, &min1, &max1);
 					imwrite(string("dists") + to_string(layer) + "_" + to_string((int) angle) + ".png", (innerDists - min1) * 255 / (max1 - min1));
