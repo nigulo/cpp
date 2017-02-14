@@ -62,9 +62,9 @@ Mat rotate(const Mat& src, double angle, bool dists) {
 	#else
 		Point center = Point(src.cols/2, src.rows/2);
 		Mat rot_mat(2, 3, CV_32FC1);
-		/// Get the rotation matrix with the specifications above
+		// Get the rotation matrix with the specifications above
 		rot_mat = getRotationMatrix2D(center, angle, 1.0);
-		/// Rotate the warped image
+		// Rotate the warped image
 		warpAffine(src, dst, rot_mat, src.size(), dists ? INTER_LINEAR : INTER_NEAREST);
 
 	#endif
