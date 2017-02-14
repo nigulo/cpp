@@ -7,6 +7,10 @@
 #endif
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#ifdef OPENCV_2_4
+	#include <opencv2/contrib/contrib.hpp>
+#endif
+#include <opencv2/core/core.hpp>
 #include "utils/utils.h"
 #include "pcdl/SnapshotLoader.h"
 
@@ -18,7 +22,8 @@ using namespace utils;
 using namespace pcdl;
 
 #define DEBUG
-typedef float MAT_TYPE;
+typedef float MAT_TYPE_FLOAT;
+typedef int MAT_TYPE_INT;
 
 #define OUT_GRANULE 1
 #define IN_GRANULE 2
@@ -51,7 +56,7 @@ Mat rotate(const Mat& src, double angle, bool dists) {
 }
 
 bool inDomain(const Mat& mat, int row, int col) {
-	return mat.at<MAT_TYPE>(row, col) == IN_GRANULE || mat.at<MAT_TYPE>(row, col) == OUT_GRANULE;
+	return mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE || mat.at<MAT_TYPE_FLOAT>(row, col) == OUT_GRANULE;
 }
 
 pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
@@ -64,7 +69,7 @@ pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 	//}
 	for (int col = 0; col < mat.cols; col++) {
 		//cout << "calcDistances3 " << col << endl;
-		bool inGranule = mat.at<MAT_TYPE>(0, col) == IN_GRANULE;
+		bool inGranule = mat.at<MAT_TYPE_FLOAT>(0, col) == IN_GRANULE;
 		int dist = 0;
 		int domainStart = mat.rows;
 		int startRow = 0;
@@ -89,18 +94,18 @@ pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 				// Entering domain from top
 				domainStart = row;
 				startRow = row;
-				inGranule = mat.at<MAT_TYPE>(row, col) == IN_GRANULE;
+				inGranule = mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE;
 				continue;
 			}
 			//cout << "calcDistances5 " << col << " " << row << endl;
-			if ((mat.at<MAT_TYPE>(row, col) == IN_GRANULE) == inGranule) {
+			if ((mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) == inGranule) {
 				//cout << "calcDistances6 " << col << " " << row << endl;
 				dist++;
 			} else {
 				//cout << "calcDistances7 " << col << " " << row << endl;
 				Mat& dists = inGranule ? innerDists : outerDists;
 				for (int row1 = startRow; row1 < row; row1++) {
-					dists.at<MAT_TYPE>(row1, col) = dist;
+					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 				}
 				//cout << "calcDistances8 " << col << " " << row << endl;
 				dist = 0;
@@ -113,26 +118,116 @@ pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 		if (periodic) {
 			int domainEnd = row;
 			int endRow;
-			for (endRow = domainStart; endRow < startRow && (mat.at<MAT_TYPE>(endRow, col) == IN_GRANULE) == inGranule; endRow++) {
+			for (endRow = domainStart; endRow < startRow && (mat.at<MAT_TYPE_FLOAT>(endRow, col) == IN_GRANULE) == inGranule; endRow++) {
 				dist++;
 			}
 			//cout << "calcDistances9.5 " << endRow << endl;
 			for (int row1 = domainStart; row1 < endRow; row1++) {
-				dists.at<MAT_TYPE>(row1, col) = dist;
+				dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 			}
 			//cout << "calcDistances9.7 " << col << endl;
 			for (int row1 = startRow; row1 < domainEnd; row1++) {
-				dists.at<MAT_TYPE>(row1, col) = dist;
+				dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 			}
 		} else {
 			for (int row1 = startRow; row1 < row; row1++) {
-				dists.at<MAT_TYPE>(row1, col) = dist;
+				dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 			}
 		}
 		//cout << "calcDistances10 " << col << endl;
 	}
 	//cout << "calcDistances11" << endl;
 	return make_pair(innerDists, outerDists);
+}
+
+pair<int, int> markRow(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label) {
+	granuleLabels.at<MAT_TYPE_INT>(row, col) = label;
+	auto value = mat.at<MAT_TYPE_FLOAT>(row, col);
+	int startCol;
+	for (startCol = col - 1; startCol >= 0; startCol--) {
+		if (mat.at<MAT_TYPE_FLOAT>(row, startCol) == value) {
+			granuleLabels.at<MAT_TYPE_INT>(row, startCol) = label;
+		} else {
+			break;
+		}
+	}
+	int endCol;
+	for (endCol = col + 1; endCol < mat.cols; endCol++) {
+		if (mat.at<MAT_TYPE_FLOAT>(row, endCol) == value) {
+			granuleLabels.at<MAT_TYPE_INT>(row, endCol) = label;
+		} else {
+			break;
+		}
+	}
+	//cout << "markRow " << (startCol + 1) << " " << (endCol - 1) << endl;
+	return make_pair(startCol + 1, endCol - 1);
+}
+
+void markClosedRegion(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label) {
+	//cout << "markClosedRegion " << label << " " << row << " " << col << endl;
+	auto startEndCols = markRow(granuleLabels, mat, row, col, label);
+	int startCol = startEndCols.first;
+	int endCol = startEndCols.second;
+	auto value = mat.at<MAT_TYPE_FLOAT>(row, col);
+	for (int col1 = startCol; col1 <= endCol; col1++) {
+		if (row > 0 && granuleLabels.at<MAT_TYPE_INT>(row - 1, col1) == 0) {
+			if (mat.at<MAT_TYPE_FLOAT>(row - 1, col1) == value) {
+				markClosedRegion(granuleLabels, mat, row - 1, col1, label);
+			}
+		}
+		if (row < mat.rows - 1 && granuleLabels.at<MAT_TYPE_INT>(row + 1, col1) == 0) {
+			if (mat.at<MAT_TYPE_FLOAT>(row + 1, col1) == value) {
+				markClosedRegion(granuleLabels, mat, row + 1, col1, label);
+			}
+		}
+	}
+	//cout << "markClosedRegion end " << label << " " << row << " " << col << endl;
+}
+
+Mat labelGranules(const Mat& mat) {
+	Mat granuleLabels = Mat::zeros(mat.rows, mat.cols, CV_32S);
+	int label = 1;
+	for (int row = 0; row < mat.rows; row++) {
+		for (int col = 0; col < mat.cols; col++) {
+			if (granuleLabels.at<MAT_TYPE_INT>(row, col) == 0) {
+				markClosedRegion(granuleLabels, mat, row, col, label++);
+			}
+		}
+	}
+	return granuleLabels;
+    //Mat img;
+    //granuleLabels.convertTo(granuleLabels, CV_8UC3);
+    //applyColorMap(granuleLabels, img, COLORMAP_HSV);
+	//imwrite("granule_labels.png", img);
+}
+
+vector<float> calcExtrema(const Mat& dists, const Mat& mat, const Mat& granuleLabels, bool inGranule) {
+	map<int, float> granuleSizes;
+	for (int row = 0; row < mat.rows; row++) {
+		for (int col = 0; col < mat.cols; col++) {
+			if ((mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) == inGranule) {
+				int label = granuleLabels.at<MAT_TYPE_INT>(row, col);
+				if (granuleSizes.find(label) == granuleSizes.end()) {
+					granuleSizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
+				} else {
+					if (inGranule) {
+						if (granuleSizes[label] < dists.at<MAT_TYPE_FLOAT>(row, col)) {
+							granuleSizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
+						}
+					} else {
+						if (granuleSizes[label] > dists.at<MAT_TYPE_FLOAT>(row, col)) {
+							granuleSizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
+						}
+					}
+				}
+			}
+		}
+	}
+	vector<float> extrema;
+	for (auto dist : granuleSizes) {
+		extrema.push_back(dist.second);
+	}
+	return extrema;
 }
 
 int main(int argc, char *argv[]) {
@@ -191,9 +286,9 @@ int main(int argc, char *argv[]) {
 		assert(y < mat.rows);
 		assert(z < mat.cols);
 		if (field > 0) {
-			mat.at<MAT_TYPE>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = IN_GRANULE;
+			mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = IN_GRANULE;
 		} else {
-			mat.at<MAT_TYPE>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = OUT_GRANULE;
+			mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = OUT_GRANULE;
 		}
 	});
 
@@ -204,6 +299,7 @@ int main(int argc, char *argv[]) {
 			layer++;
 			continue;
 		}
+		Mat croppedMat = mat(cropRect);
 		ofstream output(string("dists") + to_string(layer) + ".txt");
 		Mat lInner;
 		Mat lOuter;
@@ -238,33 +334,38 @@ int main(int argc, char *argv[]) {
 			} else {
 				for (int i = 0; i < lNewInner.rows; i++) {
 					for (int j = 0; j < lNewInner.cols; j++) {
-						if (mat.at<MAT_TYPE>(i + rowOffset, j + colOffset) == IN_GRANULE) {
-							int newDist = lNewInner.at<MAT_TYPE>(i, j);
-							if (newDist > lInner.at<MAT_TYPE>(i, j)) {
+						if (croppedMat.at<MAT_TYPE_FLOAT>(i, j) == IN_GRANULE) {
+							int newDist = lNewInner.at<MAT_TYPE_FLOAT>(i, j);
+							if (newDist > lInner.at<MAT_TYPE_FLOAT>(i, j)) {
 								// in granule and new distance is longer
-								lInner.at<MAT_TYPE>(i, j) = newDist;
+								lInner.at<MAT_TYPE_FLOAT>(i, j) = newDist;
 							}
 						} else {
-							int newDist = lNewOuter.at<MAT_TYPE>(i, j);
-							if (newDist < lOuter.at<MAT_TYPE>(i, j)) {
+							int newDist = lNewOuter.at<MAT_TYPE_FLOAT>(i, j);
+							if (newDist < lOuter.at<MAT_TYPE_FLOAT>(i, j)) {
 								// intergranular and new distance is shorter
-								lOuter.at<MAT_TYPE>(i, j) = newDist;
+								lOuter.at<MAT_TYPE_FLOAT>(i, j) = newDist;
 							}
 						}
 					}
 				}
 			}
-			#ifdef DEBUG
-			//	output << l << endl;
-			#endif
 		}
-		//output << lInner << endl;
-		//output.close();
 		double min, max;
 		minMaxLoc(lInner, &min, &max);
 		imwrite(string("inner_dists") + to_string(layer) + ".png", (lInner - min) * 255 / (max - min));
 		minMaxLoc(lOuter, &min, &max);
 		imwrite(string("outer_dists") + to_string(layer) + ".png", (lOuter - min) * 255 / (max - min));
+		Mat granuleLabels = labelGranules(mat);
+		for (auto maximum : calcExtrema(lInner, croppedMat, granuleLabels, true)) {
+			output << maximum << endl;
+		}
+		//output << endl;
+		//for (auto minimum : calcExtrema(lOuter, croppedMat, granuleLabels, false)) {
+		//	output << minimum << endl;
+		//}
+		output.close();
+
 		layer++;
 	}
 
