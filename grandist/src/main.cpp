@@ -21,28 +21,44 @@ using namespace cv;
 using namespace utils;
 using namespace pcdl;
 
-#define DEBUG
+//#define DEBUG
+
+// Need to use float matrices even for keeping integer values
+// because the library supports rotations only for these
 typedef float MAT_TYPE_FLOAT;
+// Integer type can be used for matrices not involved in rotations
 typedef int MAT_TYPE_INT;
 
-#define OUT_GRANULE 1
-#define IN_GRANULE 2
+#define OUT_GRANULE 1 ///< The point is inside granule
+#define IN_GRANULE 2 ///< The point is outside of the
 
+/**
+ * Rotates the matrix
+ * @param[in] src matrix to rotate
+ * @param[in] angle angle of rotation in degrees.
+ * @param[in] dists either distance matrix or matrix of granules.
+ * Determines which type of interpolation is used.
+ * @return the rotated matrix
+ *
+ */
 Mat rotate(const Mat& src, double angle, bool dists) {
 	Mat dst;
 	// Create a destination to paint the source into.
 	dst.create(src.size(), src.type());
 	#ifdef GPU
-	  gpu::GpuMat src_gpu;
-	  gpu::GpuMat dst_gpu;
-	  // Push the images into the GPU
-	  src_gpu.upload(src);
-	  dst_gpu.upload(dst);
-	  // Rotate in the GPU!
-	  gpu::rotate(src_gpu, dst_gpu, src_gpu.size(), angle, src_gpu.size().width, src_gpu.size().height);
+		/////////////////////////////////////////////
+		// GPU routine may not work as it is untested
+		/////////////////////////////////////////////
+		gpu::GpuMat src_gpu;
+		gpu::GpuMat dst_gpu;
+		// Push the images into the GPU
+		src_gpu.upload(src);
+		dst_gpu.upload(dst);
+		// Rotate in the GPU!
+		gpu::rotate(src_gpu, dst_gpu, src_gpu.size(), angle, src_gpu.size().width, src_gpu.size().height);
 
-	  // Download the rendered GPU data back to CPU
-	  dst_gpu.download(dst);
+		// Download the rendered GPU data back to CPU
+		dst_gpu.download(dst);
 	#else
 		Point center = Point(src.cols/2, src.rows/2);
 		Mat rot_mat(2, 3, CV_32FC1);
@@ -59,28 +75,25 @@ bool inDomain(const Mat& mat, int row, int col) {
 	return mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE || mat.at<MAT_TYPE_FLOAT>(row, col) == OUT_GRANULE;
 }
 
+/**
+ * Calculates inter- and intragranular distances
+ * @param[in] mat matrix of down/up flows
+ * @param[in] periodic whether the boundaries are periodic.
+ * If true omits the measures for regions crossing the boundaries.
+ * @return matrices of maximum inner and minimum outer distances
+ */
 pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
-	//cout << "calcDistances1" << endl;
 	Mat innerDists = Mat::zeros(mat.rows, mat.cols, CV_32F);//, CV_32S);
 	Mat outerDists = Mat::ones(mat.rows, mat.cols, CV_32F);//, CV_32S);
-	//cout << "calcDistances2" << endl;
-	//if (log) {
-	//	cout << "Rows: " << mat.rows << endl;
-	//}
 	for (int col = 0; col < mat.cols; col++) {
-		//cout << "calcDistances3 " << col << endl;
 		bool inGranule = mat.at<MAT_TYPE_FLOAT>(0, col) == IN_GRANULE;
 		int dist = 0;
 		int domainStart = mat.rows;
 		int startRow = 0;
 		int row;
-		//cout << "calcDistances4 " << col << endl;
 		for (row = 1; row < mat.rows; row++) {
 			if (!inDomain(mat, row, col)) { // This point not in domain
 				if (inDomain(mat, row - 1, col)) { // Previous point in domain
-					//if (log) {
-					//	cout << "Going out of domain: col=" << col << ", row = " << row << ", " << mat.at<MAT_TYPE>(row, col) << endl;
-					//}
 					// Going out of domain from bottom
 					break;
 				}
@@ -88,58 +101,39 @@ pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 				continue;
 			}
 			if (!inDomain(mat, row - 1, col)) { // Previous point not in domain
-				//if (log) {
-				//	cout << "Entering domain: col=" << col << ", row = " << row << endl;
-				//}
 				// Entering domain from top
 				domainStart = row;
 				startRow = row;
 				inGranule = mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE;
 				continue;
 			}
-			//cout << "calcDistances5 " << col << " " << row << endl;
 			if ((mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) == inGranule) {
-				//cout << "calcDistances6 " << col << " " << row << endl;
 				dist++;
 			} else {
-				//cout << "calcDistances7 " << col << " " << row << endl;
-				Mat& dists = inGranule ? innerDists : outerDists;
-				for (int row1 = startRow; row1 < row; row1++) {
-					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
+				if (!periodic || startRow > domainStart) {
+					Mat& dists = inGranule ? innerDists : outerDists;
+					for (int row1 = startRow; row1 < row; row1++) {
+						dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
+					}
 				}
-				//cout << "calcDistances8 " << col << " " << row << endl;
 				dist = 0;
 				startRow = row;
 				inGranule = !inGranule;
 			}
 		}
-		//cout << "calcDistances9 " << col << endl;
 		Mat& dists = inGranule ? innerDists : outerDists;
-		if (periodic) {
-			int domainEnd = row;
-			int endRow;
-			for (endRow = domainStart; endRow < startRow && (mat.at<MAT_TYPE_FLOAT>(endRow, col) == IN_GRANULE) == inGranule; endRow++) {
-				dist++;
-			}
-			//cout << "calcDistances9.5 " << endRow << endl;
-			for (int row1 = domainStart; row1 < endRow; row1++) {
-				dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
-			}
-			//cout << "calcDistances9.7 " << col << endl;
-			for (int row1 = startRow; row1 < domainEnd; row1++) {
-				dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
-			}
-		} else {
+		if (!periodic) {
 			for (int row1 = startRow; row1 < row; row1++) {
 				dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 			}
 		}
-		//cout << "calcDistances10 " << col << endl;
 	}
-	//cout << "calcDistances11" << endl;
 	return make_pair(innerDists, outerDists);
 }
 
+/**
+ * Helper method for labeling the closed regions
+ */
 pair<int, int> markRow(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label) {
 	granuleLabels.at<MAT_TYPE_INT>(row, col) = label;
 	auto value = mat.at<MAT_TYPE_FLOAT>(row, col);
@@ -163,6 +157,9 @@ pair<int, int> markRow(Mat& granuleLabels, const Mat& mat, const int row, const 
 	return make_pair(startCol + 1, endCol - 1);
 }
 
+/**
+ * Helper method for labeling the closed regions
+ */
 void markClosedRegion(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label) {
 	//cout << "markClosedRegion " << label << " " << row << " " << col << endl;
 	auto startEndCols = markRow(granuleLabels, mat, row, col, label);
@@ -184,6 +181,10 @@ void markClosedRegion(Mat& granuleLabels, const Mat& mat, const int row, const i
 	//cout << "markClosedRegion end " << label << " " << row << " " << col << endl;
 }
 
+/**
+ * Labels the closed regions. Only needed to identify the closed regions if we want to extract only
+ * single extremum per region. Otherwise local extrema could be calculated from distance matrix.
+ */
 Mat labelGranules(const Mat& mat) {
 	Mat granuleLabels = Mat::zeros(mat.rows, mat.cols, CV_32S);
 	int label = 1;
@@ -195,12 +196,22 @@ Mat labelGranules(const Mat& mat) {
 		}
 	}
 	return granuleLabels;
+	//////////////////////////////////////////
+	// Visualizing if the labeling makes sense
     //Mat img;
     //granuleLabels.convertTo(granuleLabels, CV_8UC3);
     //applyColorMap(granuleLabels, img, COLORMAP_HSV);
 	//imwrite("granule_labels.png", img);
+	//////////////////////////////////////////
 }
 
+/**
+ * Calculates extrema of distances
+ * @param[in] dists distance matrix
+ * @param[in] mat matrix of down/up flows
+ * @param[in] granuleLabelsmatrix of closed region labels
+ * @param[in] inGranule inter- or intragranular regions
+ */
 vector<float> calcExtrema(const Mat& dists, const Mat& mat, const Mat& granuleLabels, bool inGranule) {
 	map<int, float> granuleSizes;
 	for (int row = 0; row < mat.rows; row++) {
@@ -228,6 +239,28 @@ vector<float> calcExtrema(const Mat& dists, const Mat& mat, const Mat& granuleLa
 		extrema.push_back(dist.second);
 	}
 	return extrema;
+}
+
+/**
+ * Repeats the matrix twice in horizontal and vertical directions.
+ * Needed to correctly estimate the granule sizes on the boundaries
+ */
+void tileMatrix(Mat& mat, int rows, int cols) {
+	int rowOffset = (mat.rows - 2 * rows) / 2;
+	int colOffset = (mat.cols - 2 * cols) / 2;
+
+	int midRow = mat.rows / 2;
+	int midCol = mat.cols / 2;
+
+	for (int row = 0; row < rows; row++) {
+		for (int col = 0; col < cols; col++) {
+			auto value = mat.at<MAT_TYPE_FLOAT>(midRow + row, midCol + col);
+			mat.at<MAT_TYPE_FLOAT>(rowOffset + row, colOffset + col) = value;
+			mat.at<MAT_TYPE_FLOAT>(midRow + row, colOffset + col) = value;
+			mat.at<MAT_TYPE_FLOAT>(rowOffset + row, midCol + col) = value;
+
+		}
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -274,6 +307,15 @@ int main(int argc, char *argv[]) {
 	int rowOffset = (rows - height) / 2;
 	int colOffset = (cols - width) / 2;
 
+	if (periodic) {
+		rows = ceil(((double) 2 * height) * sqrt(2));
+		cols = ceil(((double) 2 * width) * sqrt(2));
+
+		rowOffset = rows / 2;
+		colOffset = cols / 2;
+	}
+
+
 	for (int i = 0; i < depth; i++) {
 		matrices[i] = Mat::zeros(rows, cols, CV_32F);//CV_8S);
 	}
@@ -299,6 +341,9 @@ int main(int argc, char *argv[]) {
 			layer++;
 			continue;
 		}
+		if (periodic) {
+			tileMatrix(mat, height, width);
+		}
 		Mat croppedMat = mat(cropRect);
 		ofstream output(string("dists") + to_string(layer) + ".txt");
 		Mat lInner;
@@ -306,11 +351,11 @@ int main(int argc, char *argv[]) {
 		for (double angle = 0; angle < 360; angle += 1) {
 			Mat mat1 = mat.clone();
 			Mat matRotated = angle > 0 ? rotate(mat1, angle, false) : mat1;
-			//#ifdef DEBUG
-			//	if (layer == 280 && ((int) angle) % 10 == 0) {
-			//		imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
-			//	}
-			//#endif
+			#ifdef DEBUG
+				if (layer == 280 && ((int) angle) % 10 == 0) {
+					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
+				}
+			#endif
 			auto dists = calcDistances(matRotated, false);
 			auto innerDists = dists.first;
 			auto outerDists = dists.second;
