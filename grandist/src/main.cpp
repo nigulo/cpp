@@ -37,12 +37,11 @@ typedef int MAT_TYPE_INT;
  * Rotates the matrix
  * @param[in] src matrix to rotate
  * @param[in] angle angle of rotation in degrees.
- * @param[in] dists either distance matrix or matrix of granules.
  * Determines which type of interpolation is used.
  * @return the rotated matrix
  *
  */
-Mat rotate(const Mat& src, double angle, bool dists) {
+Mat rotate(const Mat& src, double angle) {
 	Mat dst;
 	// Create a destination to paint the source into.
 	dst.create(src.size(), src.type());
@@ -66,7 +65,7 @@ Mat rotate(const Mat& src, double angle, bool dists) {
 		// Get the rotation matrix with the specifications above
 		rot_mat = getRotationMatrix2D(center, angle, 1.0);
 		// Rotate the warped image
-		warpAffine(src, dst, rot_mat, src.size(), dists ? INTER_LINEAR : INTER_NEAREST);
+		warpAffine(src, dst, rot_mat, src.size(), INTER_NEAREST);
 
 	#endif
 	return dst;
@@ -84,8 +83,10 @@ bool inDomain(const Mat& mat, int row, int col) {
  * @return matrices of maximum inner and minimum outer distances
  */
 pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
-	Mat innerDists = Mat::zeros(mat.rows, mat.cols, CV_32F);//, CV_32S);
-	Mat outerDists = Mat::ones(mat.rows, mat.cols, CV_32F);//, CV_32S);
+	Mat innerDists = Mat::zeros(mat.rows, mat.cols, CV_32F);
+	// We are later looking for minima in intergranular regions so make the initial values
+	// as large as possible. The regions of granules (which we are not interested in) will then keep the higher values.
+	Mat outerDists = Mat::ones(mat.rows, mat.cols, CV_32F) * numeric_limits<float>::max();
 	for (int col = 0; col < mat.cols; col++) {
 		bool inGranule = mat.at<MAT_TYPE_FLOAT>(0, col) == IN_GRANULE;
 		int dist = 0;
@@ -133,14 +134,14 @@ pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 }
 
 /**
- * Helper method for labeling the closed regions
+ * Helper method for labeling the regions
  */
-pair<int, int> markRow(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label) {
+pair<int, int> labelRow(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label, function<bool(float, float)> compFunc) {
 	granuleLabels.at<MAT_TYPE_INT>(row, col) = label;
 	auto value = mat.at<MAT_TYPE_FLOAT>(row, col);
 	int startCol;
 	for (startCol = col - 1; startCol >= 0; startCol--) {
-		if (mat.at<MAT_TYPE_FLOAT>(row, startCol) == value) {
+		if (compFunc(mat.at<MAT_TYPE_FLOAT>(row, startCol), value)) {
 			granuleLabels.at<MAT_TYPE_INT>(row, startCol) = label;
 		} else {
 			break;
@@ -148,7 +149,7 @@ pair<int, int> markRow(Mat& granuleLabels, const Mat& mat, const int row, const 
 	}
 	int endCol;
 	for (endCol = col + 1; endCol < mat.cols; endCol++) {
-		if (mat.at<MAT_TYPE_FLOAT>(row, endCol) == value) {
+		if (compFunc(mat.at<MAT_TYPE_FLOAT>(row, endCol), value)) {
 			granuleLabels.at<MAT_TYPE_INT>(row, endCol) = label;
 		} else {
 			break;
@@ -159,23 +160,23 @@ pair<int, int> markRow(Mat& granuleLabels, const Mat& mat, const int row, const 
 }
 
 /**
- * Helper method for labeling the closed regions
+ * Helper method for labeling the regions
  */
-void markClosedRegion(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label) {
+void labelConnectedRegion(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label, function<bool(float, float)> compFunc) {
 	//cout << "markClosedRegion " << label << " " << row << " " << col << endl;
-	auto startEndCols = markRow(granuleLabels, mat, row, col, label);
+	auto startEndCols = labelRow(granuleLabels, mat, row, col, label, compFunc);
 	int startCol = startEndCols.first;
 	int endCol = startEndCols.second;
 	auto value = mat.at<MAT_TYPE_FLOAT>(row, col);
 	for (int col1 = startCol; col1 <= endCol; col1++) {
 		if (row > 0 && granuleLabels.at<MAT_TYPE_INT>(row - 1, col1) == 0) {
-			if (mat.at<MAT_TYPE_FLOAT>(row - 1, col1) == value) {
-				markClosedRegion(granuleLabels, mat, row - 1, col1, label);
+			if (compFunc(mat.at<MAT_TYPE_FLOAT>(row - 1, col1), value)) {
+				labelConnectedRegion(granuleLabels, mat, row - 1, col1, label, compFunc);
 			}
 		}
 		if (row < mat.rows - 1 && granuleLabels.at<MAT_TYPE_INT>(row + 1, col1) == 0) {
-			if (mat.at<MAT_TYPE_FLOAT>(row + 1, col1) == value) {
-				markClosedRegion(granuleLabels, mat, row + 1, col1, label);
+			if (compFunc(mat.at<MAT_TYPE_FLOAT>(row + 1, col1), value)) {
+				labelConnectedRegion(granuleLabels, mat, row + 1, col1, label, compFunc);
 			}
 		}
 	}
@@ -192,58 +193,77 @@ Mat labelGranules(const Mat& mat) {
 	for (int row = 0; row < mat.rows; row++) {
 		for (int col = 0; col < mat.cols; col++) {
 			if (granuleLabels.at<MAT_TYPE_INT>(row, col) == 0) {
-				markClosedRegion(granuleLabels, mat, row, col, label++);
+				labelConnectedRegion(granuleLabels, mat, row, col, label++, equal_to<float>());
 			}
 		}
 	}
+	//////////////////////////////////////////
+	//Visualizing if the labeling makes sense
+    Mat img;
+    Mat granuleLabels2;
+    granuleLabels.convertTo(granuleLabels2, CV_8UC3);
+    applyColorMap(granuleLabels2, img, COLORMAP_HSV);
+	imwrite("granule_labels.png", img);
+	//////////////////////////////////////////
 	return granuleLabels;
-	//////////////////////////////////////////
-	// Visualizing if the labeling makes sense
-    //Mat img;
-    //granuleLabels.convertTo(granuleLabels, CV_8UC3);
-    //applyColorMap(granuleLabels, img, COLORMAP_HSV);
-	//imwrite("granule_labels.png", img);
-	//////////////////////////////////////////
 }
 
 /**
- * Calculates extrema of distances
- * @param[in] dists distance matrix
- * @param[in] mat matrix of down/up flows
- * @param[in] granuleLabelsmatrix of closed region labels
- * @param[in] inGranule inter- or intragranular regions
+ * Labels the isocontours of the distance matrix.
  */
-pair<vector<float>, vector<float>> calcExtrema(const Mat& dists, const Mat& mat, const Mat& granuleLabels) {
-	map<int, float> granuleSizes;
-	map<int, float> downFlowSizes;
-	for (int row = 0; row < mat.rows; row++) {
-		for (int col = 0; col < mat.cols; col++) {
-			int label = granuleLabels.at<MAT_TYPE_INT>(row, col);
-			auto& sizes = mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE ? granuleSizes : downFlowSizes;
-			if (sizes.find(label) == granuleSizes.end()) {
-				sizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
-			} else {
-				if (mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) {
-					if (sizes[label] < dists.at<MAT_TYPE_FLOAT>(row, col)) {
-						sizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
-					}
+Mat labelExtrema(const Mat& dists, bool minimaOrMaxima) {
+	Mat extremaLabels = Mat::zeros(dists.rows, dists.cols, CV_32S);
+	int label = 1;
+	for (int row = 0; row < dists.rows; row++) {
+		for (int col = 0; col < dists.cols; col++) {
+			if (extremaLabels.at<MAT_TYPE_INT>(row, col) == 0) {
+				if (minimaOrMaxima) {
+					labelConnectedRegion(extremaLabels, dists, row, col, label++, less_equal<float>());
 				} else {
-					if (sizes[label] > dists.at<MAT_TYPE_FLOAT>(row, col)) {
-						sizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
-					}
+					labelConnectedRegion(extremaLabels, dists, row, col, label++, greater_equal<float>());
 				}
 			}
 		}
 	}
-	vector<float> granuleExtrema;
-	for (auto dist : granuleSizes) {
-		granuleExtrema.push_back(dist.second);
+	//////////////////////////////////////////
+	// Visualizing if the labeling makes sense
+    Mat img;
+    Mat extremaLabels2;
+    extremaLabels.convertTo(extremaLabels2, CV_8UC3);
+    applyColorMap(extremaLabels2, img, COLORMAP_HSV);
+	imwrite("extrema_labels.png", img);
+	//////////////////////////////////////////
+	return extremaLabels;
+}
+
+/**
+ * Calculates global extrema of distances
+ * @param[in] dists distance matrix
+ * @param[in] mat matrix of down/up flows
+ * @param[in] regionLabels matrix of closed region labels (either granules or regions of local extrema)
+ * @param[in] compFunc comparison function, either less<float>() or greater<float()>
+ * @return extrema of distances
+ */
+vector<float> findExtrema(const Mat& dists, const Mat& regionLabels, function<bool(float, float)> compFunc) {
+	map<int, float> extremaPerRegion;
+	for (int row = 0; row < dists.rows; row++) {
+		for (int col = 0; col < dists.cols; col++) {
+			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
+			auto dist = dists.at<MAT_TYPE_FLOAT>(row, col);
+			if (extremaPerRegion.find(label) == extremaPerRegion.end()) {
+				extremaPerRegion[label] = dist;
+			} else {
+				if (compFunc(extremaPerRegion[label], dists.at<MAT_TYPE_FLOAT>(row, col))) {
+					extremaPerRegion[label] = dist;
+				}
+			}
+		}
 	}
-	vector<float> downFlowExtrema;
-	for (auto dist : downFlowSizes) {
-		downFlowExtrema.push_back(dist.second);
+	vector<float> extrema;
+	for (auto dist : extremaPerRegion) {
+		extrema.push_back(dist.second);
 	}
-	return make_pair(granuleExtrema, downFlowExtrema);
+	return extrema;
 }
 
 /**
@@ -361,12 +381,11 @@ int main(int argc, char *argv[]) {
 			tileMatrix(mat, height, width);
 		}
 		Mat croppedMat = mat(cropRect);
-		ofstream output(string("dists") + to_string(layer) + ".txt");
 		Mat lInner;
 		Mat lOuter;
 		for (double angle = 0; angle < 360; angle += DELTA_ANGLE) {
 			Mat mat1 = mat.clone();
-			Mat matRotated = angle > 0 ? rotate(mat1, angle, false) : mat1;
+			Mat matRotated = angle > 0 ? rotate(mat1, angle) : mat1;
 			#ifdef DEBUG
 				if (((int) angle) % 10 == 0) {
 					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
@@ -383,8 +402,8 @@ int main(int argc, char *argv[]) {
 				}
 			#endif
 			if (angle > 0) {
-				innerDists = rotate(innerDists, -angle, true);
-				outerDists = rotate(outerDists, -angle, true);
+				innerDists = rotate(innerDists, -angle);
+				outerDists = rotate(outerDists, -angle);
 			}
 			Mat lNewInner = innerDists(cropRect);
 			Mat lNewOuter = outerDists(cropRect);
@@ -396,13 +415,13 @@ int main(int argc, char *argv[]) {
 				for (int i = 0; i < lNewInner.rows; i++) {
 					for (int j = 0; j < lNewInner.cols; j++) {
 						if (croppedMat.at<MAT_TYPE_FLOAT>(i, j) == IN_GRANULE) {
-							int newDist = lNewInner.at<MAT_TYPE_FLOAT>(i, j);
+							auto newDist = lNewInner.at<MAT_TYPE_FLOAT>(i, j);
 							if (newDist > lInner.at<MAT_TYPE_FLOAT>(i, j)) {
 								// in granule and new distance is longer
 								lInner.at<MAT_TYPE_FLOAT>(i, j) = newDist;
 							}
 						} else {
-							int newDist = lNewOuter.at<MAT_TYPE_FLOAT>(i, j);
+							auto newDist = lNewOuter.at<MAT_TYPE_FLOAT>(i, j);
 							if (newDist < lOuter.at<MAT_TYPE_FLOAT>(i, j)) {
 								// intergranular and new distance is shorter
 								lOuter.at<MAT_TYPE_FLOAT>(i, j) = newDist;
@@ -412,21 +431,51 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
+		Mat granuleLabels = labelGranules(mat);
+
+		ofstream output1(string("inner_global_dists") + to_string(layer) + ".txt");
+		for (auto extremum : findExtrema(lInner, granuleLabels, greater<float>())) {
+			output1 << extremum << endl;
+		}
+		output1.close();
+
+		ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
+		for (auto extremum : findExtrema(lOuter, granuleLabels, less<float>())) {
+			output2 << extremum << endl;
+		}
+		output2.close();
+
+		Mat maximaLabels = labelExtrema(mat, true);
+		ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
+		output3.close();
+		for (auto extremum : findExtrema(lInner, maximaLabels, greater<float>())) {
+			output3 << extremum << endl;
+		}
+		output3.close();
+
+		Mat minimaLabels = labelExtrema(mat, true);
+		ofstream output4(string("outer_local_dists") + to_string(layer) + ".txt");
+		output4.close();
+		for (auto extremum : findExtrema(lOuter, minimaLabels, less<float>())) {
+			output4 << extremum << endl;
+		}
+		output4.close();
+
+		// Visualize distance matrices
 		double min, max;
 		minMaxLoc(lInner, &min, &max);
 		imwrite(string("inner_dists") + to_string(layer) + ".png", (lInner - min) * 255 / (max - min));
+		// Replace occurrences of numeric_limits<float>::max() with zeros
+		for (int row = 0; row < lOuter.rows; row++) {
+			for (int col = 0; col < lOuter.cols; col++) {
+				if (lOuter.at<MAT_TYPE_FLOAT>(row, col) == numeric_limits<float>::max()) {
+					lOuter.at<MAT_TYPE_FLOAT>(row, col) = 0;
+				}
+				//cout << lOuter.at<MAT_TYPE_FLOAT>(row, col) << endl;
+			}
+		}
 		minMaxLoc(lOuter, &min, &max);
 		imwrite(string("outer_dists") + to_string(layer) + ".png", (lOuter - min) * 255 / (max - min));
-		Mat granuleLabels = labelGranules(mat);
-		auto extrema = calcExtrema(lInner, croppedMat, granuleLabels);
-		for (auto maximum : extrema.first) {
-			output << maximum << endl;
-		}
-		//output << endl;
-		//for (auto minimum : calcExtrema(lOuter, croppedMat, granuleLabels, false)) {
-		//	output << minimum << endl;
-		//}
-		output.close();
 
 		layer++;
 	}
