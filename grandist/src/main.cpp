@@ -412,7 +412,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
-		double min, max;
+		double min, max; // Test
 		minMaxLoc(lInner, &min, &max);
 		imwrite(string("inner_dists") + to_string(layer) + ".png", (lInner - min) * 255 / (max - min));
 		minMaxLoc(lOuter, &min, &max);
