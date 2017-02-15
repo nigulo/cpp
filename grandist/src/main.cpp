@@ -213,33 +213,37 @@ Mat labelGranules(const Mat& mat) {
  * @param[in] granuleLabelsmatrix of closed region labels
  * @param[in] inGranule inter- or intragranular regions
  */
-vector<float> calcExtrema(const Mat& dists, const Mat& mat, const Mat& granuleLabels, bool inGranule) {
+pair<vector<float>, vector<float>> calcExtrema(const Mat& dists, const Mat& mat, const Mat& granuleLabels) {
 	map<int, float> granuleSizes;
+	map<int, float> downFlowSizes;
 	for (int row = 0; row < mat.rows; row++) {
 		for (int col = 0; col < mat.cols; col++) {
-			if ((mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) == inGranule) {
-				int label = granuleLabels.at<MAT_TYPE_INT>(row, col);
-				if (granuleSizes.find(label) == granuleSizes.end()) {
-					granuleSizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
+			int label = granuleLabels.at<MAT_TYPE_INT>(row, col);
+			auto& sizes = mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE ? granuleSizes : downFlowSizes;
+			if (sizes.find(label) == granuleSizes.end()) {
+				sizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
+			} else {
+				if (mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) {
+					if (sizes[label] < dists.at<MAT_TYPE_FLOAT>(row, col)) {
+						sizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
+					}
 				} else {
-					if (inGranule) {
-						if (granuleSizes[label] < dists.at<MAT_TYPE_FLOAT>(row, col)) {
-							granuleSizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
-						}
-					} else {
-						if (granuleSizes[label] > dists.at<MAT_TYPE_FLOAT>(row, col)) {
-							granuleSizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
-						}
+					if (sizes[label] > dists.at<MAT_TYPE_FLOAT>(row, col)) {
+						sizes[label] = dists.at<MAT_TYPE_FLOAT>(row, col);
 					}
 				}
 			}
 		}
 	}
-	vector<float> extrema;
+	vector<float> granuleExtrema;
 	for (auto dist : granuleSizes) {
-		extrema.push_back(dist.second);
+		granuleExtrema.push_back(dist.second);
 	}
-	return extrema;
+	vector<float> downFlowExtrema;
+	for (auto dist : downFlowSizes) {
+		downFlowExtrema.push_back(dist.second);
+	}
+	return make_pair(granuleExtrema, downFlowExtrema);
 }
 
 /**
@@ -414,7 +418,8 @@ int main(int argc, char *argv[]) {
 		minMaxLoc(lOuter, &min, &max);
 		imwrite(string("outer_dists") + to_string(layer) + ".png", (lOuter - min) * 255 / (max - min));
 		Mat granuleLabels = labelGranules(mat);
-		for (auto maximum : calcExtrema(lInner, croppedMat, granuleLabels, true)) {
+		auto extrema = calcExtrema(lInner, croppedMat, granuleLabels);
+		for (auto maximum : extrema.first) {
 			output << maximum << endl;
 		}
 		//output << endl;
