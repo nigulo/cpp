@@ -470,27 +470,32 @@ int main(int argc, char *argv[]) {
 		}
 		output1.close();
 		cout << lOuter << endl;
+
+		Mat lOuterGlobal = lInner.clone();
 		ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
 		for (auto extremum : findExtrema(lOuter, granuleLabels, less<float>())) {
 			output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+			lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 2 * lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
 		}
 		output2.close();
 
+		Mat lInnerLocal = lInner.clone();
 		Mat maximaLabels = labelExtrema(croppedMat, false);
 		ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
-		Mat lInnerLocal = lInner.clone();
 		for (auto extremum : findExtrema(lInner, maximaLabels, greater<float>())) {
 			output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 			lInnerLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 2 * lInnerLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
 		}
 		output3.close();
 
-		//Mat minimaLabels = labelExtrema(croppedMat, true);
-		//ofstream output4(string("outer_local_dists") + to_string(layer) + ".txt");
-		//for (auto extremum : findExtrema(lOuter, minimaLabels, less<float>())) {
-		//	output4 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-		//}
-		//output4.close();
+		Mat lOuterLocal = lInner.clone();
+		Mat minimaLabels = labelExtrema(croppedMat, true);
+		ofstream output4(string("outer_local_dists") + to_string(layer) + ".txt");
+		for (auto extremum : findExtrema(lOuter, minimaLabels, less<float>())) {
+			output4 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+			lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 2 * lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
+		}
+		output4.close();
 
 		// Visualize distance matrices
 		double min, max;
@@ -506,11 +511,19 @@ int main(int argc, char *argv[]) {
 				if (lOuter.at<MAT_TYPE_FLOAT>(row, col) == numeric_limits<float>::max()) {
 					lOuter.at<MAT_TYPE_FLOAT>(row, col) = 0;
 				}
+				if (lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) == numeric_limits<float>::max()) {
+					lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) = 0;
+				}
+				if (lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) == numeric_limits<float>::max()) {
+					lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) = 0;
+				}
 				//cout << lOuter.at<MAT_TYPE_FLOAT>(row, col) << endl;
 			}
 		}
 		minMaxLoc(lOuter, &min, &max);
 		imwrite(string("outer_dists") + to_string(layer) + ".png", (lOuter - min) * 255 / (max - min));
+		imwrite(string("outer_global_extrema") + to_string(layer) + ".png", (lOuterGlobal - min) * 255 / (max - min));
+		imwrite(string("outer_local_extrema") + to_string(layer) + ".png", (lOuterLocal - min) * 255 / (max - min));
 
 		layer++;
 	}
