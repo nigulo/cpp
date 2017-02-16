@@ -82,7 +82,7 @@ bool inDomain(const Mat& mat, int row, int col) {
  * If true omits the measures for regions crossing the boundaries.
  * @return matrices of maximum inner and minimum outer distances
  */
-pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
+pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, bool periodic) {
 	Mat innerDists = Mat::zeros(mat.rows, mat.cols, CV_32F);
 	Mat outerDists = Mat::ones(mat.rows, mat.cols, CV_32F) * numeric_limits<float>::max();
 	for (int col = 0; col < mat.cols; col++) {
@@ -111,9 +111,11 @@ pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 				dist++;
 			} else {
 				if (!periodic || startRow > domainStart) {
-					Mat& dists = inGranule ? innerDists : outerDists;
-					for (int row1 = startRow; row1 < row; row1++) {
-						dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
+					if (inGranule || (startRow > 0 && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
+						Mat& dists = inGranule ? innerDists : outerDists;
+						for (int row1 = startRow; row1 < row; row1++) {
+							dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
+						}
 					}
 				}
 				dist = 1;
@@ -123,8 +125,10 @@ pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 		}
 		Mat& dists = inGranule ? innerDists : outerDists;
 		if (!periodic) {
-			for (int row1 = startRow; row1 < row; row1++) {
-				dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
+			if (inGranule || (startRow > 0 && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
+				for (int row1 = startRow; row1 < row; row1++) {
+					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
+				}
 			}
 		}
 	}
@@ -231,7 +235,7 @@ bool onBoundary(int row, int col, const Mat& mat) {
 }
 
 /**
- * Labels the isocontours of the distance matrix.
+ * Labels the local extrema of the distance matrix.
  */
 Mat labelExtrema(const Mat& dists, bool minimaOrMaxima) {
 	Mat extremaLabels = Mat::zeros(dists.rows, dists.cols, CV_32S);
@@ -245,7 +249,7 @@ Mat labelExtrema(const Mat& dists, bool minimaOrMaxima) {
 				if (extremaLabels.at<MAT_TYPE_INT>(row, col) == 0) {
 					auto dist = dists.at<MAT_TYPE_FLOAT>(row, col);
 					if (minimaOrMaxima) {
-						if (dist >= 2 && dist < globalExtremum) {
+						if (dist < globalExtremum) {
 							globalExtremum = dist;
 							extremumRow = row;
 							extremumCol = col;
@@ -428,15 +432,16 @@ int main(int argc, char *argv[]) {
 		Mat croppedMat = mat(cropRect);
 		Mat lInner;
 		Mat lOuter;
+		Mat granuleLabels = labelGranules(mat);
 		for (double angle = 0; angle < 360; angle += DELTA_ANGLE) {
-			Mat mat1 = mat.clone();
-			Mat matRotated = angle > 0 ? rotate(mat1, angle) : mat1;
+			Mat matRotated = angle > 0 ? rotate(mat, angle) : mat;
+			Mat granuleLabelsRotated = angle > 0 ? rotate(granuleLabels, angle) : granuleLabels;
 			#ifdef DEBUG
 				if (((int) angle) % 10 == 0) {
 					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
 				}
 			#endif
-			auto dists = calcDistances(matRotated, false);
+			auto dists = calcDistances(matRotated, granuleLabelsRotated, false);
 			auto innerDists = dists.first;
 			auto outerDists = dists.second;
 			#ifdef DEBUG
@@ -467,14 +472,10 @@ int main(int argc, char *argv[]) {
 							}
 							lOuter.at<MAT_TYPE_FLOAT>(row, col) = numeric_limits<float>::max();
 						} else {
-							if (true) {//!onBoundary(row, col, mat)) {
-								auto newDist = lNewOuter.at<MAT_TYPE_FLOAT>(row, col);
-								if (newDist < lOuter.at<MAT_TYPE_FLOAT>(row, col)) {
-									// intergranular and new distance is shorter
-									lOuter.at<MAT_TYPE_FLOAT>(row, col) = newDist;
-								}
-							} else {
-								lOuter.at<MAT_TYPE_FLOAT>(row, col) = numeric_limits<float>::max();
+							auto newDist = lNewOuter.at<MAT_TYPE_FLOAT>(row, col);
+							if (newDist < lOuter.at<MAT_TYPE_FLOAT>(row, col)) {
+								// intergranular and new distance is shorter
+								lOuter.at<MAT_TYPE_FLOAT>(row, col) = newDist;
 							}
 							lInner.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						}
@@ -482,7 +483,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
-		Mat granuleLabels = labelGranules(croppedMat);
+		granuleLabels = granuleLabels(cropRect);
 
 		Mat lInnerGlobal = lInner.clone();
 		ofstream output1(string("inner_global_dists") + to_string(layer) + ".txt");
