@@ -84,10 +84,10 @@ bool inDomain(const Mat& mat, int row, int col) {
  */
 pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 	Mat innerDists = Mat::zeros(mat.rows, mat.cols, CV_32F);
-	Mat outerDists = Mat::zeros(mat.rows, mat.cols, CV_32F);
+	Mat outerDists = Mat::ones(mat.rows, mat.cols, CV_32F) * numeric_limits<float>::max();
 	for (int col = 0; col < mat.cols; col++) {
 		bool inGranule = mat.at<MAT_TYPE_FLOAT>(0, col) == IN_GRANULE;
-		float dist = 0;
+		float dist = 1;
 		int domainStart = mat.rows;
 		int startRow = 0;
 		int row;
@@ -105,7 +105,7 @@ pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 				domainStart = row;
 				startRow = row;
 				inGranule = mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE;
-				//continue;
+				continue;
 			}
 			if ((mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) == inGranule) {
 				dist++;
@@ -116,7 +116,7 @@ pair<Mat, Mat> calcDistances(const Mat& mat, bool periodic) {
 						dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 					}
 				}
-				dist = 0;
+				dist = 1;
 				startRow = row;
 				inGranule = !inGranule;
 			}
@@ -212,6 +212,24 @@ Mat labelGranules(const Mat& mat) {
 	return granuleLabels;
 }
 
+bool onBoundary(int row, int col, const Mat& mat) {
+	if (row == 0 || row == mat.rows - 1 || col == 0 || col == mat.cols - 1) {
+		return true;
+	}
+	auto value = mat.at<MAT_TYPE_FLOAT>(row, col);
+	for (int i : {-1, 0, 1}) {
+		for (int j : {-1, 0, 1}) {
+			if (i == 0 && j == 0) {
+				continue;
+			}
+			if (mat.at<MAT_TYPE_FLOAT>(row + i, col + j) != value) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 /**
  * Labels the isocontours of the distance matrix.
  */
@@ -227,7 +245,7 @@ Mat labelExtrema(const Mat& dists, bool minimaOrMaxima) {
 				if (extremaLabels.at<MAT_TYPE_INT>(row, col) == 0) {
 					auto dist = dists.at<MAT_TYPE_FLOAT>(row, col);
 					if (minimaOrMaxima) {
-						if (dist < globalExtremum) {
+						if (dist >= 2 && dist < globalExtremum) {
 							globalExtremum = dist;
 							extremumRow = row;
 							extremumCol = col;
@@ -439,22 +457,26 @@ int main(int argc, char *argv[]) {
 				lInner = lNewInner;
 				lOuter = lNewOuter;
 			} else {
-				for (int i = 0; i < lNewInner.rows; i++) {
-					for (int j = 0; j < lNewInner.cols; j++) {
-						if (croppedMat.at<MAT_TYPE_FLOAT>(i, j) == IN_GRANULE) {
-							auto newDist = lNewInner.at<MAT_TYPE_FLOAT>(i, j);
-							if (newDist > lInner.at<MAT_TYPE_FLOAT>(i, j)) {
+				for (int row = 0; row < lNewInner.rows; row++) {
+					for (int col = 0; col < lNewInner.cols; col++) {
+						if (croppedMat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) {
+							auto newDist = lNewInner.at<MAT_TYPE_FLOAT>(row, col);
+							if (newDist > lInner.at<MAT_TYPE_FLOAT>(row, col)) {
 								// in granule and new distance is longer
-								lInner.at<MAT_TYPE_FLOAT>(i, j) = newDist;
+								lInner.at<MAT_TYPE_FLOAT>(row, col) = newDist;
 							}
-							lOuter.at<MAT_TYPE_FLOAT>(i, j) = numeric_limits<float>::max();
+							lOuter.at<MAT_TYPE_FLOAT>(row, col) = numeric_limits<float>::max();
 						} else {
-							auto newDist = lNewOuter.at<MAT_TYPE_FLOAT>(i, j);
-							if (newDist < lOuter.at<MAT_TYPE_FLOAT>(i, j)) {
-								// intergranular and new distance is shorter
-								lOuter.at<MAT_TYPE_FLOAT>(i, j) = newDist;
+							if (true) {//!onBoundary(row, col, mat)) {
+								auto newDist = lNewOuter.at<MAT_TYPE_FLOAT>(row, col);
+								if (newDist < lOuter.at<MAT_TYPE_FLOAT>(row, col)) {
+									// intergranular and new distance is shorter
+									lOuter.at<MAT_TYPE_FLOAT>(row, col) = newDist;
+								}
+							} else {
+								lOuter.at<MAT_TYPE_FLOAT>(row, col) = numeric_limits<float>::max();
 							}
-							lInner.at<MAT_TYPE_FLOAT>(i, j) = 0;
+							lInner.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						}
 					}
 				}
@@ -469,18 +491,22 @@ int main(int argc, char *argv[]) {
 			lInnerGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 2 * lInnerGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
 		}
 		output1.close();
-		cout << lOuter << endl;
+		//cout << lOuter << endl;
 
-		Mat lOuterGlobal = lInner.clone();
+		Mat lOuterGlobal = lOuter.clone();
 		ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
 		for (auto extremum : findExtrema(lOuter, granuleLabels, less<float>())) {
-			output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-			lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 2 * lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
+			if (get<0>(extremum) != numeric_limits<float>::max()) {
+				output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+			}
+			//if (lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) != numeric_limits<float>::max()) {
+				lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 20 * lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
+			//}
 		}
 		output2.close();
 
 		Mat lInnerLocal = lInner.clone();
-		Mat maximaLabels = labelExtrema(croppedMat, false);
+		Mat maximaLabels = labelExtrema(lInner, false);
 		ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
 		for (auto extremum : findExtrema(lInner, maximaLabels, greater<float>())) {
 			output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
@@ -488,12 +514,14 @@ int main(int argc, char *argv[]) {
 		}
 		output3.close();
 
-		Mat lOuterLocal = lInner.clone();
-		Mat minimaLabels = labelExtrema(croppedMat, true);
+		Mat lOuterLocal = lOuter.clone();
+		Mat minimaLabels = labelExtrema(lOuter, true);
 		ofstream output4(string("outer_local_dists") + to_string(layer) + ".txt");
 		for (auto extremum : findExtrema(lOuter, minimaLabels, less<float>())) {
 			output4 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-			lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 2 * lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
+			//if (lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) != numeric_limits<float>::max()) {
+				lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 10 * lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
+			//}
 		}
 		output4.close();
 
