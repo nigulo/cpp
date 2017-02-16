@@ -111,7 +111,7 @@ pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, bool peri
 				dist++;
 			} else {
 				if (!periodic || startRow > domainStart) {
-					if (inGranule || (startRow > 0 && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
+					if (inGranule || (startRow > domainStart && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
 						Mat& dists = inGranule ? innerDists : outerDists;
 						for (int row1 = startRow; row1 < row; row1++) {
 							dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
@@ -125,7 +125,7 @@ pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, bool peri
 		}
 		Mat& dists = inGranule ? innerDists : outerDists;
 		if (!periodic) {
-			if (inGranule || (startRow > 0 && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
+			if (inGranule || (startRow > domainStart && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
 				for (int row1 = startRow; row1 < row; row1++) {
 					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 				}
