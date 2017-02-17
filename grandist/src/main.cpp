@@ -144,15 +144,15 @@ pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, set<int> 
 /**
  * Helper method for labeling the regions
  */
-pair<int, int> labelRow(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label, function<bool(float, float)> compFunc) {
-	granuleLabels.at<MAT_TYPE_INT>(row, col) = label;
+pair<int, int> labelRow(Mat& labels, const Mat& mat, const int row, const int col, const int label, function<bool(float, float)> compFunc) {
+	labels.at<MAT_TYPE_INT>(row, col) = label;
 	auto initialValue = mat.at<MAT_TYPE_FLOAT>(row, col);
 	auto value = initialValue;
 	int startCol;
 	for (startCol = col - 1; startCol >= 0; startCol--) {
 		int neighborValue = mat.at<MAT_TYPE_FLOAT>(row, startCol);
 		if (compFunc(neighborValue, value)) {
-			granuleLabels.at<MAT_TYPE_INT>(row, startCol) = label;
+			labels.at<MAT_TYPE_INT>(row, startCol) = label;
 			value = neighborValue;
 		} else {
 			break;
@@ -163,7 +163,7 @@ pair<int, int> labelRow(Mat& granuleLabels, const Mat& mat, const int row, const
 	for (endCol = col + 1; endCol < mat.cols; endCol++) {
 		int neighborValue = mat.at<MAT_TYPE_FLOAT>(row, endCol);
 		if (compFunc(neighborValue, value)) {
-			granuleLabels.at<MAT_TYPE_INT>(row, endCol) = label;
+			labels.at<MAT_TYPE_INT>(row, endCol) = label;
 			value = neighborValue;
 		} else {
 			break;
@@ -176,21 +176,21 @@ pair<int, int> labelRow(Mat& granuleLabels, const Mat& mat, const int row, const
 /**
  * Helper method for labeling the regions
  */
-void labelConnectedRegion(Mat& granuleLabels, const Mat& mat, const int row, const int col, const int label, function<bool(float, float)> compFunc) {
+void labelConnectedRegion(Mat& labels, const Mat& mat, const int row, const int col, const int label, function<bool(float, float)> compFunc) {
 	//cout << "markClosedRegion " << label << " " << row << " " << col << endl;
-	auto startEndCols = labelRow(granuleLabels, mat, row, col, label, compFunc);
+	auto startEndCols = labelRow(labels, mat, row, col, label, compFunc);
 	int startCol = startEndCols.first;
 	int endCol = startEndCols.second;
 	for (int col1 = startCol; col1 <= endCol; col1++) {
 		auto value = mat.at<MAT_TYPE_FLOAT>(row, col1);
-		if (row > 0 && granuleLabels.at<MAT_TYPE_INT>(row - 1, col1) == 0) {
+		if (row > 0 && labels.at<MAT_TYPE_INT>(row - 1, col1) == 0) {
 			if (compFunc(mat.at<MAT_TYPE_FLOAT>(row - 1, col1), value)) {
-				labelConnectedRegion(granuleLabels, mat, row - 1, col1, label, compFunc);
+				labelConnectedRegion(labels, mat, row - 1, col1, label, compFunc);
 			}
 		}
-		if (row < mat.rows - 1 && granuleLabels.at<MAT_TYPE_INT>(row + 1, col1) == 0) {
+		if (row < mat.rows - 1 && labels.at<MAT_TYPE_INT>(row + 1, col1) == 0) {
 			if (compFunc(mat.at<MAT_TYPE_FLOAT>(row + 1, col1), value)) {
-				labelConnectedRegion(granuleLabels, mat, row + 1, col1, label, compFunc);
+				labelConnectedRegion(labels, mat, row + 1, col1, label, compFunc);
 			}
 		}
 	}
@@ -469,9 +469,6 @@ int main(int argc, char *argv[]) {
 		Mat granuleLabelsFloat = labelGranules(mat);
 		granuleLabels.convertTo(granuleLabelsFloat, CV_32F);
 		auto granulesOnBoundaries = periodic ? getGranulesOnBoundaries(granuleLabels, height, width) : set<int>();
-		//for (int a : granulesOnBoundaries) {
-		//	cout << a << endl;
-		//}
 		for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 			Mat matRotated = angle > 0 ? rotate(mat, angle) : mat;
 			Mat granuleLabelsRotated = angle > 0 ? rotate(granuleLabelsFloat, angle) : granuleLabelsFloat;
@@ -531,7 +528,7 @@ int main(int argc, char *argv[]) {
 		ofstream output1(string("inner_global_dists") + to_string(layer) + ".txt");
 		auto innerGlobalExtrema = findExtrema(lInner, granuleLabels, greater<float>());
 		for (auto extremum : innerGlobalExtrema) {
-			if (croppedMat.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) == IN_GRANULE) {
+			if (get<0>(extremum) != 0) {
 				output1 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 			}
 		}
