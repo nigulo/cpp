@@ -13,6 +13,7 @@
 #include <opencv2/core/core.hpp>
 #include "utils/utils.h"
 #include "pcdl/SnapshotLoader.h"
+#include <set>
 
 using namespace std;
 using namespace boost;
@@ -85,7 +86,7 @@ bool inDomain(const Mat& mat, int row, int col) {
  * If true omits the measures for regions crossing the boundaries.
  * @return matrices of maximum inner and minimum outer distances
  */
-pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, bool periodic) {
+pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, set<int> granulesOnBoundaries, bool periodic) {
 	Mat innerDists = Mat::zeros(mat.rows, mat.cols, CV_32F);
 	Mat outerDists = Mat::ones(mat.rows, mat.cols, CV_32F) * INFTY;
 	for (int col = 0; col < mat.cols; col++) {
@@ -115,8 +116,8 @@ pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, bool peri
 			if ((mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) == inGranule) {
 				dist++;
 			} else {
-				if (!periodic || startRow > domainStart) {
-					if (inGranule || (startRow > domainStart && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
+				if (!periodic || !inGranule || granulesOnBoundaries.find((int) granuleLabels.at<MAT_TYPE_FLOAT>(startRow, col)) == granulesOnBoundaries.end()) {
+					if (inGranule || (startRow > domainStart && granuleLabels.at<MAT_TYPE_FLOAT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_FLOAT>(row, col))) {
 						Mat& dists = inGranule ? innerDists : outerDists;
 						for (int row1 = startRow; row1 < row; row1++) {
 							dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
@@ -130,7 +131,7 @@ pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, bool peri
 		}
 		Mat& dists = inGranule ? innerDists : outerDists;
 		if (!periodic) {
-			if (inGranule || (startRow > domainStart && row < domainEnd && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
+			if (inGranule || (startRow > domainStart && row < domainEnd && granuleLabels.at<MAT_TYPE_FLOAT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_FLOAT>(row, col))) {
 				for (int row1 = startRow; row1 < row; row1++) {
 					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 				}
@@ -221,23 +222,31 @@ Mat labelGranules(const Mat& mat) {
 	return granuleLabels;
 }
 
-bool onBoundary(int row, int col, const Mat& mat) {
-	if (row == 0 || row == mat.rows - 1 || col == 0 || col == mat.cols - 1) {
-		return true;
-	}
-	auto value = mat.at<MAT_TYPE_FLOAT>(row, col);
-	for (int i : {-1, 0, 1}) {
-		for (int j : {-1, 0, 1}) {
-			if (i == 0 && j == 0) {
-				continue;
-			}
-			if (mat.at<MAT_TYPE_FLOAT>(row + i, col + j) != value) {
-				return true;
-			}
+set<int /*granuleLabel*/> getGranulesOnBoundaries(const Mat& granuleLabels, int rows, int cols) {
+	set<int> granulesOnBoundaries;
+
+	int rowOffset = (granuleLabels.rows - 2 * rows) / 2;
+	int colOffset = (granuleLabels.cols - 2 * cols) / 2;
+
+	int midRow = granuleLabels.rows / 2;
+	int midCol = granuleLabels.cols / 2;
+
+	for (int row = 0; row < granuleLabels.rows; row++) {
+		if (granuleLabels.at<MAT_TYPE_INT>(row, midCol) == granuleLabels.at<MAT_TYPE_INT>(row, midCol - 1)) {
+			granulesOnBoundaries.insert(granuleLabels.at<MAT_TYPE_INT>(row, colOffset));
+			granulesOnBoundaries.insert(granuleLabels.at<MAT_TYPE_INT>(row, midCol + cols - 1));
+			//cout << granuleLabels.at<MAT_TYPE_INT>(row, 0) << endl;
 		}
 	}
-	return false;
+	for (int col = 0; col < granuleLabels.cols; col++) {
+		if (granuleLabels.at<MAT_TYPE_INT>(midRow, col) == granuleLabels.at<MAT_TYPE_INT>(midRow - 1, col)) {
+			granulesOnBoundaries.insert(granuleLabels.at<MAT_TYPE_INT>(rowOffset, col));
+			granulesOnBoundaries.insert(granuleLabels.at<MAT_TYPE_INT>(midRow + rows - 1, col));
+		}
+	}
+	return granulesOnBoundaries;
 }
+
 
 /**
  * Labels the local extrema of the distance matrix.
@@ -422,7 +431,7 @@ int main(int argc, char *argv[]) {
 
 
 	for (int i = 0; i < depth; i++) {
-		matrices[i] = Mat::zeros(rows, cols, CV_32F);//CV_8S);
+		matrices[i] = Mat::zeros(rows, cols, CV_32F);
 	}
 
 	//int tLast = -1;
@@ -457,15 +466,21 @@ int main(int argc, char *argv[]) {
 		Mat lInner;
 		Mat lOuter;
 		Mat granuleLabels = labelGranules(mat);
+		Mat granuleLabelsFloat = labelGranules(mat);
+		granuleLabels.convertTo(granuleLabelsFloat, CV_32F);
+		auto granulesOnBoundaries = periodic ? getGranulesOnBoundaries(granuleLabels, height, width) : set<int>();
+		//for (int a : granulesOnBoundaries) {
+		//	cout << a << endl;
+		//}
 		for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 			Mat matRotated = angle > 0 ? rotate(mat, angle) : mat;
-			Mat granuleLabelsRotated = angle > 0 ? rotate(granuleLabels, angle) : granuleLabels;
+			Mat granuleLabelsRotated = angle > 0 ? rotate(granuleLabelsFloat, angle) : granuleLabelsFloat;
 			#ifdef DEBUG
 				if (((int) angle) % 10 == 0) {
 					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
 				}
 			#endif
-			auto dists = calcDistances(matRotated, granuleLabelsRotated, periodic);
+			auto dists = calcDistances(matRotated, granuleLabelsRotated, granulesOnBoundaries, periodic);
 			auto innerDists = dists.first;
 			auto outerDists = dists.second;
 			#ifdef DEBUG
