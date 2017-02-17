@@ -33,6 +33,9 @@ typedef int MAT_TYPE_INT;
 #define IN_GRANULE 2 ///< The point is outside of the
 
 #define DELTA_ANGLE 1.0 ///< The angle increment used in rotations
+#define INFTY numeric_limits<float>::max()
+#define RED Vec3b(0, 0, 255)
+
 /**
  * Rotates the matrix
  * @param[in] src matrix to rotate
@@ -84,17 +87,19 @@ bool inDomain(const Mat& mat, int row, int col) {
  */
 pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, bool periodic) {
 	Mat innerDists = Mat::zeros(mat.rows, mat.cols, CV_32F);
-	Mat outerDists = Mat::ones(mat.rows, mat.cols, CV_32F) * numeric_limits<float>::max();
+	Mat outerDists = Mat::ones(mat.rows, mat.cols, CV_32F) * INFTY;
 	for (int col = 0; col < mat.cols; col++) {
 		bool inGranule = mat.at<MAT_TYPE_FLOAT>(0, col) == IN_GRANULE;
 		float dist = 1;
 		int domainStart = mat.rows;
+		int domainEnd = mat.rows;
 		int startRow = 0;
 		int row;
 		for (row = 1; row < mat.rows; row++) {
 			if (!inDomain(mat, row, col)) { // This point not in domain
 				if (inDomain(mat, row - 1, col)) { // Previous point in domain
 					// Going out of domain from bottom
+					domainEnd = row;
 					break;
 				}
 				// Still not entered the domain
@@ -125,7 +130,7 @@ pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels, bool peri
 		}
 		Mat& dists = inGranule ? innerDists : outerDists;
 		if (!periodic) {
-			if (inGranule || (startRow > domainStart && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
+			if (inGranule || (startRow > domainStart && row < domainEnd && granuleLabels.at<MAT_TYPE_INT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_INT>(row, col))) {
 				for (int row1 = startRow; row1 < row; row1++) {
 					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 				}
@@ -241,7 +246,7 @@ Mat labelExtrema(const Mat& dists, bool minimaOrMaxima) {
 	Mat extremaLabels = Mat::zeros(dists.rows, dists.cols, CV_32S);
 	int label = 1;
 	for (;;) {
-		float globalExtremum = minimaOrMaxima ? numeric_limits<float>::max() : 0;
+		float globalExtremum = minimaOrMaxima ? INFTY : 0;
 		int extremumRow = -1;
 		int extremumCol = -1;
 		for (int row = 0; row < dists.rows; row++) {
@@ -335,6 +340,25 @@ void tileMatrix(Mat& mat, int rows, int cols) {
 
 		}
 	}
+}
+
+void convertTo8Bit(Mat& mat) {
+	double min, max;
+	minMaxLoc(mat, &min, &max);
+	mat.convertTo(mat, CV_8U, 255.0 / (max - min),-min * 255.0 / (max - min));
+}
+
+Mat convertToColorAndMarkExtrema(const Mat& src, const vector<tuple<float /*value*/, int /*row*/, int /*col*/>>& extrema, float excludeValue) {
+	Mat dst;
+	cvtColor(src, dst, CV_GRAY2RGB);
+	for (auto extremum : extrema) {
+		int row = get<1>(extremum);
+		int col = get<2>(extremum);
+		if (src.at<MAT_TYPE_FLOAT>(row, col) != excludeValue) {
+			dst.at<Vec3b>(row, col) = RED;
+		}
+	}
+	return dst;
 }
 
 int main(int argc, char *argv[]) {
@@ -433,7 +457,7 @@ int main(int argc, char *argv[]) {
 		Mat lInner;
 		Mat lOuter;
 		Mat granuleLabels = labelGranules(mat);
-		for (double angle = 0; angle < 360; angle += DELTA_ANGLE) {
+		for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 			Mat matRotated = angle > 0 ? rotate(mat, angle) : mat;
 			Mat granuleLabelsRotated = angle > 0 ? rotate(granuleLabels, angle) : granuleLabels;
 			#ifdef DEBUG
@@ -470,7 +494,7 @@ int main(int argc, char *argv[]) {
 								// in granule and new distance is longer
 								lInner.at<MAT_TYPE_FLOAT>(row, col) = newDist;
 							}
-							lOuter.at<MAT_TYPE_FLOAT>(row, col) = numeric_limits<float>::max();
+							lOuter.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
 						} else {
 							auto newDist = lNewOuter.at<MAT_TYPE_FLOAT>(row, col);
 							if (newDist < lOuter.at<MAT_TYPE_FLOAT>(row, col)) {
@@ -485,74 +509,123 @@ int main(int argc, char *argv[]) {
 		}
 		granuleLabels = granuleLabels(cropRect);
 
+		//-------------------------------------------------------------------------
+		// Inner extrema
+		//-------------------------------------------------------------------------
 		Mat lInnerGlobal = lInner.clone();
 		ofstream output1(string("inner_global_dists") + to_string(layer) + ".txt");
-		for (auto extremum : findExtrema(lInner, granuleLabels, greater<float>())) {
-			output1 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-			lInnerGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 2 * lInnerGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
+		auto innerGlobalExtrema = findExtrema(lInner, granuleLabels, greater<float>());
+		for (auto extremum : innerGlobalExtrema) {
+			if (croppedMat.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) == IN_GRANULE) {
+				output1 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+			}
 		}
 		output1.close();
 		//cout << lOuter << endl;
 
+		Mat lInnerLocal = lInner.clone();
+		Mat maximaLabels = labelExtrema(lInner, false);
+		ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
+		auto innerLocalExtrema = findExtrema(lInner, maximaLabels, greater<float>());
+		for (auto extremum : innerLocalExtrema) {
+			output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+		}
+		output3.close();
+
+		// Convert to 8-bit matrices and normalize from 0 to 255
+		convertTo8Bit(lInner);
+		convertTo8Bit(lInnerGlobal);
+		convertTo8Bit(lInnerLocal);
+		//double min, max;
+		//minMaxLoc(lInner, &min, &max);
+		//lInner.convertTo(lInner, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
+		//lInnerGlobal.convertTo(lInnerGlobal, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
+		//lInnerLocal.convertTo(lInnerLocal, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
+		//lInner = (lInner - min) * 255 / (max - min);
+		//lInnerGlobal = (lInnerGlobal - min) * 255 / (max - min);
+		//lInnerLocal = (lInnerLocal - min) * 255 / (max - min);
+
+		// Convert to color image and mark positions of extrema red
+		Mat lInnerGlobalRGB = convertToColorAndMarkExtrema(lInnerGlobal, innerGlobalExtrema, 0);
+		Mat lInnerLocalRGB = convertToColorAndMarkExtrema(lInnerLocal, innerLocalExtrema, 0);
+		//cvtColor(lInnerGlobal, lInnerGlobalRGB, CV_GRAY2RGB);
+		//for (auto extremum : innerGlobalExtrema) {
+		//	int row = get<1>(extremum);
+		//	int col = get<2>(extremum);
+		//	if (croppedMat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) {
+		//		lInnerGlobalRGB.at<Vec3b>(row, col) = RED;
+		//	}
+		//}
+
+		// Visualize matrices
+		imwrite(string("inner_dists") + to_string(layer) + ".png", lInner);
+		imwrite(string("inner_global_extrema") + to_string(layer) + ".png", lInnerGlobalRGB);
+		imwrite(string("inner_local_extrema") + to_string(layer) + ".png", lInnerLocalRGB);
+
+		//-------------------------------------------------------------------------
+		// Outer extrema
+		//-------------------------------------------------------------------------
 		Mat lOuterGlobal = lOuter.clone();
 		ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
-		for (auto extremum : findExtrema(lOuter, granuleLabels, less<float>())) {
-			if (get<0>(extremum) != numeric_limits<float>::max()) {
+		auto outerGlobalExtrema = findExtrema(lOuter, granuleLabels, less<float>());
+		for (auto extremum : outerGlobalExtrema) {
+			if (get<0>(extremum) != INFTY) {
 				output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 			}
-			//if (lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) != numeric_limits<float>::max()) {
-				lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 20 * lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
+			//if (lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) != INFTY) {
+			//	lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 20 * lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
 			//}
 		}
 		output2.close();
 
-		Mat lInnerLocal = lInner.clone();
-		Mat maximaLabels = labelExtrema(lInner, false);
-		ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
-		for (auto extremum : findExtrema(lInner, maximaLabels, greater<float>())) {
-			output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-			lInnerLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 2 * lInnerLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
-		}
-		output3.close();
-
 		Mat lOuterLocal = lOuter.clone();
 		Mat minimaLabels = labelExtrema(lOuter, true);
 		ofstream output4(string("outer_local_dists") + to_string(layer) + ".txt");
-		for (auto extremum : findExtrema(lOuter, minimaLabels, less<float>())) {
+		auto outerLocalExtrema = findExtrema(lOuter, minimaLabels, less<float>());
+		for (auto extremum : outerLocalExtrema) {
 			output4 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-			//if (lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) != numeric_limits<float>::max()) {
-				lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 10 * lOuterLocal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
+			//auto row = get<1>(extremum);
+			//auto col = get<2>(extremum);
+			//if (lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) != INFTY) {
+			//	lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) = 10 * lOuterLocal.at<MAT_TYPE_FLOAT>(row, col);
 			//}
 		}
 		output4.close();
 
-		// Visualize distance matrices
-		double min, max;
-		minMaxLoc(lInner, &min, &max);
-		imwrite(string("inner_dists") + to_string(layer) + ".png", (lInner - min) * 255 / (max - min));
-
-		imwrite(string("inner_global_extrema") + to_string(layer) + ".png", (lInnerGlobal - min) * 255 / (max - min));
-		imwrite(string("inner_local_extrema") + to_string(layer) + ".png", (lInnerLocal - min) * 255 / (max - min));
-
-		// Replace occurrences of numeric_limits<float>::max() with zeros
+		// Replace occurrences of INFTY with zeros
 		for (int row = 0; row < lOuter.rows; row++) {
 			for (int col = 0; col < lOuter.cols; col++) {
-				if (lOuter.at<MAT_TYPE_FLOAT>(row, col) == numeric_limits<float>::max()) {
+				if (lOuter.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
 					lOuter.at<MAT_TYPE_FLOAT>(row, col) = 0;
 				}
-				if (lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) == numeric_limits<float>::max()) {
+				if (lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
 					lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) = 0;
 				}
-				if (lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) == numeric_limits<float>::max()) {
+				if (lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
 					lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) = 0;
 				}
-				//cout << lOuter.at<MAT_TYPE_FLOAT>(row, col) << endl;
 			}
 		}
-		minMaxLoc(lOuter, &min, &max);
-		imwrite(string("outer_dists") + to_string(layer) + ".png", (lOuter - min) * 255 / (max - min));
-		imwrite(string("outer_global_extrema") + to_string(layer) + ".png", (lOuterGlobal - min) * 255 / (max - min));
-		imwrite(string("outer_local_extrema") + to_string(layer) + ".png", (lOuterLocal - min) * 255 / (max - min));
+
+		convertTo8Bit(lOuter);
+		convertTo8Bit(lOuterGlobal);
+		convertTo8Bit(lOuterLocal);
+		Mat lOuterGlobalRGB = convertToColorAndMarkExtrema(lOuterGlobal, outerGlobalExtrema, INFTY);
+		Mat lOuterLocalRGB = convertToColorAndMarkExtrema(lOuterLocal, outerLocalExtrema, INFTY);
+
+
+		//minMaxLoc(lOuter, &min, &max);
+		//lOuter.convertTo(lOuter, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
+		//lOuterGlobal.convertTo(lOuterGlobal, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
+		//lOuterLocal.convertTo(lOuterLocal, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
+		//lOuter = (lOuter - min) * 255 / (max - min);
+		//lOuterGlobal = (lOuterGlobal - min) * 255 / (max - min);
+		//lOuterLocal = (lOuterLocal - min) * 255 / (max - min);
+
+
+		imwrite(string("outer_dists") + to_string(layer) + ".png", lOuter);
+		imwrite(string("outer_global_extrema") + to_string(layer) + ".png", lOuterGlobalRGB);
+		imwrite(string("outer_local_extrema") + to_string(layer) + ".png", lOuterLocalRGB);
 
 		layer++;
 	}
