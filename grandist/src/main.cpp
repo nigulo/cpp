@@ -354,7 +354,7 @@ Mat convertToColorAndMarkExtrema(const Mat& src, const vector<tuple<float /*valu
 	for (auto extremum : extrema) {
 		int row = get<1>(extremum);
 		int col = get<2>(extremum);
-		if (src.at<MAT_TYPE_FLOAT>(row, col) != excludeValue) {
+		if (get<0>(extremum) != excludeValue) {
 			dst.at<Vec3b>(row, col) = RED;
 		}
 	}
@@ -465,7 +465,7 @@ int main(int argc, char *argv[]) {
 					imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (matRotated - 1) * 255);
 				}
 			#endif
-			auto dists = calcDistances(matRotated, granuleLabelsRotated, false);
+			auto dists = calcDistances(matRotated, granuleLabelsRotated, periodic);
 			auto innerDists = dists.first;
 			auto outerDists = dists.second;
 			#ifdef DEBUG
