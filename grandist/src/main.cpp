@@ -525,7 +525,7 @@ int main(int argc, char *argv[]) {
 		// Inner extrema
 		//-------------------------------------------------------------------------
 		Mat lInnerGlobal = lInner.clone();
-		ofstream output1(string("inner_global_dists") + to_string(layer) + ".txt");
+		std::ofstream output1(string("inner_global_dists") + to_string(layer) + ".txt");
 		auto innerGlobalExtrema = findExtrema(lInner, granuleLabels, greater<float>());
 		for (auto extremum : innerGlobalExtrema) {
 			if (get<0>(extremum) != 0) {
@@ -537,7 +537,7 @@ int main(int argc, char *argv[]) {
 
 		Mat lInnerLocal = lInner.clone();
 		Mat maximaLabels = labelExtrema(lInner, false);
-		ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
+		std::ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
 		auto innerLocalExtrema = findExtrema(lInner, maximaLabels, greater<float>());
 		for (auto extremum : innerLocalExtrema) {
 			output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
@@ -578,7 +578,7 @@ int main(int argc, char *argv[]) {
 		// Outer extrema
 		//-------------------------------------------------------------------------
 		Mat lOuterGlobal = lOuter.clone();
-		ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
+		std::ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
 		auto outerGlobalExtrema = findExtrema(lOuter, granuleLabels, less<float>());
 		for (auto extremum : outerGlobalExtrema) {
 			if (get<0>(extremum) != INFTY) {
@@ -592,7 +592,7 @@ int main(int argc, char *argv[]) {
 
 		Mat lOuterLocal = lOuter.clone();
 		Mat minimaLabels = labelExtrema(lOuter, true);
-		ofstream output4(string("outer_local_dists") + to_string(layer) + ".txt");
+		std::ofstream output4(string("outer_local_dists") + to_string(layer) + ".txt");
 		auto outerLocalExtrema = findExtrema(lOuter, minimaLabels, less<float>());
 		for (auto extremum : outerLocalExtrema) {
 			output4 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
