@@ -19,9 +19,31 @@
 #include <functional>
 #include <fstream>
 
+/**
+ * Repeats the matrix twice in horizontal and vertical directions.
+ * Needed to correctly estimate the granule sizes on the boundaries
+ */
+Mat& tileMatrix(Mat& mat, int rows, int cols) {
+	int rowOffset = (mat.rows - 2 * rows) / 2;
+	int colOffset = (mat.cols - 2 * cols) / 2;
+
+	int midRow = mat.rows / 2;
+	int midCol = mat.cols / 2;
+
+	for (int row = 0; row < rows; row++) {
+		for (int col = 0; col < cols; col++) {
+			auto value = mat.at<MAT_TYPE_FLOAT>(midRow + row, midCol + col);
+			mat.at<MAT_TYPE_FLOAT>(rowOffset + row, colOffset + col) = value;
+			mat.at<MAT_TYPE_FLOAT>(midRow + row, colOffset + col) = value;
+			mat.at<MAT_TYPE_FLOAT>(rowOffset + row, midCol + col) = value;
+		}
+	}
+	return mat;
+}
+
 GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect) :
 		layer(layer),
-		granules(granules),
+		granules(periodic ? tileMatrix(granules, originalHeight, originalWidth) : granules),
 		originalHeight(originalHeight),
 		originalWidth(originalWidth),
 		periodic(periodic),
@@ -324,27 +346,6 @@ vector<tuple<float /*value*/, int /*row*/, int /*col*/>> findExtrema(const Mat& 
 		extrema.push_back(extremum.second);
 	}
 	return extrema;
-}
-
-/**
- * Repeats the matrix twice in horizontal and vertical directions.
- * Needed to correctly estimate the granule sizes on the boundaries
- */
-void tileMatrix(Mat& mat, int rows, int cols) {
-	int rowOffset = (mat.rows - 2 * rows) / 2;
-	int colOffset = (mat.cols - 2 * cols) / 2;
-
-	int midRow = mat.rows / 2;
-	int midCol = mat.cols / 2;
-
-	for (int row = 0; row < rows; row++) {
-		for (int col = 0; col < cols; col++) {
-			auto value = mat.at<MAT_TYPE_FLOAT>(midRow + row, midCol + col);
-			mat.at<MAT_TYPE_FLOAT>(rowOffset + row, colOffset + col) = value;
-			mat.at<MAT_TYPE_FLOAT>(midRow + row, colOffset + col) = value;
-			mat.at<MAT_TYPE_FLOAT>(rowOffset + row, midCol + col) = value;
-		}
-	}
 }
 
 void convertTo8Bit(Mat& mat) {
