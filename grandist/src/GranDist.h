@@ -31,8 +31,9 @@ public:
 	virtual ~GranDist();
 private:
 	tuple<Mat, Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
-	Mat labelRegions() const;
+	pair<Mat, set<int>> labelRegions() const;
 	set<int /*granuleLabel*/> getGranulesOnBoundaries() const;
+	bool inDownFlowBubble(const Mat& regionLabels, int row, int col) const;
 	bool onBoundary(const Mat& granuleLabels, int row, int col) const;
 private:
 	int layer;

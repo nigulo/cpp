@@ -50,14 +50,19 @@ GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidt
 		originalWidth(originalWidth),
 		periodic(periodic),
 		cropRect(cropRect),
-		regionLabels(labelRegions()) {
+		regionLabels() {
+
+	auto labels = labelRegions();
+	this->regionLabels = labels.first;
+	auto closedRegions = labels.second;
+
 
 	auto regionsOnBoundaries = getGranulesOnBoundaries();
 	for (int row = 0; row < regionLabels.rows; row++) {
 		for (int col = 0; col < regionLabels.cols; col++) {
 			if (granules.at<MAT_TYPE_FLOAT>(row, col) == DOWN_FLOW)  {
 				int label = regionLabels.at<MAT_TYPE_INT>(row, col);
-				if (regionsOnBoundaries.find(label) == regionsOnBoundaries.end()) {
+				if (closedRegions.find(label) != closedRegions.end() && regionsOnBoundaries.find(label) == regionsOnBoundaries.end()) {
 					downFlowBubbles.insert(label);
 				}
 			}
@@ -115,10 +120,10 @@ bool inDomain(const Mat& granules, int row, int col) {
 }
 
 /**
- * @return true if the given point is in the down flow bubble, true in case it's in down flow lane.
+ * @return true if the given point is in the down flow bubble, false in case it is in down flow lane.
  */
-bool inBubble(const Mat& regionLabels, int startRow, int endRow, int col) {
-	return regionLabels.at<MAT_TYPE_FLOAT>(startRow, col) == regionLabels.at<MAT_TYPE_FLOAT>(endRow, col);
+bool GranDist::inDownFlowBubble(const Mat& regionLabels, int row, int col) const {
+	return downFlowBubbles.find(regionLabels.at<MAT_TYPE_FLOAT>(row, col)) != downFlowBubbles.end();
 }
 
 /**
@@ -164,7 +169,7 @@ tuple<Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& reg
 			if ((granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW) == inGranule) {
 				dist++;
 			} else {
-				bool inDownFlowLane = inGranule ? false : inDomain(granules, startRow - 1, col) && !inBubble(regionLabels, startRow - 1, row, col);
+				bool inDownFlowLane = inGranule ? false : inDomain(granules, startRow - 1, col) && !inDownFlowBubble(regionLabels, startRow, col);
 				// In case of periodic boundary skip regions intersecting with the boundary, except for down flow lanes
 				if (!periodic || inDownFlowLane || !onBoundary(regionLabels, startRow, col)) {
 					// In case of downflow lanes don't count these regions that are on the boundaries
@@ -180,9 +185,10 @@ tuple<Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& reg
 				inGranule = !inGranule;
 			}
 		}
-		Mat& dists = inGranule ? granuleSizes : downFlowLaneWidths;
 		if (!periodic) {
-			if (inGranule || (startRow > domainStart && row < domainEnd && regionLabels.at<MAT_TYPE_FLOAT>(startRow - 1, col) != regionLabels.at<MAT_TYPE_FLOAT>(row, col))) {
+			bool inDownFlowLane = inGranule ? false : inDomain(granules, startRow - 1, col) && !inDownFlowBubble(regionLabels, startRow, col);
+			Mat& dists = inGranule ? granuleSizes : (inDownFlowLane ? downFlowLaneWidths : downFlowBubbleSizes);
+			if (!inDownFlowLane) {
 				for (int row1 = startRow; row1 < row; row1++) {
 					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 				}
@@ -196,7 +202,7 @@ tuple<Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& reg
  * Labels the closed regions. Only needed to identify the closed regions if we want to extract only
  * single extremum per region. Otherwise local extrema could be calculated from distance matrix.
  */
-Mat GranDist::labelRegions() const {
+pair<Mat, set<int>> GranDist::labelRegions() const {
 	FloodFill floodFill(granules);
 	for (int row = 0; row < granules.rows; row++) {
 		for (int col = 0; col < granules.cols; col++) {
@@ -211,7 +217,7 @@ Mat GranDist::labelRegions() const {
     //applyColorMap(granuleLabels2, img, COLORMAP_HSV);
 	//imwrite("granule_labels.png", img);
 	//////////////////////////////////////////
-	return floodFill.getLabels();
+	return make_pair(floodFill.getLabels(), floodFill.getClosedRegions());
 }
 
 set<int /*granuleLabel*/> GranDist::getGranulesOnBoundaries() const {
