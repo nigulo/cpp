@@ -14,14 +14,11 @@
 using namespace cv;
 using namespace std;
 
-// Need to use float matrices even for keeping integer values
-// because the library supports rotations only for these
-typedef float MAT_TYPE_FLOAT;
-// Integer type can be used for matrices not involved in rotations
-typedef int MAT_TYPE_INT;
-
-#define OUT_GRANULE 1 ///< The point is inside granule
-#define IN_GRANULE 2 ///< The point is outside of the
+enum RegionType {
+	OUT_OF_DOMAIN, ///< 0
+	DOWN_FLOW, 	   ///< 1
+	UP_FLOW        ///< 2
+};
 
 #define DELTA_ANGLE 1.0 ///< The angle increment used in rotations
 #define INFTY numeric_limits<float>::max()
@@ -33,9 +30,10 @@ public:
 	void process();
 	virtual ~GranDist();
 private:
-	pair<Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
-	Mat labelGranules() const;
+	tuple<Mat, Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
+	Mat labelRegions() const;
 	set<int /*granuleLabel*/> getGranulesOnBoundaries() const;
+	bool onBoundary(const Mat& granuleLabels, int row, int col) const;
 private:
 	int layer;
 	Mat granules;
@@ -43,8 +41,9 @@ private:
 	int originalWidth;
 	bool periodic;
 	Rect cropRect;
-	Mat granuleLabels;
-	set<int> granulesOnBoundaries;
+	Mat regionLabels;
+	set<int> regionsOnBoundaries;
+	set<int> downFlowBubbles;
 };
 
 #endif /* GRANDIST_H_ */

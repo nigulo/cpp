@@ -4,6 +4,7 @@
 #include "utils/utils.h"
 #include "pcdl/SnapshotLoader.h"
 #include "GranDist.h"
+#include "common.h"
 
 using namespace boost;
 using namespace boost::filesystem;
@@ -71,6 +72,7 @@ int main(int argc, char *argv[]) {
 
 
 	for (int i = 0; i < depth; i++) {
+		// Using hidden fact that RegionType.OUT_OF_DOMAIN is 0
 		matrices[i] = Mat::zeros(rows, cols, CV_32F);
 	}
 
@@ -81,9 +83,9 @@ int main(int argc, char *argv[]) {
 		assert(y < mat.rows);
 		assert(z < mat.cols);
 		if (field > 0) {
-			mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = IN_GRANULE;
+			mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = UP_FLOW;
 		} else {
-			mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = OUT_GRANULE;
+			mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = DOWN_FLOW;
 		}
 	});
 

@@ -5,7 +5,9 @@
  *      Author: olspern1
  */
 
-#include <grandist/src/GranDist.h>
+#include "GranDist.h"
+#include "common.h"
+#include "FloodFill.h"
 #include <vector>
 #include <map>
 #ifdef GPU
@@ -48,9 +50,20 @@ GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidt
 		originalWidth(originalWidth),
 		periodic(periodic),
 		cropRect(cropRect),
-		granuleLabels(labelGranules()),
-		granulesOnBoundaries(periodic ? getGranulesOnBoundaries() : set<int>()) {
+		regionLabels(labelRegions()) {
 
+	auto regionsOnBoundaries = getGranulesOnBoundaries();
+	for (int row = 0; row < regionLabels.rows; row++) {
+		for (int col = 0; col < regionLabels.cols; col++) {
+			if (granules.at<MAT_TYPE_FLOAT>(row, col) == DOWN_FLOW)  {
+				int label = regionLabels.at<MAT_TYPE_INT>(row, col);
+				if (regionsOnBoundaries.find(label) == regionsOnBoundaries.end()) {
+					downFlowBubbles.insert(label);
+				}
+			}
+		}
+	}
+	this->regionsOnBoundaries = periodic ? regionsOnBoundaries : set<int>();
 }
 
 GranDist::~GranDist() {
@@ -60,7 +73,6 @@ GranDist::~GranDist() {
  * Rotates the matrix
  * @param[in] src matrix to rotate
  * @param[in] angle angle of rotation in degrees.
- * Determines which type of interpolation is used.
  * @return the rotated matrix
  *
  */
@@ -94,22 +106,39 @@ Mat rotate(const Mat& src, double angle) {
 	return dst;
 }
 
-bool inDomain(const Mat& mat, int row, int col) {
-	return mat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE || mat.at<MAT_TYPE_FLOAT>(row, col) == OUT_GRANULE;
+/**
+ * @return true if the given point is in the domain of simulation grid,
+ * false otherwise (there are extra pixels with 0 values added to fit the rotated image fully to matrix)
+ */
+bool inDomain(const Mat& granules, int row, int col) {
+	return granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW || granules.at<MAT_TYPE_FLOAT>(row, col) == DOWN_FLOW;
 }
 
 /**
- * Calculates inter- and intragranular distances
- * @param[in] mat matrix of down/up flows
- * @param[in] periodic whether the boundaries are periodic.
- * If true omits the measures for regions crossing the boundaries.
- * @return matrices of maximum inner and minimum outer distances
+ * @return true if the given point is in the down flow bubble, true in case it's in down flow lane.
  */
-pair<Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& granuleLabels) const {
-	Mat innerDists = Mat::zeros(granules.rows, granules.cols, CV_32F);
-	Mat outerDists = Mat::ones(granules.rows, granules.cols, CV_32F) * INFTY;
+bool inBubble(const Mat& regionLabels, int startRow, int endRow, int col) {
+	return regionLabels.at<MAT_TYPE_FLOAT>(startRow, col) == regionLabels.at<MAT_TYPE_FLOAT>(endRow, col);
+}
+
+/**
+ * @return true if the given granule intersects with boundary of the simulation domain
+ */
+bool GranDist::onBoundary(const Mat& regionLabels, int row, int col) const {
+	return regionsOnBoundaries.find((int) regionLabels.at<MAT_TYPE_FLOAT>(row, col)) != regionsOnBoundaries.end();
+}
+/**
+ * Calculates inter- and intragranular distances on vertical lines
+ * @param[in] granules rotated matrix of down/up flows
+ * @param[in] granuleLabels rotated matrix of granule labels
+ * @return matrices of granule sizes, down flow widths and down flow bubble sizes
+ */
+tuple<Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& regionLabels) const {
+	Mat granuleSizes = Mat::zeros(granules.rows, granules.cols, CV_32F);
+	Mat downFlowLaneWidths = Mat::ones(granules.rows, granules.cols, CV_32F) * INFTY;
+	Mat downFlowBubbleSizes = Mat::zeros(granules.rows, granules.cols, CV_32F);
 	for (int col = 0; col < granules.cols; col++) {
-		bool inGranule = granules.at<MAT_TYPE_FLOAT>(0, col) == IN_GRANULE;
+		bool inGranule = granules.at<MAT_TYPE_FLOAT>(0, col) == UP_FLOW;
 		float dist = 1;
 		int domainStart = granules.rows;
 		int domainEnd = granules.rows;
@@ -129,105 +158,49 @@ pair<Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& granuleLa
 				// Entering domain from top
 				domainStart = row;
 				startRow = row;
-				inGranule = granules.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE;
+				inGranule = granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW;
 				continue;
 			}
-			if ((granules.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) == inGranule) {
+			if ((granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW) == inGranule) {
 				dist++;
 			} else {
-				if (!periodic || !inGranule || granulesOnBoundaries.find((int) granuleLabels.at<MAT_TYPE_FLOAT>(startRow, col)) == granulesOnBoundaries.end()) {
-					if (inGranule || (startRow > domainStart && granuleLabels.at<MAT_TYPE_FLOAT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_FLOAT>(row, col))) {
-						Mat& dists = inGranule ? innerDists : outerDists;
+				bool inDownFlowLane = inGranule ? false : inDomain(granules, startRow - 1, col) && !inBubble(regionLabels, startRow - 1, row, col);
+				// In case of periodic boundary skip regions intersecting with the boundary, except for down flow lanes
+				if (!periodic || inDownFlowLane || !onBoundary(regionLabels, startRow, col)) {
+					// In case of downflow lanes don't count these regions that are on the boundaries
+					//if (!inDownFlowLane || startRow > domainStart) {
+						Mat& dists = inGranule ? granuleSizes : (inDownFlowLane ? downFlowLaneWidths : downFlowBubbleSizes);
 						for (int row1 = startRow; row1 < row; row1++) {
 							dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 						}
-					}
+					//}
 				}
 				dist = 1;
 				startRow = row;
 				inGranule = !inGranule;
 			}
 		}
-		Mat& dists = inGranule ? innerDists : outerDists;
+		Mat& dists = inGranule ? granuleSizes : downFlowLaneWidths;
 		if (!periodic) {
-			if (inGranule || (startRow > domainStart && row < domainEnd && granuleLabels.at<MAT_TYPE_FLOAT>(startRow - 1, col) != granuleLabels.at<MAT_TYPE_FLOAT>(row, col))) {
+			if (inGranule || (startRow > domainStart && row < domainEnd && regionLabels.at<MAT_TYPE_FLOAT>(startRow - 1, col) != regionLabels.at<MAT_TYPE_FLOAT>(row, col))) {
 				for (int row1 = startRow; row1 < row; row1++) {
 					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 				}
 			}
 		}
 	}
-	return make_pair(innerDists, outerDists);
-}
-
-/**
- * Helper method for labeling the regions
- */
-pair<int, int> labelRow(Mat& labels, const Mat& mat, const int row, const int col, const int label, function<bool(float, float)> compFunc) {
-	labels.at<MAT_TYPE_INT>(row, col) = label;
-	auto initialValue = mat.at<MAT_TYPE_FLOAT>(row, col);
-	auto value = initialValue;
-	int startCol;
-	for (startCol = col - 1; startCol >= 0; startCol--) {
-		int neighborValue = mat.at<MAT_TYPE_FLOAT>(row, startCol);
-		if (compFunc(neighborValue, value)) {
-			labels.at<MAT_TYPE_INT>(row, startCol) = label;
-			value = neighborValue;
-		} else {
-			break;
-		}
-	}
-	value = initialValue;
-	int endCol;
-	for (endCol = col + 1; endCol < mat.cols; endCol++) {
-		int neighborValue = mat.at<MAT_TYPE_FLOAT>(row, endCol);
-		if (compFunc(neighborValue, value)) {
-			labels.at<MAT_TYPE_INT>(row, endCol) = label;
-			value = neighborValue;
-		} else {
-			break;
-		}
-	}
-	//cout << "markRow " << (startCol + 1) << " " << (endCol - 1) << endl;
-	return make_pair(startCol + 1, endCol - 1);
-}
-
-/**
- * Helper method for labeling the regions
- */
-void labelConnectedRegion(Mat& labels, const Mat& mat, const int row, const int col, const int label, function<bool(float, float)> compFunc) {
-	//cout << "markClosedRegion " << label << " " << row << " " << col << endl;
-	auto startEndCols = labelRow(labels, mat, row, col, label, compFunc);
-	int startCol = startEndCols.first;
-	int endCol = startEndCols.second;
-	for (int col1 = startCol; col1 <= endCol; col1++) {
-		auto value = mat.at<MAT_TYPE_FLOAT>(row, col1);
-		if (row > 0 && labels.at<MAT_TYPE_INT>(row - 1, col1) == 0) {
-			if (compFunc(mat.at<MAT_TYPE_FLOAT>(row - 1, col1), value)) {
-				labelConnectedRegion(labels, mat, row - 1, col1, label, compFunc);
-			}
-		}
-		if (row < mat.rows - 1 && labels.at<MAT_TYPE_INT>(row + 1, col1) == 0) {
-			if (compFunc(mat.at<MAT_TYPE_FLOAT>(row + 1, col1), value)) {
-				labelConnectedRegion(labels, mat, row + 1, col1, label, compFunc);
-			}
-		}
-	}
-	//cout << "markClosedRegion end " << label << " " << row << " " << col << endl;
+	return make_tuple(granuleSizes, downFlowLaneWidths, downFlowBubbleSizes);
 }
 
 /**
  * Labels the closed regions. Only needed to identify the closed regions if we want to extract only
  * single extremum per region. Otherwise local extrema could be calculated from distance matrix.
  */
-Mat GranDist::labelGranules() const {
-	Mat granuleLabels = Mat::zeros(granules.rows, granules.cols, CV_32S);
-	int label = 1;
+Mat GranDist::labelRegions() const {
+	FloodFill floodFill(granules);
 	for (int row = 0; row < granules.rows; row++) {
 		for (int col = 0; col < granules.cols; col++) {
-			if (granuleLabels.at<MAT_TYPE_INT>(row, col) == 0) {
-				labelConnectedRegion(granuleLabels, granules, row, col, label++, equal_to<float>());
-			}
+			floodFill.fill(row, col);
 		}
 	}
 	//////////////////////////////////////////
@@ -238,29 +211,29 @@ Mat GranDist::labelGranules() const {
     //applyColorMap(granuleLabels2, img, COLORMAP_HSV);
 	//imwrite("granule_labels.png", img);
 	//////////////////////////////////////////
-	return granuleLabels;
+	return floodFill.getLabels();
 }
 
 set<int /*granuleLabel*/> GranDist::getGranulesOnBoundaries() const {
 	set<int> granulesOnBoundaries;
 
-	int rowOffset = (granuleLabels.rows - 2 * originalHeight) / 2;
-	int colOffset = (granuleLabels.cols - 2 * originalWidth) / 2;
+	int rowOffset = (regionLabels.rows - 2 * originalHeight) / 2;
+	int colOffset = (regionLabels.cols - 2 * originalWidth) / 2;
 
-	int midRow = granuleLabels.rows / 2;
-	int midCol = granuleLabels.cols / 2;
+	int midRow = regionLabels.rows / 2;
+	int midCol = regionLabels.cols / 2;
 
-	for (int row = 0; row < granuleLabels.rows; row++) {
-		if (granuleLabels.at<MAT_TYPE_INT>(row, midCol) == granuleLabels.at<MAT_TYPE_INT>(row, midCol - 1)) {
-			granulesOnBoundaries.insert(granuleLabels.at<MAT_TYPE_INT>(row, colOffset));
-			granulesOnBoundaries.insert(granuleLabels.at<MAT_TYPE_INT>(row, midCol + originalWidth - 1));
+	for (int row = 0; row < regionLabels.rows; row++) {
+		if (regionLabels.at<MAT_TYPE_INT>(row, midCol) == regionLabels.at<MAT_TYPE_INT>(row, midCol - 1)) {
+			granulesOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(row, colOffset));
+			granulesOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(row, midCol + originalWidth - 1));
 			//cout << granuleLabels.at<MAT_TYPE_INT>(row, 0) << endl;
 		}
 	}
-	for (int col = 0; col < granuleLabels.cols; col++) {
-		if (granuleLabels.at<MAT_TYPE_INT>(midRow, col) == granuleLabels.at<MAT_TYPE_INT>(midRow - 1, col)) {
-			granulesOnBoundaries.insert(granuleLabels.at<MAT_TYPE_INT>(rowOffset, col));
-			granulesOnBoundaries.insert(granuleLabels.at<MAT_TYPE_INT>(midRow + originalHeight - 1, col));
+	for (int col = 0; col < regionLabels.cols; col++) {
+		if (regionLabels.at<MAT_TYPE_INT>(midRow, col) == regionLabels.at<MAT_TYPE_INT>(midRow - 1, col)) {
+			granulesOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(rowOffset, col));
+			granulesOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(midRow + originalHeight - 1, col));
 		}
 	}
 	return granulesOnBoundaries;
@@ -271,15 +244,14 @@ set<int /*granuleLabel*/> GranDist::getGranulesOnBoundaries() const {
  * Labels the local extrema of the distance matrix.
  */
 Mat labelExtrema(const Mat& dists, bool minimaOrMaxima) {
-	Mat extremaLabels = Mat::zeros(dists.rows, dists.cols, CV_32S);
-	int label = 1;
+	FloodFill floodFill(dists);
 	for (;;) {
 		float globalExtremum = minimaOrMaxima ? INFTY : 0;
 		int extremumRow = -1;
 		int extremumCol = -1;
 		for (int row = 0; row < dists.rows; row++) {
 			for (int col = 0; col < dists.cols; col++) {
-				if (extremaLabels.at<MAT_TYPE_INT>(row, col) == 0) {
+				if (floodFill.getLabels().at<MAT_TYPE_INT>(row, col) == 0) {
 					auto dist = dists.at<MAT_TYPE_FLOAT>(row, col);
 					if (minimaOrMaxima) {
 						if (dist < globalExtremum) {
@@ -302,9 +274,11 @@ Mat labelExtrema(const Mat& dists, bool minimaOrMaxima) {
 		}
 		// Label all points that are in the neighborhood of this extremum
 		if (minimaOrMaxima) {
-			labelConnectedRegion(extremaLabels, dists, extremumRow, extremumCol, label++, greater_equal<float>());
+			floodFill.setCompFunc(greater_equal<float>());
+			floodFill.fill(extremumRow, extremumCol);
 		} else {
-			labelConnectedRegion(extremaLabels, dists, extremumRow, extremumCol, label++, less_equal<float>());
+			floodFill.setCompFunc(less_equal<float>());
+			floodFill.fill(extremumRow, extremumCol);
 		}
 	}
 	//////////////////////////////////////////
@@ -315,7 +289,7 @@ Mat labelExtrema(const Mat& dists, bool minimaOrMaxima) {
     //applyColorMap(extremaLabels2, img, COLORMAP_HSV);
 	//imwrite("extrema_labels.png", img);
 	//////////////////////////////////////////
-	return extremaLabels;
+	return floodFill.getLabels();
 }
 
 /**
@@ -372,21 +346,22 @@ void GranDist::process() {
 		tileMatrix(granules, originalHeight, originalWidth);
 	}
 	Mat croppedGranules = granules(cropRect);
-	Mat lInner;
-	Mat lOuter;
-	Mat granuleLabelsFloat;
-	granuleLabels.convertTo(granuleLabelsFloat, CV_32F);
+	Mat granuleSizes;
+	Mat downFlowLaneWidths;
+	Mat downFlowBubbleSizes;
+	Mat regionLabelsFloat;
+	regionLabels.convertTo(regionLabelsFloat, CV_32F);
 	for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
-		Mat granuleLabelsRotated = angle > 0 ? rotate(granuleLabelsFloat, angle) : granuleLabelsFloat;
+		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;
 		#ifdef DEBUG
 			if (((int) angle) % 10 == 0) {
 				imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (granulesRotated - 1) * 255);
 			}
 		#endif
-		auto dists = calcDistances(granulesRotated, granuleLabelsRotated);
-		auto innerDists = dists.first;
-		auto outerDists = dists.second;
+		auto dists = calcDistances(granulesRotated, regionLabelsRotated);
+		auto innerDists = get<0>(dists);
+		auto outerDists = get<1>(dists);
 		#ifdef DEBUG
 			if (((int) angle) % 10 == 0) {
 				double min1, max1;
@@ -402,38 +377,38 @@ void GranDist::process() {
 		Mat lNewOuter = outerDists(cropRect);
 		if (angle == 0) {
 			// First time
-			lInner = lNewInner;
-			lOuter = lNewOuter;
+			granuleSizes = lNewInner;
+			downFlowLaneWidths = lNewOuter;
 		} else {
 			for (int row = 0; row < lNewInner.rows; row++) {
 				for (int col = 0; col < lNewInner.cols; col++) {
-					if (croppedGranules.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) {
+					if (croppedGranules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW) {
 						auto newDist = lNewInner.at<MAT_TYPE_FLOAT>(row, col);
-						if (newDist > lInner.at<MAT_TYPE_FLOAT>(row, col)) {
+						if (newDist > granuleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
 							// in granule and new distance is longer
-							lInner.at<MAT_TYPE_FLOAT>(row, col) = newDist;
+							granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = newDist;
 						}
-						lOuter.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
+						downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
 					} else {
 						auto newDist = lNewOuter.at<MAT_TYPE_FLOAT>(row, col);
-						if (newDist < lOuter.at<MAT_TYPE_FLOAT>(row, col)) {
+						if (newDist < downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col)) {
 							// intergranular and new distance is shorter
-							lOuter.at<MAT_TYPE_FLOAT>(row, col) = newDist;
+							downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = newDist;
 						}
-						lInner.at<MAT_TYPE_FLOAT>(row, col) = 0;
+						granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					}
 				}
 			}
 		}
 	}
-	granuleLabels = granuleLabels(cropRect);
+	regionLabels = regionLabels(cropRect);
 
 	//-------------------------------------------------------------------------
 	// Inner extrema
 	//-------------------------------------------------------------------------
-	Mat lInnerGlobal = lInner.clone();
+	Mat lInnerGlobal = granuleSizes.clone();
 	std::ofstream output1(string("inner_global_dists") + to_string(layer) + ".txt");
-	auto innerGlobalExtrema = findExtrema(lInner, granuleLabels, greater<float>());
+	auto innerGlobalExtrema = findExtrema(granuleSizes, regionLabels, greater<float>());
 	for (auto extremum : innerGlobalExtrema) {
 		if (get<0>(extremum) != 0) {
 			output1 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
@@ -442,17 +417,17 @@ void GranDist::process() {
 	output1.close();
 	//cout << lOuter << endl;
 
-	Mat lInnerLocal = lInner.clone();
-	Mat maximaLabels = labelExtrema(lInner, false);
+	Mat lInnerLocal = granuleSizes.clone();
+	Mat maximaLabels = labelExtrema(granuleSizes, false);
 	std::ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
-	auto innerLocalExtrema = findExtrema(lInner, maximaLabels, greater<float>());
+	auto innerLocalExtrema = findExtrema(granuleSizes, maximaLabels, greater<float>());
 	for (auto extremum : innerLocalExtrema) {
 		output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 	}
 	output3.close();
 
 	// Convert to 8-bit matrices and normalize from 0 to 255
-	convertTo8Bit(lInner);
+	convertTo8Bit(granuleSizes);
 	convertTo8Bit(lInnerGlobal);
 	convertTo8Bit(lInnerLocal);
 	//double min, max;
@@ -477,16 +452,16 @@ void GranDist::process() {
 	//}
 
 	// Visualize matrices
-	imwrite(string("inner_dists") + to_string(layer) + ".png", lInner);
+	imwrite(string("inner_dists") + to_string(layer) + ".png", granuleSizes);
 	imwrite(string("inner_global_extrema") + to_string(layer) + ".png", lInnerGlobalRGB);
 	imwrite(string("inner_local_extrema") + to_string(layer) + ".png", lInnerLocalRGB);
 
 	//-------------------------------------------------------------------------
 	// Outer extrema
 	//-------------------------------------------------------------------------
-	Mat lOuterGlobal = lOuter.clone();
+	Mat lOuterGlobal = downFlowLaneWidths.clone();
 	std::ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
-	auto outerGlobalExtrema = findExtrema(lOuter, granuleLabels, less<float>());
+	auto outerGlobalExtrema = findExtrema(downFlowLaneWidths, regionLabels, less<float>());
 	for (auto extremum : outerGlobalExtrema) {
 		if (get<0>(extremum) != INFTY) {
 			output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
@@ -497,10 +472,10 @@ void GranDist::process() {
 	}
 	output2.close();
 
-	Mat lOuterLocal = lOuter.clone();
-	Mat minimaLabels = labelExtrema(lOuter, true);
+	Mat lOuterLocal = downFlowLaneWidths.clone();
+	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
 	std::ofstream output4(string("outer_local_dists") + to_string(layer) + ".txt");
-	auto outerLocalExtrema = findExtrema(lOuter, minimaLabels, less<float>());
+	auto outerLocalExtrema = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
 	for (auto extremum : outerLocalExtrema) {
 		output4 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 		//auto row = get<1>(extremum);
@@ -512,10 +487,10 @@ void GranDist::process() {
 	output4.close();
 
 	// Replace occurrences of INFTY with zeros
-	for (int row = 0; row < lOuter.rows; row++) {
-		for (int col = 0; col < lOuter.cols; col++) {
-			if (lOuter.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
-				lOuter.at<MAT_TYPE_FLOAT>(row, col) = 0;
+	for (int row = 0; row < downFlowLaneWidths.rows; row++) {
+		for (int col = 0; col < downFlowLaneWidths.cols; col++) {
+			if (downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
+				downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
 			if (lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
 				lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) = 0;
@@ -526,7 +501,7 @@ void GranDist::process() {
 		}
 	}
 
-	convertTo8Bit(lOuter);
+	convertTo8Bit(downFlowLaneWidths);
 	convertTo8Bit(lOuterGlobal);
 	convertTo8Bit(lOuterLocal);
 	Mat lOuterGlobalRGB = convertToColorAndMarkExtrema(lOuterGlobal, outerGlobalExtrema, INFTY);
@@ -542,7 +517,7 @@ void GranDist::process() {
 	//lOuterLocal = (lOuterLocal - min) * 255 / (max - min);
 
 
-	imwrite(string("outer_dists") + to_string(layer) + ".png", lOuter);
+	imwrite(string("outer_dists") + to_string(layer) + ".png", downFlowLaneWidths);
 	imwrite(string("outer_global_extrema") + to_string(layer) + ".png", lOuterGlobalRGB);
 	imwrite(string("outer_local_extrema") + to_string(layer) + ".png", lOuterLocalRGB);
 
