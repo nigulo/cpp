@@ -425,10 +425,10 @@ void GranDist::process() {
 	//-------------------------------------------------------------------------
 	// Granule sizes
 	//-------------------------------------------------------------------------
-	Mat lInnerGlobal = granuleSizes.clone();
-	std::ofstream output1(string("inner_global_dists") + to_string(layer) + ".txt");
-	auto innerGlobalExtrema = findExtrema(granuleSizes, regionLabels, greater<float>());
-	for (auto extremum : innerGlobalExtrema) {
+	Mat granuleSizesClone = granuleSizes.clone();
+	std::ofstream output1(string("granule_size_maxima") + to_string(layer) + ".txt");
+	auto granuleSizeMaxima = findExtrema(granuleSizes, regionLabels, greater<float>());
+	for (auto extremum : granuleSizeMaxima) {
 		if (get<0>(extremum) != 0) {
 			output1 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 		}
@@ -447,16 +447,16 @@ void GranDist::process() {
 
 	// Convert to 8-bit matrices and normalize from 0 to 255
 	convertTo8Bit(granuleSizes);
-	convertTo8Bit(lInnerGlobal);
+	convertTo8Bit(granuleSizesClone);
 	//convertTo8Bit(lInnerLocal);
 
 	// Convert to color image and mark positions of extrema red
-	Mat lInnerGlobalRGB = convertToColorAndMarkExtrema(lInnerGlobal, innerGlobalExtrema, 0);
+	Mat granuleSizeMaximaRGB = convertToColorAndMarkExtrema(granuleSizesClone, granuleSizeMaxima, 0);
 	//Mat lInnerLocalRGB = convertToColorAndMarkExtrema(lInnerLocal, innerLocalExtrema, 0);
 
 	// Visualize matrices
-	imwrite(string("inner_dists") + to_string(layer) + ".png", granuleSizes);
-	imwrite(string("inner_global_extrema") + to_string(layer) + ".png", lInnerGlobalRGB);
+	imwrite(string("granule_sizes") + to_string(layer) + ".png", granuleSizes);
+	imwrite(string("granule_size_maxima") + to_string(layer) + ".png", granuleSizeMaximaRGB);
 	//imwrite(string("inner_local_extrema") + to_string(layer) + ".png", lInnerLocalRGB);
 
 	//-------------------------------------------------------------------------
@@ -475,11 +475,11 @@ void GranDist::process() {
 	//}
 	//output2.close();
 
-	Mat downFlowLaneWidthMinima = downFlowLaneWidths.clone();
+	Mat downFlowLaneWidthsClone = downFlowLaneWidths.clone();
 	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
 	std::ofstream output4(string("dl_width_minima") + to_string(layer) + ".txt");
-	auto outerLocalExtrema = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
-	for (auto extremum : outerLocalExtrema) {
+	auto downFlowLaneWidthMinima = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
+	for (auto extremum : downFlowLaneWidthMinima) {
 		output4 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 	}
 	output4.close();
@@ -493,17 +493,17 @@ void GranDist::process() {
 			//if (lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
 			//	lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			//}
-			if (downFlowLaneWidthMinima.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
-				downFlowLaneWidthMinima.at<MAT_TYPE_FLOAT>(row, col) = 0;
+			if (downFlowLaneWidthsClone.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
+				downFlowLaneWidthsClone.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
 		}
 	}
 
 	convertTo8Bit(downFlowLaneWidths);
 	//convertTo8Bit(lOuterGlobal);
-	convertTo8Bit(downFlowLaneWidthMinima);
+	convertTo8Bit(downFlowLaneWidthsClone);
 	//Mat lOuterGlobalRGB = convertToColorAndMarkExtrema(lOuterGlobal, outerGlobalExtrema, INFTY);
-	Mat downFlowLaneWidthMinimaRGB = convertToColorAndMarkExtrema(downFlowLaneWidthMinima, outerLocalExtrema, INFTY);
+	Mat downFlowLaneWidthMinimaRGB = convertToColorAndMarkExtrema(downFlowLaneWidthsClone, downFlowLaneWidthMinima, INFTY);
 
 
 	imwrite(string("dl_widths") + to_string(layer) + ".png", downFlowLaneWidths);
