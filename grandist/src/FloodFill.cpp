@@ -28,17 +28,19 @@ void FloodFill::fillConnectedRegion(const int row, const int col) {
 	for (int col1 = startCol; col1 <= endCol; col1++) {
 		auto value = mat.at<MAT_TYPE_FLOAT>(row, col1);
 		if (row > 0 && labels.at<MAT_TYPE_INT>(row - 1, col1) == 0) {
-			if (compFunc(mat.at<MAT_TYPE_FLOAT>(row - 1, col1), value)) {
+			auto neighborValue = mat.at<MAT_TYPE_FLOAT>(row - 1, col1);
+			if (compFunc(neighborValue, value)) {
 				fillConnectedRegion(row - 1, col1);
 			} else {
-				updateClosedRegions(value);
+				updateClosedRegions(neighborValue);
 			}
 		}
 		if (row < mat.rows - 1 && labels.at<MAT_TYPE_INT>(row + 1, col1) == 0) {
-			if (compFunc(mat.at<MAT_TYPE_FLOAT>(row + 1, col1), value)) {
+			auto neighborValue = mat.at<MAT_TYPE_FLOAT>(row + 1, col1);
+			if (compFunc(neighborValue, value)) {
 				fillConnectedRegion(row + 1, col1);
 			} else {
-				updateClosedRegions(value);
+				updateClosedRegions(neighborValue);
 			}
 		}
 	}

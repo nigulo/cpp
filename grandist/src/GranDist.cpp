@@ -20,6 +20,7 @@
 #endif
 #include <functional>
 #include <fstream>
+#include <iostream>
 
 /**
  * Repeats the matrix twice in horizontal and vertical directions.
@@ -55,6 +56,9 @@ GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidt
 	auto labels = labelRegions();
 	this->regionLabels = labels.first;
 	auto closedRegions = labels.second;
+	for (auto closedRegion : closedRegions) {
+		cout << closedRegion << endl;
+	}
 
 
 	auto regionsOnBoundaries = getGranulesOnBoundaries();
