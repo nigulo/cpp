@@ -366,40 +366,53 @@ void GranDist::process() {
 			}
 		#endif
 		auto dists = calcDistances(granulesRotated, regionLabelsRotated);
-		auto innerDists = get<0>(dists);
-		auto outerDists = get<1>(dists);
+		auto verticalGranuleSizes = get<0>(dists);
+		auto verticalDownFlowLaneWidths = get<1>(dists);
+		auto verticalDownFlowBubbleSizes = get<2>(dists);
 		#ifdef DEBUG
 			if (((int) angle) % 10 == 0) {
 				double min1, max1;
-				minMaxLoc(innerDists, &min1, &max1);
-				imwrite(string("dists") + to_string(layer) + "_" + to_string((int) angle) + ".png", (innerDists - min1) * 255 / (max1 - min1));
+				minMaxLoc(verticalGranuleSizes, &min1, &max1);
+				imwrite(string("dists") + to_string(layer) + "_" + to_string((int) angle) + ".png", (verticalGranuleSizes - min1) * 255 / (max1 - min1));
 			}
 		#endif
 		if (angle > 0) {
-			innerDists = rotate(innerDists, -angle);
-			outerDists = rotate(outerDists, -angle);
+			verticalGranuleSizes = rotate(verticalGranuleSizes, -angle);
+			verticalDownFlowLaneWidths = rotate(verticalDownFlowLaneWidths, -angle);
+			verticalDownFlowBubbleSizes = rotate(verticalDownFlowBubbleSizes, -angle);
 		}
-		Mat lNewInner = innerDists(cropRect);
-		Mat lNewOuter = outerDists(cropRect);
+		Mat newGranuleSizes = verticalGranuleSizes(cropRect);
+		Mat newDownFlowLaneWidths = verticalDownFlowLaneWidths(cropRect);
+		Mat newDownFlowBubbleSizes = verticalDownFlowBubbleSizes(cropRect);
 		if (angle == 0) {
 			// First time
-			granuleSizes = lNewInner;
-			downFlowLaneWidths = lNewOuter;
+			granuleSizes = newGranuleSizes;
+			downFlowLaneWidths = newDownFlowLaneWidths;
+			downFlowBubbleSizes = newDownFlowBubbleSizes;
 		} else {
-			for (int row = 0; row < lNewInner.rows; row++) {
-				for (int col = 0; col < lNewInner.cols; col++) {
+			for (int row = 0; row < newGranuleSizes.rows; row++) {
+				for (int col = 0; col < newGranuleSizes.cols; col++) {
 					if (croppedGranules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW) {
-						auto newDist = lNewInner.at<MAT_TYPE_FLOAT>(row, col);
-						if (newDist > granuleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
-							// in granule and new distance is longer
-							granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = newDist;
+						auto newSize = newGranuleSizes.at<MAT_TYPE_FLOAT>(row, col);
+						if (newSize > granuleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
+							// in granule and new size is greater
+							granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
 						}
 						downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
 					} else {
-						auto newDist = lNewOuter.at<MAT_TYPE_FLOAT>(row, col);
-						if (newDist < downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col)) {
-							// intergranular and new distance is shorter
-							downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = newDist;
+						if (inDownFlowBubble(regionLabels, row, col)) {
+							auto newSize = newDownFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col);
+							if (newSize > downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
+								// in down flow bubble and new size is greater
+								downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
+							}
+						} else {
+							auto newWidth = newDownFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col);
+							if (newWidth < downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col)) {
+								// in downflow lane and new width is shorter
+								downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = newWidth;
+							}
+
 						}
 						granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					}
@@ -410,7 +423,7 @@ void GranDist::process() {
 	regionLabels = regionLabels(cropRect);
 
 	//-------------------------------------------------------------------------
-	// Inner extrema
+	// Granule sizes
 	//-------------------------------------------------------------------------
 	Mat lInnerGlobal = granuleSizes.clone();
 	std::ofstream output1(string("inner_global_dists") + to_string(layer) + ".txt");
@@ -423,72 +436,51 @@ void GranDist::process() {
 	output1.close();
 	//cout << lOuter << endl;
 
-	Mat lInnerLocal = granuleSizes.clone();
-	Mat maximaLabels = labelExtrema(granuleSizes, false);
-	std::ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
-	auto innerLocalExtrema = findExtrema(granuleSizes, maximaLabels, greater<float>());
-	for (auto extremum : innerLocalExtrema) {
-		output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-	}
-	output3.close();
+	//Mat lInnerLocal = granuleSizes.clone();
+	//Mat maximaLabels = labelExtrema(granuleSizes, false);
+	//std::ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
+	//auto innerLocalExtrema = findExtrema(granuleSizes, maximaLabels, greater<float>());
+	//for (auto extremum : innerLocalExtrema) {
+	//	output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+	//}
+	//output3.close();
 
 	// Convert to 8-bit matrices and normalize from 0 to 255
 	convertTo8Bit(granuleSizes);
 	convertTo8Bit(lInnerGlobal);
-	convertTo8Bit(lInnerLocal);
-	//double min, max;
-	//minMaxLoc(lInner, &min, &max);
-	//lInner.convertTo(lInner, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
-	//lInnerGlobal.convertTo(lInnerGlobal, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
-	//lInnerLocal.convertTo(lInnerLocal, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
-	//lInner = (lInner - min) * 255 / (max - min);
-	//lInnerGlobal = (lInnerGlobal - min) * 255 / (max - min);
-	//lInnerLocal = (lInnerLocal - min) * 255 / (max - min);
+	//convertTo8Bit(lInnerLocal);
 
 	// Convert to color image and mark positions of extrema red
 	Mat lInnerGlobalRGB = convertToColorAndMarkExtrema(lInnerGlobal, innerGlobalExtrema, 0);
-	Mat lInnerLocalRGB = convertToColorAndMarkExtrema(lInnerLocal, innerLocalExtrema, 0);
-	//cvtColor(lInnerGlobal, lInnerGlobalRGB, CV_GRAY2RGB);
-	//for (auto extremum : innerGlobalExtrema) {
-	//	int row = get<1>(extremum);
-	//	int col = get<2>(extremum);
-	//	if (croppedMat.at<MAT_TYPE_FLOAT>(row, col) == IN_GRANULE) {
-	//		lInnerGlobalRGB.at<Vec3b>(row, col) = RED;
-	//	}
-	//}
+	//Mat lInnerLocalRGB = convertToColorAndMarkExtrema(lInnerLocal, innerLocalExtrema, 0);
 
 	// Visualize matrices
 	imwrite(string("inner_dists") + to_string(layer) + ".png", granuleSizes);
 	imwrite(string("inner_global_extrema") + to_string(layer) + ".png", lInnerGlobalRGB);
-	imwrite(string("inner_local_extrema") + to_string(layer) + ".png", lInnerLocalRGB);
+	//imwrite(string("inner_local_extrema") + to_string(layer) + ".png", lInnerLocalRGB);
 
 	//-------------------------------------------------------------------------
-	// Outer extrema
+	// Down flow lane widths
 	//-------------------------------------------------------------------------
-	Mat lOuterGlobal = downFlowLaneWidths.clone();
-	std::ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
-	auto outerGlobalExtrema = findExtrema(downFlowLaneWidths, regionLabels, less<float>());
-	for (auto extremum : outerGlobalExtrema) {
-		if (get<0>(extremum) != INFTY) {
-			output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-		}
-		//if (lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) != INFTY) {
-		//	lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 20 * lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
-		//}
-	}
-	output2.close();
+	//Mat lOuterGlobal = downFlowLaneWidths.clone();
+	//std::ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
+	//auto outerGlobalExtrema = findExtrema(downFlowLaneWidths, regionLabels, less<float>());
+	//for (auto extremum : outerGlobalExtrema) {
+	//	if (get<0>(extremum) != INFTY) {
+	//		output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+	//	}
+	//	//if (lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) != INFTY) {
+	//	//	lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 20 * lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
+	//	//}
+	//}
+	//output2.close();
 
-	Mat lOuterLocal = downFlowLaneWidths.clone();
+	Mat downFlowLaneWidthMinima = downFlowLaneWidths.clone();
 	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
-	std::ofstream output4(string("outer_local_dists") + to_string(layer) + ".txt");
+	std::ofstream output4(string("dl_width_minima") + to_string(layer) + ".txt");
 	auto outerLocalExtrema = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
 	for (auto extremum : outerLocalExtrema) {
 		output4 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-		//auto row = get<1>(extremum);
-		//auto col = get<2>(extremum);
-		//if (lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) != INFTY) {
-		//	lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) = 10 * lOuterLocal.at<MAT_TYPE_FLOAT>(row, col);
-		//}
 	}
 	output4.close();
 
@@ -498,33 +490,24 @@ void GranDist::process() {
 			if (downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
 				downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
-			if (lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
-				lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) = 0;
-			}
-			if (lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
-				lOuterLocal.at<MAT_TYPE_FLOAT>(row, col) = 0;
+			//if (lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
+			//	lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) = 0;
+			//}
+			if (downFlowLaneWidthMinima.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
+				downFlowLaneWidthMinima.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
 		}
 	}
 
 	convertTo8Bit(downFlowLaneWidths);
-	convertTo8Bit(lOuterGlobal);
-	convertTo8Bit(lOuterLocal);
-	Mat lOuterGlobalRGB = convertToColorAndMarkExtrema(lOuterGlobal, outerGlobalExtrema, INFTY);
-	Mat lOuterLocalRGB = convertToColorAndMarkExtrema(lOuterLocal, outerLocalExtrema, INFTY);
+	//convertTo8Bit(lOuterGlobal);
+	convertTo8Bit(downFlowLaneWidthMinima);
+	//Mat lOuterGlobalRGB = convertToColorAndMarkExtrema(lOuterGlobal, outerGlobalExtrema, INFTY);
+	Mat downFlowLaneWidthMinimaRGB = convertToColorAndMarkExtrema(downFlowLaneWidthMinima, outerLocalExtrema, INFTY);
 
 
-	//minMaxLoc(lOuter, &min, &max);
-	//lOuter.convertTo(lOuter, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
-	//lOuterGlobal.convertTo(lOuterGlobal, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
-	//lOuterLocal.convertTo(lOuterLocal, CV_8U, 255.0 / (max - min),-min * 255.0/(max - min));
-	//lOuter = (lOuter - min) * 255 / (max - min);
-	//lOuterGlobal = (lOuterGlobal - min) * 255 / (max - min);
-	//lOuterLocal = (lOuterLocal - min) * 255 / (max - min);
-
-
-	imwrite(string("outer_dists") + to_string(layer) + ".png", downFlowLaneWidths);
-	imwrite(string("outer_global_extrema") + to_string(layer) + ".png", lOuterGlobalRGB);
-	imwrite(string("outer_local_extrema") + to_string(layer) + ".png", lOuterLocalRGB);
+	imwrite(string("dl_widths") + to_string(layer) + ".png", downFlowLaneWidths);
+	//imwrite(string("outer_global_extrema") + to_string(layer) + ".png", lOuterGlobalRGB);
+	imwrite(string("dl_width_minima") + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
 
 }
