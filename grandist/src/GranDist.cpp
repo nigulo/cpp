@@ -464,7 +464,7 @@ void GranDist::process() {
 	regionLabels = regionLabels(cropRect);
 
 	//-------------------------------------------------------------------------
-	// Granule sizes
+	// Output granule sizes
 	//-------------------------------------------------------------------------
 	Mat granuleSizesClone = granuleSizes.clone();
 	std::ofstream output1(string("granule_size_maxima") + to_string(layer) + ".txt");
@@ -475,55 +475,30 @@ void GranDist::process() {
 		}
 	}
 	output1.close();
-	//cout << lOuter << endl;
-
-	//Mat lInnerLocal = granuleSizes.clone();
-	//Mat maximaLabels = labelExtrema(granuleSizes, false);
-	//std::ofstream output3(string("inner_local_dists") + to_string(layer) + ".txt");
-	//auto innerLocalExtrema = findExtrema(granuleSizes, maximaLabels, greater<float>());
-	//for (auto extremum : innerLocalExtrema) {
-	//	output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-	//}
-	//output3.close();
 
 	// Convert to 8-bit matrices and normalize from 0 to 255
 	convertTo8Bit(granuleSizes);
 	convertTo8Bit(granuleSizesClone);
-	//convertTo8Bit(lInnerLocal);
 
 	// Convert to color image and mark positions of extrema red
 	Mat granuleSizeMaximaRGB = convertToColorAndMarkExtrema(granuleSizesClone, granuleSizeMaxima, 0);
-	//Mat lInnerLocalRGB = convertToColorAndMarkExtrema(lInnerLocal, innerLocalExtrema, 0);
 
 	// Visualize matrices
 	imwrite(string("granule_sizes") + to_string(layer) + ".png", granuleSizes);
 	imwrite(string("granule_size_maxima") + to_string(layer) + ".png", granuleSizeMaximaRGB);
-	//imwrite(string("inner_local_extrema") + to_string(layer) + ".png", lInnerLocalRGB);
 
 	//-------------------------------------------------------------------------
-	// Down flow lane widths
+	// Output down flow lane widths
 	//-------------------------------------------------------------------------
-	//Mat lOuterGlobal = downFlowLaneWidths.clone();
-	//std::ofstream output2(string("outer_global_dists") + to_string(layer) + ".txt");
-	//auto outerGlobalExtrema = findExtrema(downFlowLaneWidths, regionLabels, less<float>());
-	//for (auto extremum : outerGlobalExtrema) {
-	//	if (get<0>(extremum) != INFTY) {
-	//		output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-	//	}
-	//	//if (lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) != INFTY) {
-	//	//	lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum)) = 20 * lOuterGlobal.at<MAT_TYPE_FLOAT>(get<1>(extremum), get<2>(extremum));
-	//	//}
-	//}
-	//output2.close();
 
 	Mat downFlowLaneWidthsClone = downFlowLaneWidths.clone();
 	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
-	std::ofstream output4(string("dl_width_minima") + to_string(layer) + ".txt");
+	std::ofstream output2(string("dl_width_minima") + to_string(layer) + ".txt");
 	auto downFlowLaneWidthMinima = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
 	for (auto extremum : downFlowLaneWidthMinima) {
-		output4 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+		output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 	}
-	output4.close();
+	output2.close();
 
 	// Replace occurrences of INFTY with zeros
 	for (int row = 0; row < downFlowLaneWidths.rows; row++) {
@@ -531,9 +506,6 @@ void GranDist::process() {
 			if (downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
 				downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
-			//if (lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
-			//	lOuterGlobal.at<MAT_TYPE_FLOAT>(row, col) = 0;
-			//}
 			if (downFlowLaneWidthsClone.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
 				downFlowLaneWidthsClone.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
@@ -541,14 +513,35 @@ void GranDist::process() {
 	}
 
 	convertTo8Bit(downFlowLaneWidths);
-	//convertTo8Bit(lOuterGlobal);
 	convertTo8Bit(downFlowLaneWidthsClone);
-	//Mat lOuterGlobalRGB = convertToColorAndMarkExtrema(lOuterGlobal, outerGlobalExtrema, INFTY);
 	Mat downFlowLaneWidthMinimaRGB = convertToColorAndMarkExtrema(downFlowLaneWidthsClone, downFlowLaneWidthMinima, INFTY);
 
 
 	imwrite(string("dl_widths") + to_string(layer) + ".png", downFlowLaneWidths);
-	//imwrite(string("outer_global_extrema") + to_string(layer) + ".png", lOuterGlobalRGB);
 	imwrite(string("dl_width_minima") + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
+
+	//-------------------------------------------------------------------------
+	// Output down flow bubble sizes
+	//-------------------------------------------------------------------------
+	Mat downFlowBubbleSizesClone = downFlowBubbleSizes.clone();
+	std::ofstream output3(string("df_bubble_size_maxima") + to_string(layer) + ".txt");
+	auto downFlowBubbleSizeMaxima = findExtrema(downFlowBubbleSizes, regionLabels, greater<float>());
+	for (auto extremum : downFlowBubbleSizeMaxima) {
+		if (get<0>(extremum) != 0) {
+			output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+		}
+	}
+	output3.close();
+
+	// Convert to 8-bit matrices and normalize from 0 to 255
+	convertTo8Bit(downFlowBubbleSizes);
+	convertTo8Bit(downFlowBubbleSizesClone);
+
+	// Convert to color image and mark positions of extrema red
+	Mat downFlowBubbleSizeMaximaRGB = convertToColorAndMarkExtrema(downFlowBubbleSizesClone, downFlowBubbleSizeMaxima, 0);
+
+	// Visualize matrices
+	imwrite(string("df_bubble_sizes") + to_string(layer) + ".png", downFlowBubbleSizes);
+	imwrite(string("df_bubble_size_maxima") + to_string(layer) + ".png", downFlowBubbleSizeMaximaRGB);
 
 }
