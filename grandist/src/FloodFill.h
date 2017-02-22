@@ -35,6 +35,9 @@ public:
 		this->compFunc = compFunc;
 	}
 
+	int getNumRegions() const {
+		return label - 1;
+	}
 private:
 	void fillConnectedRegion(const int row, const int col);
 	pair<int, int> fillRow(const int row, const int col);

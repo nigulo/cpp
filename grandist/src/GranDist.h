@@ -10,6 +10,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <set>
+#include <memory>
 
 using namespace cv;
 using namespace std;
@@ -30,12 +31,13 @@ public:
 	void process();
 	virtual ~GranDist();
 private:
-	tuple<Mat, Mat, Mat, pair<Mat, Mat>> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
-	Mat labelRegions() const;
+	void labelRegions();
+	tuple<Mat, Mat, Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
 	set<int> getClosedRegions() const;
 	set<int /*granuleLabel*/> getGranulesOnBoundaries() const;
 	bool inDownFlowBubble(const Mat& regionLabels, int row, int col) const;
 	bool onBoundary(const Mat& granuleLabels, int row, int col) const;
+	unique_ptr<float> getDownflowLaneIndex(const Mat& regionLabels, int startRow, int endRow, int col, int domainStart, int domainEnd) const;
 private:
 	int layer;
 	Mat granules;
@@ -47,6 +49,7 @@ private:
 	set<int> regionsOnBoundaries;
 	set<int> downFlowBubbles;
 	Mat regionLabelsFloat;
+	int numRegions;
 };
 
 #endif /* GRANDIST_H_ */
