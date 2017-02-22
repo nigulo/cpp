@@ -146,7 +146,7 @@ bool inDomain(const Mat& granules, int row, int col) {
  * @return true if the given point is in the down flow bubble, false in case it is in down flow lane.
  */
 bool GranDist::inDownFlowBubble(const Mat& regionLabels, int row, int col) const {
-	return downFlowBubbles.find(regionLabels.at<MAT_TYPE_FLOAT>(row, col)) != downFlowBubbles.end();
+	return downFlowBubbles.find((int) regionLabels.at<MAT_TYPE_FLOAT>(row, col)) != downFlowBubbles.end();
 }
 
 /**
@@ -440,20 +440,22 @@ void GranDist::process() {
 							granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
 						}
 						downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
+						downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					} else {
-						if (inDownFlowBubble(regionLabels, row, col)) {
+						if (inDownFlowBubble(regionLabelsFloat, row, col)) {
 							auto newSize = newDownFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col);
 							if (newSize > downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
 								// in down flow bubble and new size is greater
 								downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
 							}
+							downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
 						} else {
 							auto newWidth = newDownFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col);
 							if (newWidth < downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col)) {
 								// in downflow lane and new width is shorter
 								downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = newWidth;
 							}
-
+							downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						}
 						granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					}
@@ -493,7 +495,7 @@ void GranDist::process() {
 
 	Mat downFlowLaneWidthsClone = downFlowLaneWidths.clone();
 	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
-	std::ofstream output2(string("dl_width_minima") + to_string(layer) + ".txt");
+	std::ofstream output2(string("df_width_minima") + to_string(layer) + ".txt");
 	auto downFlowLaneWidthMinima = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
 	for (auto extremum : downFlowLaneWidthMinima) {
 		output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
@@ -517,8 +519,8 @@ void GranDist::process() {
 	Mat downFlowLaneWidthMinimaRGB = convertToColorAndMarkExtrema(downFlowLaneWidthsClone, downFlowLaneWidthMinima, INFTY);
 
 
-	imwrite(string("dl_widths") + to_string(layer) + ".png", downFlowLaneWidths);
-	imwrite(string("dl_width_minima") + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
+	imwrite(string("df_widths") + to_string(layer) + ".png", downFlowLaneWidths);
+	imwrite(string("df_width_minima") + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
 
 	//-------------------------------------------------------------------------
 	// Output down flow bubble sizes
