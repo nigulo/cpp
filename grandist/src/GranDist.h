@@ -30,7 +30,7 @@ public:
 	void process();
 	virtual ~GranDist();
 private:
-	tuple<Mat, Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
+	tuple<Mat, Mat, Mat, pair<Mat, Mat>> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
 	Mat labelRegions() const;
 	set<int> getClosedRegions() const;
 	set<int /*granuleLabel*/> getGranulesOnBoundaries() const;
