@@ -12,7 +12,8 @@ FloodFill::FloodFill(const Mat& mat, function<bool(float, float)> compFunc) :
 		mat(mat),
 		labels(Mat::zeros(mat.rows, mat.cols, CV_32S)),
 		compFunc(compFunc),
-		label(1)
+		label(1),
+		area(0)
 {
 
 }
@@ -74,6 +75,7 @@ pair<int, int> FloodFill::fillRow(const int row, const int col) {
 			break;
 		}
 	}
+	area += endCol - startCol - 1;
 	//cout << "markRow " << (startCol + 1) << " " << (endCol - 1) << endl;
 	return make_pair(startCol + 1, endCol - 1);
 }
@@ -89,8 +91,10 @@ void FloodFill::updateClosedRegions(float neighborValue) {
 
 void FloodFill::fill(const int row, const int col) {
 	if (labels.at<MAT_TYPE_INT>(row, col) == 0) {
+		area = 0;
 		closedRegions.insert(label);
 		fillConnectedRegion(row, col);
+		regionAreas[label] = area;
 		label++;
 	}
 }

@@ -9,7 +9,6 @@
 #include "common.h"
 #include "FloodFill.h"
 #include <vector>
-#include <map>
 #ifdef GPU
 #include <opencv2/gpu/gpu.hpp>
 #endif
@@ -117,7 +116,7 @@ void GranDist::labelRegions() {
 	//////////////////////////////////////////
 	regionLabels = floodFill.getLabels();
 	numRegions = floodFill.getNumRegions();
-
+	regionAreas = floodFill.getRegionAreas();
 }
 
 /**
@@ -210,7 +209,7 @@ tuple<Mat, Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat
 	Mat downFlowLaneIndices = Mat::zeros(granules.rows, granules.cols, CV_32F);
 	for (int col = 0; col < granules.cols; col++) {
 		bool inGranule = granules.at<MAT_TYPE_FLOAT>(0, col) == UP_FLOW;
-		float dist = 1;
+		float dist = 0;
 		int domainStart = granules.rows;
 		int domainEnd = granules.rows;
 		int startRow = 0;
@@ -250,7 +249,7 @@ tuple<Mat, Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat
 						}
 					}
 				}
-				dist = 1;
+				dist = 0;
 				startRow = row;
 				inGranule = !inGranule;
 			}
@@ -504,7 +503,10 @@ void GranDist::process() {
 	auto granuleSizeMaxima = findExtrema(granuleSizes, regionLabels, greater<float>());
 	for (auto extremum : granuleSizeMaxima) {
 		if (get<0>(extremum) != 0) {
-			output1 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+			int row = get<1>(extremum);
+			int col = get<2>(extremum);
+			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
+			output1 << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
 	output1.close();
@@ -529,14 +531,13 @@ void GranDist::process() {
 	std::ofstream output2(string("df_width_minima") + to_string(layer) + ".txt");
 	auto downFlowLaneWidthMinima = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
 
-	vector<tuple<float, int, int>> erroneousMinima;
 	map<float /*down flow lane index*/, tuple<float, int, int> /*minimum*/> uniqueMinima;
 	for (auto extremum : downFlowLaneWidthMinima) {
 		auto row = get<1>(extremum);
 		auto col = get<2>(extremum);
 		auto index = downFlowLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
 		if (index == 0) {
-			erroneousMinima.push_back(extremum);
+			assert(false);
 		} else {
 			auto i = uniqueMinima.find(index);
 			if (i == uniqueMinima.end()) {
@@ -551,10 +552,6 @@ void GranDist::process() {
 
 	for (auto i : uniqueMinima) {
 		auto extremum = i.second;
-		output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-		downFlowLaneWidthMinima.push_back(extremum);
-	}
-	for (auto extremum : erroneousMinima) {
 		output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 		downFlowLaneWidthMinima.push_back(extremum);
 	}
@@ -589,7 +586,10 @@ void GranDist::process() {
 	auto downFlowBubbleSizeMaxima = findExtrema(downFlowBubbleSizes, regionLabels, greater<float>());
 	for (auto extremum : downFlowBubbleSizeMaxima) {
 		if (get<0>(extremum) != 0) {
-			output3 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+			int row = get<1>(extremum);
+			int col = get<2>(extremum);
+			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
+			output3 << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
 	output3.close();

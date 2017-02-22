@@ -38,6 +38,10 @@ public:
 	int getNumRegions() const {
 		return label - 1;
 	}
+
+	const map<int, int> getRegionAreas() {
+		return regionAreas;
+	}
 private:
 	void fillConnectedRegion(const int row, const int col);
 	pair<int, int> fillRow(const int row, const int col);
@@ -48,7 +52,9 @@ private:
 	map<int, float> neighbors;
 	set<int> closedRegions;
 	function<bool(float, float)> compFunc;
-	int label;
+	int label; // Label of the last area
+	map<int /*label*/, int> regionAreas;
+	int area; // Area of the last region filled
 };
 
 #endif /* FLOODFILL_H_ */

@@ -11,6 +11,7 @@
 #include <opencv2/core/core.hpp>
 #include <set>
 #include <memory>
+#include <map>
 
 using namespace cv;
 using namespace std;
@@ -50,6 +51,7 @@ private:
 	set<int> downFlowBubbles;
 	Mat regionLabelsFloat;
 	int numRegions;
+	map<int, int> regionAreas;
 };
 
 #endif /* GRANDIST_H_ */
