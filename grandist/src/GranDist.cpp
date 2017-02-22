@@ -155,6 +155,11 @@ bool GranDist::inDownFlowBubble(const Mat& regionLabels, int row, int col) const
 bool GranDist::onBoundary(const Mat& regionLabels, int row, int col) const {
 	return regionsOnBoundaries.find((int) regionLabels.at<MAT_TYPE_FLOAT>(row, col)) != regionsOnBoundaries.end();
 }
+
+bool endsAtDifferentGranules(const Mat& regionLabels, int startRow, int endRow, int col, int domainStart, int domainEnd) {
+	return startRow > domainStart && endRow < domainEnd && regionLabels.at<MAT_TYPE_FLOAT>(startRow - 1, col) != regionLabels.at<MAT_TYPE_FLOAT>(endRow, col);
+}
+
 /**
  * Calculates inter- and intragranular distances on vertical lines
  * @param[in] granules rotated matrix of down/up flows
@@ -196,12 +201,12 @@ tuple<Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& reg
 				// In case of periodic boundary skip regions intersecting with the boundary, except for down flow lanes
 				if (!periodic || inDownFlowLane || !onBoundary(regionLabels, startRow, col)) {
 					// In case of downflow lanes don't count these regions that are on the boundaries
-					//if (!inDownFlowLane || startRow > domainStart) {
+					if (!inDownFlowLane || endsAtDifferentGranules(regionLabels, startRow, row, col, domainStart, domainEnd)) {
 						Mat& dists = inGranule ? granuleSizes : (inDownFlowLane ? downFlowLaneWidths : downFlowBubbleSizes);
 						for (int row1 = startRow; row1 < row; row1++) {
 							dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 						}
-					//}
+					}
 				}
 				dist = 1;
 				startRow = row;
@@ -211,7 +216,7 @@ tuple<Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& reg
 		if (!periodic) {
 			bool inDownFlowLane = inGranule ? false : inDomain(granules, startRow - 1, col) && !inDownFlowBubble(regionLabels, startRow, col);
 			Mat& dists = inGranule ? granuleSizes : (inDownFlowLane ? downFlowLaneWidths : downFlowBubbleSizes);
-			if (!inDownFlowLane) {
+			if (!inDownFlowLane || endsAtDifferentGranules(regionLabels, startRow, row, col, domainStart, domainEnd)) {
 				for (int row1 = startRow; row1 < row; row1++) {
 					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
 				}
