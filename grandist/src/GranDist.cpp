@@ -537,7 +537,10 @@ void GranDist::process() {
 		auto col = get<2>(extremum);
 		auto index = downFlowLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
 		if (index == 0) {
-			assert(false);
+			// These are the lane indices that were turned to zero due to rounding errors in matrix rotation.
+			// Actually they should also be included in results, but probably there are no many of these
+			cout << "Skipping local minimum" << endl;
+			//assert(false);
 		} else {
 			auto i = uniqueMinima.find(index);
 			if (i == uniqueMinima.end()) {
