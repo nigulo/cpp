@@ -78,17 +78,17 @@ GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidt
 
 	//////////////////////////////////////////
 	//Visualize the downflow bubbles
-    //Mat regionLabelsClone = regionLabels.clone();
-	//for (int row = 0; row < regionLabels.rows; row++) {
-	//	for (int col = 0; col < regionLabels.cols; col++) {
-	//		if (downFlowBubbles.find(regionLabelsClone.at<MAT_TYPE_INT>(row, col)) == downFlowBubbles.end()) {
-	//			regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 0;
-	//		} else {
-	//			regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 1;
-	//		}
-	//	}
-	//}
-	//imwrite("df_bubbles.png", convertTo8Bit(regionLabelsClone));
+    Mat regionLabelsClone = regionLabels.clone();
+	for (int row = 0; row < regionLabels.rows; row++) {
+		for (int col = 0; col < regionLabels.cols; col++) {
+			if (downFlowBubbles.find(regionLabelsClone.at<MAT_TYPE_INT>(row, col)) == downFlowBubbles.end()) {
+				regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 0;
+			} else {
+				regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 1;
+			}
+		}
+	}
+	imwrite(string("df_bubbles") + to_string(layer) + ".png", convertTo8Bit(regionLabelsClone));
 	//////////////////////////////////////////
 
 	this->regionsOnBoundaries = periodic ? regionsOnBoundaries : set<int>();
@@ -402,7 +402,7 @@ void GranDist::process() {
 		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
 		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;
 		#ifdef DEBUG
-			if (((int) angle) % 10 == 0) {
+			if (((int) angle) == 0) {
 				imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (granulesRotated - 1) * 255);
 			}
 		#endif
@@ -411,7 +411,7 @@ void GranDist::process() {
 		auto verticalDownFlowLaneWidths = get<1>(dists);
 		auto verticalDownFlowBubbleSizes = get<2>(dists);
 		#ifdef DEBUG
-			if (((int) angle) % 10 == 0) {
+			if (((int) angle) == 0) {
 				double min1, max1;
 				minMaxLoc(verticalGranuleSizes, &min1, &max1);
 				imwrite(string("dists") + to_string(layer) + "_" + to_string((int) angle) + ".png", (verticalGranuleSizes - min1) * 255 / (max1 - min1));
@@ -442,7 +442,7 @@ void GranDist::process() {
 						downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
 						downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					} else {
-						if (inDownFlowBubble(regionLabelsFloat, row, col)) {
+						if (inDownFlowBubble(regionLabelsFloat, row + cropRect.y, col + cropRect.x)) {
 							auto newSize = newDownFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col);
 							if (newSize > downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
 								// in down flow bubble and new size is greater
