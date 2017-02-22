@@ -44,6 +44,14 @@ Mat& tileMatrix(Mat& mat, int rows, int cols) {
 	return mat;
 }
 
+Mat& convertTo8Bit(Mat& mat) {
+	double min, max;
+	minMaxLoc(mat, &min, &max);
+	mat.convertTo(mat, CV_8U, 255.0 / (max - min),-min * 255.0 / (max - min));
+	return mat;
+}
+
+
 GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect) :
 		layer(layer),
 		granules(periodic ? tileMatrix(granules, originalHeight, originalWidth) : granules),
@@ -51,15 +59,10 @@ GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidt
 		originalWidth(originalWidth),
 		periodic(periodic),
 		cropRect(cropRect),
-		regionLabels() {
+		regionLabels(labelRegions()) {
 
-	auto labels = labelRegions();
-	this->regionLabels = labels.first;
-	auto closedRegions = labels.second;
-	for (auto closedRegion : closedRegions) {
-		cout << closedRegion << endl;
-	}
-
+	regionLabels.convertTo(regionLabelsFloat, CV_32F);
+	const auto& closedRegions = getClosedRegions();
 
 	auto regionsOnBoundaries = getGranulesOnBoundaries();
 	for (int row = 0; row < regionLabels.rows; row++) {
@@ -72,6 +75,22 @@ GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidt
 			}
 		}
 	}
+
+	//////////////////////////////////////////
+	//Visualize the downflow bubbles
+    //Mat regionLabelsClone = regionLabels.clone();
+	//for (int row = 0; row < regionLabels.rows; row++) {
+	//	for (int col = 0; col < regionLabels.cols; col++) {
+	//		if (downFlowBubbles.find(regionLabelsClone.at<MAT_TYPE_INT>(row, col)) == downFlowBubbles.end()) {
+	//			regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 0;
+	//		} else {
+	//			regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 1;
+	//		}
+	//	}
+	//}
+	//imwrite("df_bubbles.png", convertTo8Bit(regionLabelsClone));
+	//////////////////////////////////////////
+
 	this->regionsOnBoundaries = periodic ? regionsOnBoundaries : set<int>();
 }
 
@@ -203,10 +222,9 @@ tuple<Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& reg
 }
 
 /**
- * Labels the closed regions. Only needed to identify the closed regions if we want to extract only
- * single extremum per region. Otherwise local extrema could be calculated from distance matrix.
+ * Labels the connected regions.
  */
-pair<Mat, set<int>> GranDist::labelRegions() const {
+Mat GranDist::labelRegions() const {
 	FloodFill floodFill(granules);
 	for (int row = 0; row < granules.rows; row++) {
 		for (int col = 0; col < granules.cols; col++) {
@@ -221,8 +239,30 @@ pair<Mat, set<int>> GranDist::labelRegions() const {
     //applyColorMap(granuleLabels2, img, COLORMAP_HSV);
 	//imwrite("granule_labels.png", img);
 	//////////////////////////////////////////
-	return make_pair(floodFill.getLabels(), floodFill.getClosedRegions());
+	return floodFill.getLabels();
 }
+
+
+set<int> GranDist::getClosedRegions() const {
+	// Need to give regionLabelsFloat instead of regionLabels to FloodFill class
+	// as it currently only supports float matrices
+	FloodFill floodFill(regionLabelsFloat);
+	for (int row = 0; row < regionLabelsFloat.rows; row++) {
+		for (int col = 0; col < regionLabelsFloat.cols; col++) {
+			floodFill.fill(row, col);
+		}
+	}
+	//////////////////////////////////////////
+	//Visualizing if the labeling makes sense
+    //Mat img;
+    //Mat granuleLabels2;
+    //granuleLabels.convertTo(granuleLabels2, CV_8UC3);
+    //applyColorMap(granuleLabels2, img, COLORMAP_HSV);
+	//imwrite("granule_labels.png", img);
+	//////////////////////////////////////////
+	return floodFill.getClosedRegions();
+}
+
 
 set<int /*granuleLabel*/> GranDist::getGranulesOnBoundaries() const {
 	set<int> granulesOnBoundaries;
@@ -332,12 +372,6 @@ vector<tuple<float /*value*/, int /*row*/, int /*col*/>> findExtrema(const Mat& 
 	return extrema;
 }
 
-void convertTo8Bit(Mat& mat) {
-	double min, max;
-	minMaxLoc(mat, &min, &max);
-	mat.convertTo(mat, CV_8U, 255.0 / (max - min),-min * 255.0 / (max - min));
-}
-
 Mat convertToColorAndMarkExtrema(const Mat& src, const vector<tuple<float /*value*/, int /*row*/, int /*col*/>>& extrema, float excludeValue) {
 	Mat dst;
 	cvtColor(src, dst, CV_GRAY2RGB);
@@ -359,8 +393,6 @@ void GranDist::process() {
 	Mat granuleSizes;
 	Mat downFlowLaneWidths;
 	Mat downFlowBubbleSizes;
-	Mat regionLabelsFloat;
-	regionLabels.convertTo(regionLabelsFloat, CV_32F);
 	for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
 		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;

@@ -31,7 +31,8 @@ public:
 	virtual ~GranDist();
 private:
 	tuple<Mat, Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
-	pair<Mat, set<int>> labelRegions() const;
+	Mat labelRegions() const;
+	set<int> getClosedRegions() const;
 	set<int /*granuleLabel*/> getGranulesOnBoundaries() const;
 	bool inDownFlowBubble(const Mat& regionLabels, int row, int col) const;
 	bool onBoundary(const Mat& granuleLabels, int row, int col) const;
@@ -45,6 +46,7 @@ private:
 	Mat regionLabels;
 	set<int> regionsOnBoundaries;
 	set<int> downFlowBubbles;
+	Mat regionLabelsFloat;
 };
 
 #endif /* GRANDIST_H_ */
