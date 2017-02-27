@@ -413,11 +413,41 @@ Mat convertToColorAndMarkExtrema(const Mat& src, const vector<tuple<float /*valu
 	return dst;
 }
 
+void GranDist::filterExtrema(vector<tuple<float /*value*/, int /*row*/, int /*col*/>>& extrema, bool byRegionLabel) const {
+	for (auto i = extrema.begin(); i != extrema.end();) {
+		bool found = false;
+		if (byRegionLabel) {
+			// The region of the extremum falls into original map
+			int label = regionLabels.at<MAT_TYPE_INT>(get<1>(*i), get<2>(*i));
+			for (int row = cropRect.y; row < granules.rows; row++) {
+				for (int col = cropRect.x; col < granules.cols; col++) {
+					if (regionLabels.at<MAT_TYPE_INT>(row, col) == label) {
+						found = true;
+						break;
+					}
+				}
+				if (found) {
+					break;
+				}
+			}
+		} else {
+			// The extremum is inside the original map
+			found = get<1>(*i) >= cropRect.y && get<2>(*i) >= cropRect.x;
+		}
+		if (!found) {
+			i = extrema.erase(i);
+		} else {
+			i++;
+		}
+
+	}
+}
+
 void GranDist::process() {
 	if (periodic) {
 		tileMatrix(granules, originalHeight, originalWidth);
 	}
-	Mat croppedGranules = granules(cropRect);
+	//Mat croppedGranules = granules(cropRect);
 	Mat granuleSizes;
 	Mat downFlowLaneWidths;
 	Mat downFlowBubbleSizes;
@@ -448,10 +478,10 @@ void GranDist::process() {
 			verticalDownFlowBubbleSizes = rotate(verticalDownFlowBubbleSizes, -angle);
 			verticalDownFlowLaneIndices = rotate(verticalDownFlowLaneIndices, -angle);
 		}
-		Mat newGranuleSizes = verticalGranuleSizes(cropRect);
-		Mat newDownFlowLaneWidths = verticalDownFlowLaneWidths(cropRect);
-		Mat newDownFlowBubbleSizes = verticalDownFlowBubbleSizes(cropRect);
-		Mat newDownFlowLaneIndices = verticalDownFlowLaneIndices(cropRect);
+		Mat newGranuleSizes = verticalGranuleSizes;//(cropRect);
+		Mat newDownFlowLaneWidths = verticalDownFlowLaneWidths;//(cropRect);
+		Mat newDownFlowBubbleSizes = verticalDownFlowBubbleSizes;//(cropRect);
+		Mat newDownFlowLaneIndices = verticalDownFlowLaneIndices;//(cropRect);
 		if (angle == 0) {
 			// First time
 			granuleSizes = newGranuleSizes;
@@ -461,7 +491,7 @@ void GranDist::process() {
 		} else {
 			for (int row = 0; row < newGranuleSizes.rows; row++) {
 				for (int col = 0; col < newGranuleSizes.cols; col++) {
-					if (croppedGranules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW) {
+					if (granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW) {
 						auto newSize = newGranuleSizes.at<MAT_TYPE_FLOAT>(row, col);
 						if (newSize > granuleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
 							// in granule and new size is greater
@@ -470,7 +500,7 @@ void GranDist::process() {
 						downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
 						downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					} else {
-						if (inDownFlowBubble(regionLabelsFloat, row + cropRect.y, col + cropRect.x)) {
+						if (inDownFlowBubble(regionLabelsFloat, row, col)) {
 							auto newSize = newDownFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col);
 							if (newSize > downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
 								// in down flow bubble and new size is greater
@@ -493,7 +523,7 @@ void GranDist::process() {
 		}
 	}
 
-	regionLabels = regionLabels(cropRect);
+	//regionLabels = regionLabels(cropRect);
 
 	//-------------------------------------------------------------------------
 	// Find and output granule size maxima
@@ -501,6 +531,7 @@ void GranDist::process() {
 	Mat granuleSizesClone = granuleSizes.clone();
 	std::ofstream output1(string("granule_size_maxima") + to_string(layer) + ".txt");
 	auto granuleSizeMaxima = findExtrema(granuleSizes, regionLabels, greater<float>());
+	filterExtrema(granuleSizeMaxima);
 	for (auto extremum : granuleSizeMaxima) {
 		if (get<0>(extremum) != 0) {
 			int row = get<1>(extremum);
@@ -530,6 +561,7 @@ void GranDist::process() {
 	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
 	std::ofstream output2(string("df_width_minima") + to_string(layer) + ".txt");
 	auto downFlowLaneWidthMinima = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
+	filterExtrema(downFlowLaneWidthMinima, false);
 
 	map<float /*down flow lane index*/, tuple<float, int, int> /*minimum*/> uniqueMinima;
 	for (auto extremum : downFlowLaneWidthMinima) {
@@ -587,6 +619,8 @@ void GranDist::process() {
 	Mat downFlowBubbleSizesClone = downFlowBubbleSizes.clone();
 	std::ofstream output3(string("df_bubble_size_maxima") + to_string(layer) + ".txt");
 	auto downFlowBubbleSizeMaxima = findExtrema(downFlowBubbleSizes, regionLabels, greater<float>());
+	filterExtrema(downFlowBubbleSizeMaxima);
+
 	for (auto extremum : downFlowBubbleSizeMaxima) {
 		if (get<0>(extremum) != 0) {
 			int row = get<1>(extremum);
