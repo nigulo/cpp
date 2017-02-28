@@ -55,7 +55,8 @@ int main(int argc, char *argv[]) {
 	auto width = dims[fstCoord];
 	auto height = dims[sndCoord];
 
-	Mat matrices[dims[verticalCoord]];
+	int numLayers = dims[verticalCoord];
+	Mat matrices[numLayers];
 	int rows = ceil(((double) height) * sqrt(2));
 	int cols = ceil(((double) width) * sqrt(2));
 
@@ -90,10 +91,10 @@ int main(int argc, char *argv[]) {
 	});
 
 	Rect cropRect(colOffset, rowOffset, width, height);
-	int layer = 0;
-	for (auto& mat : matrices) {
+	//#pragma omp parallel for
+	for (int layer = 0; layer < numLayers; layer++) {
+		auto& mat = matrices[layer];
 		if (layer < fromLayer || (layer - fromLayer) % step != 0) {
-			layer++;
 			continue;
 		}
 		if (toLayer != 0 && layer > toLayer) {
@@ -102,7 +103,6 @@ int main(int argc, char *argv[]) {
 		cout << "Processing layer " << layer << endl;
 		GranDist granDist(layer, mat, height, width, periodic, cropRect);
 		granDist.process();
-		layer++;
 	}
 
 	return 0;
