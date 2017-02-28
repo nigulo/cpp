@@ -28,7 +28,7 @@ enum RegionType {
 
 class GranDist {
 public:
-	GranDist(int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect);
+	GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect);
 	void process();
 	virtual ~GranDist();
 private:
@@ -41,6 +41,7 @@ private:
 	unique_ptr<float> getDownflowLaneIndex(const Mat& regionLabels, int startRow, int endRow, int col, int domainStart, int domainEnd) const;
 	void filterExtrema(vector<tuple<float /*value*/, int /*row*/, int /*col*/>>& extrema, bool byRegionLabel = true) const;
 private:
+	int timeMoment;
 	int layer;
 	Mat granules;
 	int originalHeight;

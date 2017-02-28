@@ -51,7 +51,8 @@ Mat& convertTo8Bit(Mat& mat) {
 }
 
 
-GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect) :
+GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect) :
+		timeMoment(timeMoment),
 		layer(layer),
 		granules(periodic ? tileMatrix(granules, originalHeight, originalWidth) : granules),
 		originalHeight(originalHeight),
@@ -87,7 +88,9 @@ GranDist::GranDist(int layer, Mat granules, int originalHeight, int originalWidt
 			}
 		}
 	}
-	imwrite(string("df_bubbles") + to_string(layer) + ".png", convertTo8Bit(regionLabelsClone));
+	#ifdef DEBUG
+		imwrite(string("df_bubbles") + to_string(timeMoment) + "_" + to_string(layer) + ".png", convertTo8Bit(regionLabelsClone));
+	#endif
 	//////////////////////////////////////////
 
 	this->regionsOnBoundaries = periodic ? regionsOnBoundaries : set<int>();
@@ -455,23 +458,23 @@ void GranDist::process() {
 	for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
 		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;
-		#ifdef DEBUG
-			if (((int) angle) == 0) {
-				imwrite(string("granules") + to_string(layer) + "_" + to_string((int) angle) + ".png", (granulesRotated - 1) * 255);
-			}
-		#endif
+		//#ifdef DEBUG
+		//	if (((int) angle) == 0) {
+		//		imwrite(string("granules") + to_string(timeMoment) + "_" + to_string(layer) + "_" + to_string((int) angle) + ".png", (granulesRotated - 1) * 255);
+		//	}
+		//#endif
 		auto dists = calcDistances(granulesRotated, regionLabelsRotated);
 		auto verticalGranuleSizes = get<0>(dists);
 		auto verticalDownFlowLaneWidths = get<1>(dists);
 		auto verticalDownFlowBubbleSizes = get<2>(dists);
 		auto verticalDownFlowLaneIndices = get<3>(dists);
-		#ifdef DEBUG
-			if (((int) angle) == 0) {
-				double min1, max1;
-				minMaxLoc(verticalGranuleSizes, &min1, &max1);
-				imwrite(string("dists") + to_string(layer) + "_" + to_string((int) angle) + ".png", (verticalGranuleSizes - min1) * 255 / (max1 - min1));
-			}
-		#endif
+		//#ifdef DEBUG
+		//	if (((int) angle) == 0) {
+		//		double min1, max1;
+		//		minMaxLoc(verticalGranuleSizes, &min1, &max1);
+		//		imwrite(string("dists") + to_string(timeMoment) + "_" + to_string(layer) + "_" + to_string((int) angle) + ".png", (verticalGranuleSizes - min1) * 255 / (max1 - min1));
+		//	}
+		//#endif
 		if (angle > 0) {
 			verticalGranuleSizes = rotate(verticalGranuleSizes, -angle);
 			verticalDownFlowLaneWidths = rotate(verticalDownFlowLaneWidths, -angle);
@@ -529,7 +532,7 @@ void GranDist::process() {
 	// Find and output granule size maxima
 	//-------------------------------------------------------------------------
 	Mat granuleSizesClone = granuleSizes.clone();
-	std::ofstream output1(string("granule_size_maxima") + to_string(layer) + ".txt");
+	std::ofstream output1(string("granule_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".txt");
 	auto granuleSizeMaxima = findExtrema(granuleSizes, regionLabels, greater<float>());
 	filterExtrema(granuleSizeMaxima);
 	for (auto extremum : granuleSizeMaxima) {
@@ -551,7 +554,9 @@ void GranDist::process() {
 
 	// Visualize matrices
 	//imwrite(string("granule_sizes") + to_string(layer) + ".png", granuleSizes);
-	imwrite(string("granule_size_maxima") + to_string(layer) + ".png", granuleSizeMaximaRGB);
+	#ifdef DEBUG
+		imwrite(string("granule_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", granuleSizeMaximaRGB);
+	#endif
 
 	//-------------------------------------------------------------------------
 	// Find and output down flow lane width minima
@@ -559,7 +564,7 @@ void GranDist::process() {
 
 	Mat downFlowLaneWidthsClone = downFlowLaneWidths.clone();
 	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
-	std::ofstream output2(string("df_width_minima") + to_string(layer) + ".txt");
+	std::ofstream output2(string("df_width_minima") + to_string(timeMoment) + "_" + to_string(layer) + ".txt");
 	auto downFlowLaneWidthMinima = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
 	filterExtrema(downFlowLaneWidthMinima, false);
 
@@ -611,13 +616,15 @@ void GranDist::process() {
 
 
 	//imwrite(string("df_widths") + to_string(layer) + ".png", downFlowLaneWidths);
-	imwrite(string("df_width_minima") + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
+	#ifdef DEBUG
+		imwrite(string("df_width_minima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
+	#endif
 
 	//-------------------------------------------------------------------------
 	// Find and output down flow bubble size maxima
 	//-------------------------------------------------------------------------
 	Mat downFlowBubbleSizesClone = downFlowBubbleSizes.clone();
-	std::ofstream output3(string("df_bubble_size_maxima") + to_string(layer) + ".txt");
+	std::ofstream output3(string("df_bubble_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".txt");
 	auto downFlowBubbleSizeMaxima = findExtrema(downFlowBubbleSizes, regionLabels, greater<float>());
 	filterExtrema(downFlowBubbleSizeMaxima);
 
@@ -640,6 +647,8 @@ void GranDist::process() {
 
 	// Visualize matrices
 	//imwrite(string("df_bubble_sizes") + to_string(layer) + ".png", downFlowBubbleSizes);
-	imwrite(string("df_bubble_size_maxima") + to_string(layer) + ".png", downFlowBubbleSizeMaximaRGB);
+	#ifdef DEBUG
+		imwrite(string("df_bubble_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", downFlowBubbleSizeMaximaRGB);
+	#endif
 
 }
