@@ -95,8 +95,8 @@ int main(int argc, char *argv[]) {
 		}
 		Utils::SetProperty(params, "timeMoment", to_string(timeMoment));
 		SnapshotLoader loader(params, [](const string& str) {
-			sendLog(str);
-			recvLog();
+			//sendLog(str);
+			//recvLog();
 		});
 		auto& dims = loader.getDimsDownSampled();
 		//auto numX = dims[0];
