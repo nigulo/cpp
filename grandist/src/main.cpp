@@ -5,6 +5,7 @@
 #include "pcdl/SnapshotLoader.h"
 #include "GranDist.h"
 #include "common.h"
+#include <list>
 
 using namespace boost;
 using namespace boost::filesystem;
@@ -60,7 +61,7 @@ int main(int argc, char *argv[]) {
 
 	directory_iterator end_itr; // default construction yields past-the-end
 	path dir(filePath);
-	vector<int> timeMoments;
+	list<int> timeMoments;
 	int timeMomentIndex = 0;
 	for (directory_iterator itr(dir); itr != end_itr; ++itr) {
 		if (!is_regular_file(itr->status())) {
@@ -86,6 +87,8 @@ int main(int argc, char *argv[]) {
 			timeMoments.push_back(-1); // Little hack
 		}
 	}
+
+	timeMoments.sort(std::greater<int>());
 
 	for (int timeMoment : timeMoments) {
 		if (timeMoment < 0) { // Little hack
