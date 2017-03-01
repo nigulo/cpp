@@ -82,10 +82,17 @@ int main(int argc, char *argv[]) {
 		}
 		if (timeMomentIndex++ % getNumProc() == getProcId()) {
 			timeMoments.push_back(timeMoment);
+		} else {
+			timeMoments.push_back(-1); // Little hack
 		}
 	}
 
 	for (int timeMoment : timeMoments) {
+		if (timeMoment < 0) { // Little hack
+			sendLog("Waiting for other processes to finish.\n");
+			recvLog();
+			continue;
+		}
 		Utils::SetProperty(params, "timeMoment", to_string(timeMoment));
 		SnapshotLoader loader(params, [](const string& str) {
 			sendLog(str);
