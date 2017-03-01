@@ -14,7 +14,7 @@ namespace pcdl {
 
 class SnapshotLoader : public DataLoader {
 public:
-	SnapshotLoader(const map<string, string>& params);
+	SnapshotLoader(const map<string, string>& params, std::function<void(const string&)> logFunc = defaultLogFunc);
 	virtual ~SnapshotLoader();
 public:
 	void load(std::function<void(int /*time*/, int /*x*/, int /*y*/, int /*z*/, double /*val*/)> f);

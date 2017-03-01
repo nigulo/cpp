@@ -89,6 +89,8 @@ public:
     static float FindFloatProperty(const map<string, string>& rProperties, const string& key, float defaultValue, bool caseSensitive = false);
     static double FindDoubleProperty(const map<string, string>& rProperties, const string& key, double defaultValue, bool caseSensitive = false);
 
+    static void SetProperty(map<string, string>& rProperties, const string& rKey, const string& rValue, bool caseSensitive=false);
+
     /**
      * @return the index of the given object or -1 if the object is
      * not found. operator== must be defined for the type T.

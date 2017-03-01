@@ -265,6 +265,19 @@ double Utils::FindDoubleProperty(const map<string, string>& rProperties, const s
 
 }
 
+void Utils::SetProperty(map<string, string>& rProperties, const string& rKey, const string& rValue, bool caseSensitive) {
+	string key(rKey);
+	if (!caseSensitive) {
+		to_upper(key);
+	}
+	if (rProperties.find(key) == rProperties.end()) {
+		rProperties.emplace(key, rValue);
+	} else {
+		rProperties[key] = rValue;
+	}
+}
+
+
 template<> vector<int> Utils::FromStringVector<>(const vector<string>& rVect) {
 	vector<int> retVal(rVect.size());
 	for (auto s : rVect) {

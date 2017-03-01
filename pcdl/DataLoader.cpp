@@ -17,7 +17,11 @@ using namespace boost;
 using namespace boost::filesystem;
 using namespace pcdl;
 
-DataLoader::DataLoader(const map<string, string>& params) : params(params) {
+void defaultLogFunc(const string& str) {
+	cout << str;
+}
+
+DataLoader::DataLoader(const map<string, string>& params, std::function<void(const string&)> logFunc) : params(params), logFunc(logFunc) {
 	string strDims = Utils::FindProperty(params, "dims", "1");
 	vector<string> dimsStr;
 	boost::split(dimsStr, strDims, boost::is_any_of(",;"), boost::token_compress_on);

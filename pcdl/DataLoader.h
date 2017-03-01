@@ -15,10 +15,12 @@
 
 using namespace std;
 
+void defaultLogFunc(const string& str);
+
 namespace pcdl {
 class DataLoader {
 public:
-	DataLoader(const map<string, string>& params);
+	DataLoader(const map<string, string>& params, std::function<void(const string&)> logFunc = defaultLogFunc);
 	virtual ~DataLoader();
 
 	const vector<int>& getDimsDownSampled() const {
@@ -27,6 +29,7 @@ public:
 
 protected:
 	map<string, string> params;
+	std::function<void(const string&)> logFunc;
 	vector<int> dims;
 	vector<int> dimsDownSampled;
 	int xIndex;

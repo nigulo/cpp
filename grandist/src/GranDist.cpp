@@ -576,7 +576,8 @@ void GranDist::process() {
 		if (index == 0) {
 			// These are the lane indices that were turned to zero due to rounding errors in matrix rotation.
 			// Actually they should also be included in results, but probably there are no many of these
-			cout << "Skipping local minimum" << endl;
+			sendLog("Skipping local minimum\n");
+			recvLog();
 			//assert(false);
 		} else {
 			auto i = uniqueMinima.find(index);

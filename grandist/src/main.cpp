@@ -5,9 +5,6 @@
 #include "pcdl/SnapshotLoader.h"
 #include "GranDist.h"
 #include "common.h"
-#ifndef _NOMPI
-#include "mpi.h"
-#endif
 
 using namespace boost;
 using namespace boost::filesystem;
@@ -15,8 +12,13 @@ using namespace utils;
 using namespace pcdl;
 
 int main(int argc, char *argv[]) {
+
+	mpiInit(argc, argv);
+
 	if (argc == 2 && string("-h") == argv[1]) {
-		cout << "Usage: ./D2 [param file] [params to overwrite]\nparam file defaults to " << "parameters.txt" << endl;
+		if (getProcId() == 0) {
+			cout << "Usage: ./D2 [param file] [params to overwrite]\nparam file defaults to " << "parameters.txt" << endl;
+		}
 		return EXIT_SUCCESS;
 	}
 	string paramFileName = argc > 1 ? argv[1] : "parameters.txt";
@@ -24,19 +26,11 @@ int main(int argc, char *argv[]) {
 	boost::replace_all(cmdLineParams, " ", "\n");
 
 	if (!exists(paramFileName)) {
-		cout << "Cannot find " << paramFileName << endl;
+		if (getProcId() == 0) {
+			cout << "Cannot find " << paramFileName << endl;
+		}
 		return EXIT_FAILURE;
 	}
-
-	#ifdef _NOMPI
-		int numProc = 1;
-		int procId = 0;
-	#else
-		MPI::Init(argc, argv);
-		int numProc = MPI::COMM_WORLD.Get_size();
-		int procId = MPI::COMM_WORLD.Get_rank();
-	#endif
-
 
 	map<string, string> paramsFromFile = Utils::ReadProperties(paramFileName);
 	map<string, string> params = Utils::ReadPropertiesFromString(cmdLineParams);
@@ -62,7 +56,7 @@ int main(int argc, char *argv[]) {
 	assert(verticalCoord >= 0 && verticalCoord <= 2);
 
 	string filePath = Utils::FindProperty(params, "filePath", "");
-	filePath += "proc0";
+	filePath += "/proc0";
 
 	directory_iterator end_itr; // default construction yields past-the-end
 	path dir(filePath);
@@ -72,7 +66,12 @@ int main(int argc, char *argv[]) {
 		if (!is_regular_file(itr->status())) {
 			continue;
 		}
-		const auto& fileName = itr->path().stem();
+		#ifdef BOOST_FILESYSTEM_VER2
+			const auto& fileName = itr->path().stem();
+		#else
+			const auto& fileName = itr->path().stem().string();
+		#endif
+
 		auto index = fileName.find("VAR");
 		if (index != 0) {
 			continue;
@@ -81,15 +80,17 @@ int main(int argc, char *argv[]) {
 		if (timeMoment < startTime || (endTime > 0 && timeMoment > endTime)) {
 			continue;
 		}
-		if (timeMomentIndex++ % numProc == procId) {
+		if (timeMomentIndex++ % getNumProc() == getProcId()) {
 			timeMoments.push_back(timeMoment);
 		}
 	}
 
 	for (int timeMoment : timeMoments) {
-		params["timeMoment"] = to_string(timeMoment);
-
-		SnapshotLoader loader(params);
+		Utils::SetProperty(params, "timeMoment", to_string(timeMoment));
+		SnapshotLoader loader(params, [](const string& str) {
+			sendLog(str);
+			recvLog();
+		});
 		auto& dims = loader.getDimsDownSampled();
 		//auto numX = dims[0];
 		//auto numY = dims[1];
@@ -142,12 +143,18 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			if (toLayer == 0 || layer <= toLayer) {
-				cout << "Processing layer " << layer << endl;
+				#pragma omp critical
+				{
+					sendLog("Processing layer " + to_string(layer) + "\n");
+					recvLog();
+				}
 				GranDist granDist(timeMoment, layer, mat, height, width, periodic, cropRect);
 				granDist.process();
 			}
 		}
 	}
 
-	return 0;
+	mpiFinalize();
+
+	return EXIT_SUCCESS;
 }

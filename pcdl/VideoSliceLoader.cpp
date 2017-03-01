@@ -16,7 +16,7 @@ using namespace boost;
 using namespace boost::filesystem;
 using namespace pcdl;
 
-VideoSliceLoader::VideoSliceLoader(const map<string, string>& params) : DataLoader(params) {
+VideoSliceLoader::VideoSliceLoader(const map<string, string>& params, std::function<void(const string&)> logFunc) : DataLoader(params, logFunc) {
 }
 
 VideoSliceLoader::~VideoSliceLoader() {
@@ -29,7 +29,7 @@ void VideoSliceLoader::load(std::function<void(int /*y*/, int /*z*/, double /*va
 	int endTime = Utils::FindIntProperty(params, "endTime", -1);
 
 	string dataFile = filePath;
-	cout << "Reading: " << dataFile << endl;
+	logFunc("Reading: " + dataFile + "\n");
 	assert(exists(dataFile));
 	BinaryDataLoader dl(dataFile, bufferSize, dims, regions, 1 /*totalNumVars*/, varIndices, TYPE_VIDEO, prec);
 	int timeOffset = 0;
@@ -43,9 +43,8 @@ void VideoSliceLoader::load(std::function<void(int /*y*/, int /*z*/, double /*va
 				break;
 			}
 			const auto timeIndex = t + timeOffset;
-			cout.flush();
 			double time = dl.GetX(t);
-			cout << "Reading time moment " << timeIndex << "(" << time << ")...";
+			logFunc("Reading time moment " + to_string(timeIndex) + " (" + to_string(time) + ")\n");
 			auto values = dl.GetY(t);
 			for (int i = 0; i < dl.GetDim(); i++) {
 				auto i1 = i;

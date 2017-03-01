@@ -16,7 +16,7 @@ using namespace boost;
 using namespace boost::filesystem;
 using namespace pcdl;
 
-SnapshotLoader::SnapshotLoader(const map<string, string>& params) : DataLoader(params) {
+SnapshotLoader::SnapshotLoader(const map<string, string>& params, std::function<void(const string&)> logFunc) : DataLoader(params, logFunc) {
 	assert(dims.size() == 3);
 	assert(xIndex == 0);
 	assert(yIndex == 1);
@@ -81,7 +81,7 @@ void SnapshotLoader::load(std::function<void(int /*time*/, int /*x*/, int /*y*/,
 			filePath += "/";
 		}
 		string dataFile = filePath + "proc" + to_string(procId) + "/VAR" + to_string(timeMoment);
-		cout << "Reading: " << dataFile << endl;
+		logFunc("Reading: " + dataFile + "\n");
 		assert(exists(dataFile));
 		BinaryDataLoader dl(dataFile, bufferSize, dimsPerProc, regions, totalNumVars, varIndices, TYPE_SNAPSHOT, prec);
 		//cout << "procId:" << procId << endl;

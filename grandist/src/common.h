@@ -8,6 +8,8 @@
 #ifndef COMMON_H_
 #define COMMON_H_
 
+#include "utils/mpiutils.h"
+
 
 // Need to use float matrices even for keeping integer values
 // because the library supports rotations only for these
