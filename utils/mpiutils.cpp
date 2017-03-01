@@ -36,7 +36,12 @@ void mpiFinalize() {
 #ifdef _MPI
 	MPI::Finalize();
 #endif
+}
 
+void mpiBarrier() {
+#ifdef _MPI
+	MPI::COMM_WORLD.Barrier();
+#endif
 }
 
 int getProcId() {

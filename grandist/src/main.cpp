@@ -143,17 +143,15 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			if (toLayer == 0 || layer <= toLayer) {
-				#pragma omp critical
-				{
-					sendLog("Processing layer " + to_string(layer) + "\n");
-					recvLog();
-				}
 				GranDist granDist(timeMoment, layer, mat, height, width, periodic, cropRect);
 				granDist.process();
 			}
 		}
+		sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
+		recvLog();
 	}
 
+	mpiBarrier();
 	mpiFinalize();
 
 	return EXIT_SUCCESS;

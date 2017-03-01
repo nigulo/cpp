@@ -14,6 +14,7 @@ using namespace std;
 
 void mpiInit(int argc, char *argv[], int tagLogLen = 1, int tagLog = 2);
 void mpiFinalize();
+void mpiBarrier();
 
 int getProcId();
 int getNumProc();
