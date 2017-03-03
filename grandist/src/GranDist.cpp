@@ -532,7 +532,7 @@ void GranDist::process() {
 	// Find and output granule size maxima
 	//-------------------------------------------------------------------------
 	Mat granuleSizesClone = granuleSizes.clone();
-	std::ofstream output1(string("granule_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".txt");
+	std::ofstream output1(string("granule_size_maxima_") + to_string(layer) + ".txt", ios_base::app);
 	auto granuleSizeMaxima = findExtrema(granuleSizes, regionLabels, greater<float>());
 	filterExtrema(granuleSizeMaxima);
 	for (auto extremum : granuleSizeMaxima) {
@@ -564,7 +564,7 @@ void GranDist::process() {
 
 	Mat downFlowLaneWidthsClone = downFlowLaneWidths.clone();
 	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
-	std::ofstream output2(string("df_width_minima") + to_string(timeMoment) + "_" + to_string(layer) + ".txt");
+	std::ofstream output2(string("df_width_minima_") + to_string(layer) + ".txt", ios_base::app);
 	auto downFlowLaneWidthMinima = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
 	filterExtrema(downFlowLaneWidthMinima, false);
 
@@ -623,7 +623,7 @@ void GranDist::process() {
 	// Find and output down flow bubble size maxima
 	//-------------------------------------------------------------------------
 	Mat downFlowBubbleSizesClone = downFlowBubbleSizes.clone();
-	std::ofstream output3(string("df_bubble_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".txt");
+	std::ofstream output3(string("df_bubble_size_maxima_") + to_string(layer) + ".txt", ios_base::app);
 	auto downFlowBubbleSizeMaxima = findExtrema(downFlowBubbleSizes, regionLabels, greater<float>());
 	filterExtrema(downFlowBubbleSizeMaxima);
 
