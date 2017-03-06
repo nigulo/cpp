@@ -9,10 +9,12 @@
 #define MPIUTILS_H_
 
 #include <string>
+#include <memory>
+#include <fstream>
 
 using namespace std;
 
-void mpiInit(int argc, char *argv[], int tagLogLen = 1, int tagLog = 2);
+void mpiInit(int argc, char *argv[], int tagLogLen = 1, int tagLog = 2, int tagStrLen = 3, int tagStr = 4);
 void mpiFinalize();
 void mpiBarrier();
 
@@ -23,5 +25,15 @@ int getNumProc();
 void sendLog(const string& str);
 void recvLog();
 
+
+class FileWriter {
+public:
+	FileWriter(const string& fileName = "");
+	virtual ~FileWriter();
+	void write(const string& str = "");
+
+private:
+	unique_ptr<std::ofstream> output;
+};
 
 #endif /* MPIUTILS_H_ */
