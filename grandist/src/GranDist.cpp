@@ -546,7 +546,6 @@ void GranDist::process() {
 			granuleSizeOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
-	granuleSizeOut.flush();
 
 	// Convert to 8-bit matrices and normalize from 0 to 255
 	convertTo8Bit(granuleSizes);
@@ -598,7 +597,6 @@ void GranDist::process() {
 		downFlowLaneWidthMinima.push_back(extremum);
 	}
 
-	dfLaneOut.flush();
 
 	// Replace occurrences of INFTY with zeros
 	for (int row = 0; row < downFlowLaneWidths.rows; row++) {
@@ -638,7 +636,6 @@ void GranDist::process() {
 			dfBubbleOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
-	dfBubbleOut.flush();
 
 	// Convert to 8-bit matrices and normalize from 0 to 255
 	convertTo8Bit(downFlowBubbleSizes);

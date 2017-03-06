@@ -100,7 +100,7 @@ FileWriter::FileWriter(const string& fileName) {
 
 FileWriter::~FileWriter() {
 #ifdef _MPI
-	if (getProcId() == 0) {
+	if (getProcId() == 0 && output.get()) {
 		output->close();
 	}
 #endif
@@ -130,7 +130,7 @@ void FileWriter::write(const string& str) {
 			int source = status.Get_source();
 			MPI::COMM_WORLD.Recv(strRecv, len,  MPI::CHAR, source, tagStr, status);
 			assert(status.Get_error() == MPI::SUCCESS);
-			if (len > 0) {
+			if (len > 1) {
 				*output << strRecv;
 				output->flush();
 			}

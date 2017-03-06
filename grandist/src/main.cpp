@@ -196,6 +196,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	mpiBarrier();
+	if (getProcId() == 0) {
+		cout << "Done!" << endl;
+	}
 	mpiFinalize();
 
 	return EXIT_SUCCESS;
