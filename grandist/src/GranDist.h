@@ -40,6 +40,20 @@ private:
 	bool onBoundary(const Mat& granuleLabels, int row, int col) const;
 	unique_ptr<float> getDownflowLaneIndex(const Mat& regionLabels, int startRow, int endRow, int col, int domainStart, int domainEnd) const;
 	void filterExtrema(vector<tuple<float /*value*/, int /*row*/, int /*col*/>>& extrema, bool byRegionLabel = true) const;
+
+public:
+	string getGranuleSizeStr() const {
+		return granuleSizeOut.str();
+	}
+
+	string getDfLaneStr() const {
+		return dfLaneOut.str();
+	}
+
+	string getDfBubbleStr() const {
+		return dfBubbleOut.str();
+	}
+
 private:
 	int timeMoment;
 	int layer;
@@ -54,6 +68,11 @@ private:
 	Mat regionLabelsFloat;
 	int numRegions;
 	map<int, int> regionAreas;
+	// Output streams for results
+
+	stringstream granuleSizeOut;
+	stringstream dfLaneOut;
+	stringstream dfBubbleOut;
 };
 
 #endif /* GRANDIST_H_ */

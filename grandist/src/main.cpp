@@ -90,75 +90,109 @@ int main(int argc, char *argv[]) {
 
 	timeMoments.sort(std::greater<int>());
 
+	size_t numUsedLayers = 0;
+
 	for (int timeMoment : timeMoments) {
-		if (timeMoment < 0) { // Little hack
+		if (timeMoment > 0) {
+			Utils::SetProperty(params, "timeMoment", to_string(timeMoment));
+			SnapshotLoader loader(params, [](const string& str) {
+				//sendLog(str);
+				//recvLog();
+			});
+			auto& dims = loader.getDimsDownSampled();
+			//auto numX = dims[0];
+			//auto numY = dims[1];
+			//auto numZ = dims[2];
+
+			auto depth = dims[verticalCoord];
+			auto width = dims[fstCoord];
+			auto height = dims[sndCoord];
+
+			int numLayers = dims[verticalCoord];
+			Mat matrices[numLayers];
+			int rows = ceil(((double) height) * sqrt(2));
+			int cols = ceil(((double) width) * sqrt(2));
+
+			int rowOffset = (rows - height) / 2;
+			int colOffset = (cols - width) / 2;
+
+			if (periodic) {
+				rows = ceil(((double) 2 * height) * sqrt(2));
+				cols = ceil(((double) 2 * width) * sqrt(2));
+
+				rowOffset = rows / 2;
+				colOffset = cols / 2;
+			}
+
+
+			for (int i = 0; i < depth; i++) {
+				// Using hidden fact that RegionType.OUT_OF_DOMAIN is 0
+				matrices[i] = Mat::zeros(rows, cols, CV_32F);
+			}
+
+			loader.load([&dims, verticalCoord, fstCoord, sndCoord, &matrices, rowOffset, colOffset](int t, int x, int y, int z, double field) {
+				int coord[] = {x, y, z};
+				assert(coord[verticalCoord] < dims[verticalCoord]);
+				auto& mat = matrices[coord[verticalCoord]];
+				assert(y < mat.rows);
+				assert(z < mat.cols);
+				if (field > 0) {
+					mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = UP_FLOW;
+				} else {
+					mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = DOWN_FLOW;
+				}
+			});
+			map<int, unique_ptr<GranDist>> granDists;
+			Rect cropRect(colOffset, rowOffset, width, height);
+			for (int layer = 0; layer < numLayers; layer++) {
+				auto& mat = matrices[layer];
+				if (layer < fromLayer || (layer - fromLayer) % step != 0) {
+					continue;
+				}
+				if (toLayer == 0 || layer <= toLayer) {
+					granDists[layer] = unique_ptr<GranDist>(new GranDist(timeMoment, layer, mat, height, width, periodic, cropRect));
+				}
+			}
+			if (numUsedLayers > 0) {
+				assert(numUsedLayers == granDists.size());
+			} else {
+				numUsedLayers = granDists.size();
+			}
+
+			auto it = granDists.begin();
+			#pragma omp parallel for
+			for (size_t i = 0; i < numUsedLayers; i++) {
+				it->second->process();
+				it++;
+			}
+			for (auto& i : granDists) {
+				auto& granDist = i.second;
+				granDist->process();
+				int layer = i.first;
+				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt");
+				FileWriter fw2(string("df_width_minima_") + to_string(layer) + ".txt");
+				FileWriter fw3(string("df_bubble_size_maxima_") + to_string(layer) + ".txt");
+				fw1.write(granDist->getGranuleSizeStr());
+				fw2.write(granDist->getDfLaneStr());
+				fw3.write(granDist->getDfBubbleStr());
+			}
+			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
+			recvLog();
+		} else {
+			assert(numUsedLayers > 0); // If this happens the number of processors is greater than number of snapshots
+			for (size_t i = 0; i < numUsedLayers; i++) {
+				// Dummy writers
+				FileWriter fw1;
+				FileWriter fw2;
+				FileWriter fw3;
+				fw1.write();
+				fw2.write();
+				fw3.write();
+
+			}
 			sendLog("Waiting for other processes to finish.\n");
 			recvLog();
-			continue;
 		}
-		Utils::SetProperty(params, "timeMoment", to_string(timeMoment));
-		SnapshotLoader loader(params, [](const string& str) {
-			//sendLog(str);
-			//recvLog();
-		});
-		auto& dims = loader.getDimsDownSampled();
-		//auto numX = dims[0];
-		//auto numY = dims[1];
-		//auto numZ = dims[2];
-
-		auto depth = dims[verticalCoord];
-		auto width = dims[fstCoord];
-		auto height = dims[sndCoord];
-
-		int numLayers = dims[verticalCoord];
-		Mat matrices[numLayers];
-		int rows = ceil(((double) height) * sqrt(2));
-		int cols = ceil(((double) width) * sqrt(2));
-
-		int rowOffset = (rows - height) / 2;
-		int colOffset = (cols - width) / 2;
-
-		if (periodic) {
-			rows = ceil(((double) 2 * height) * sqrt(2));
-			cols = ceil(((double) 2 * width) * sqrt(2));
-
-			rowOffset = rows / 2;
-			colOffset = cols / 2;
-		}
-
-
-		for (int i = 0; i < depth; i++) {
-			// Using hidden fact that RegionType.OUT_OF_DOMAIN is 0
-			matrices[i] = Mat::zeros(rows, cols, CV_32F);
-		}
-
-		loader.load([&dims, verticalCoord, fstCoord, sndCoord, &matrices, rowOffset, colOffset](int t, int x, int y, int z, double field) {
-			int coord[] = {x, y, z};
-			assert(coord[verticalCoord] < dims[verticalCoord]);
-			auto& mat = matrices[coord[verticalCoord]];
-			assert(y < mat.rows);
-			assert(z < mat.cols);
-			if (field > 0) {
-				mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = UP_FLOW;
-			} else {
-				mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = DOWN_FLOW;
-			}
-		});
-
-		Rect cropRect(colOffset, rowOffset, width, height);
-		#pragma omp parallel for
-		for (int layer = 0; layer < numLayers; layer++) {
-			auto& mat = matrices[layer];
-			if (layer < fromLayer || (layer - fromLayer) % step != 0) {
-				continue;
-			}
-			if (toLayer == 0 || layer <= toLayer) {
-				GranDist granDist(timeMoment, layer, mat, height, width, periodic, cropRect);
-				granDist.process();
-			}
-		}
-		sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
-		recvLog();
 	}
 
 	mpiBarrier();

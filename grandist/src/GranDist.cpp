@@ -58,7 +58,10 @@ GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, 
 		originalHeight(originalHeight),
 		originalWidth(originalWidth),
 		periodic(periodic),
-		cropRect(cropRect) {
+		cropRect(cropRect),
+		granuleSizeOut(ios_base::ate),
+		dfLaneOut(ios_base::ate),
+		dfBubbleOut(ios_base::ate) {
 
 	labelRegions();
 	regionLabels.convertTo(regionLabelsFloat, CV_32F);
@@ -532,7 +535,7 @@ void GranDist::process() {
 	// Find and output granule size maxima
 	//-------------------------------------------------------------------------
 	Mat granuleSizesClone = granuleSizes.clone();
-	std::ofstream output1(string("granule_size_maxima_") + to_string(layer) + ".txt", ios_base::app);
+	//std::ofstream output1(string("granule_size_maxima_") + to_string(layer) + ".txt", ios_base::app);
 	auto granuleSizeMaxima = findExtrema(granuleSizes, regionLabels, greater<float>());
 	filterExtrema(granuleSizeMaxima);
 	for (auto extremum : granuleSizeMaxima) {
@@ -540,10 +543,10 @@ void GranDist::process() {
 			int row = get<1>(extremum);
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
-			output1 << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
+			granuleSizeOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
-	output1.close();
+	granuleSizeOut.flush();
 
 	// Convert to 8-bit matrices and normalize from 0 to 255
 	convertTo8Bit(granuleSizes);
@@ -564,7 +567,7 @@ void GranDist::process() {
 
 	Mat downFlowLaneWidthsClone = downFlowLaneWidths.clone();
 	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
-	std::ofstream output2(string("df_width_minima_") + to_string(layer) + ".txt", ios_base::app);
+	//std::ofstream output2(string("df_width_minima_") + to_string(layer) + ".txt", ios_base::app);
 	auto downFlowLaneWidthMinima = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
 	filterExtrema(downFlowLaneWidthMinima, false);
 
@@ -591,11 +594,11 @@ void GranDist::process() {
 
 	for (auto i : uniqueMinima) {
 		auto extremum = i.second;
-		output2 << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+		dfLaneOut << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 		downFlowLaneWidthMinima.push_back(extremum);
 	}
 
-	output2.close();
+	dfLaneOut.flush();
 
 	// Replace occurrences of INFTY with zeros
 	for (int row = 0; row < downFlowLaneWidths.rows; row++) {
@@ -623,7 +626,7 @@ void GranDist::process() {
 	// Find and output down flow bubble size maxima
 	//-------------------------------------------------------------------------
 	Mat downFlowBubbleSizesClone = downFlowBubbleSizes.clone();
-	std::ofstream output3(string("df_bubble_size_maxima_") + to_string(layer) + ".txt", ios_base::app);
+	//std::ofstream output3(string("df_bubble_size_maxima_") + to_string(layer) + ".txt", ios_base::app);
 	auto downFlowBubbleSizeMaxima = findExtrema(downFlowBubbleSizes, regionLabels, greater<float>());
 	filterExtrema(downFlowBubbleSizeMaxima);
 
@@ -632,10 +635,10 @@ void GranDist::process() {
 			int row = get<1>(extremum);
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
-			output3 << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
+			dfBubbleOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
-	output3.close();
+	dfBubbleOut.flush();
 
 	// Convert to 8-bit matrices and normalize from 0 to 255
 	convertTo8Bit(downFlowBubbleSizes);
