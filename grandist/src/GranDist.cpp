@@ -58,10 +58,7 @@ GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, 
 		originalHeight(originalHeight),
 		originalWidth(originalWidth),
 		periodic(periodic),
-		cropRect(cropRect),
-		granuleSizeOut(ios_base::ate),
-		dfLaneOut(ios_base::ate),
-		dfBubbleOut(ios_base::ate) {
+		cropRect(cropRect) {
 
 	labelRegions();
 	regionLabels.convertTo(regionLabelsFloat, CV_32F);
