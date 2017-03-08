@@ -28,7 +28,7 @@ enum RegionType {
 
 class GranDist {
 public:
-	GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect);
+	GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect, bool debug);
 	void process();
 	virtual ~GranDist();
 private:
@@ -62,6 +62,7 @@ private:
 	int originalWidth;
 	bool periodic;
 	Rect cropRect;
+	bool debug;
 	Mat regionLabels;
 	set<int> regionsOnBoundaries;
 	set<int> downFlowBubbles;

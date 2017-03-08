@@ -41,12 +41,18 @@ int main(int argc, char *argv[]) {
 
 	int fromLayer = Utils::FindIntProperty(params, "fromLayer", 1);
 	int toLayer = Utils::FindIntProperty(params, "toLayer", 0);
-	int startTime = Utils::FindIntProperty(params, "startTime", 100);
-	int endTime = Utils::FindIntProperty(params, "endTime", 0);
 	int step = Utils::FindIntProperty(params, "step", 10);
 	assert(fromLayer >= 0);
 	assert(toLayer == 0 || toLayer >= fromLayer);
 	assert(step > 0);
+
+	int startTime = Utils::FindIntProperty(params, "startTime", 100);
+	int endTime = Utils::FindIntProperty(params, "endTime", 0);
+	assert(startTime >= 0);
+	assert(endTime == 0 || endTime >= startTime);
+
+	int debugSampling = Utils::FindIntProperty(params, "debugSampling", 10);
+	assert(debugSampling >= 1);
 
 	bool periodic = Utils::FindIntProperty(params, "periodic", 1);
 
@@ -150,7 +156,12 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 				if (toLayer == 0 || layer <= toLayer) {
-					granDists[layer] = unique_ptr<GranDist>(new GranDist(timeMoment, layer, mat, height, width, periodic, cropRect));
+					#ifdef DEBUG
+						bool debug = layer % debugSampling == 0;
+					#else
+						bool debug = false;
+					#endif
+					granDists[layer] = unique_ptr<GranDist>(new GranDist(timeMoment, layer, mat, height, width, periodic, cropRect, debug));
 				}
 			}
 			if (numUsedLayers > 0) {

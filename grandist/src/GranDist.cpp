@@ -51,14 +51,15 @@ Mat& convertTo8Bit(Mat& mat) {
 }
 
 
-GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect) :
+GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect, bool debug) :
 		timeMoment(timeMoment),
 		layer(layer),
 		granules(periodic ? tileMatrix(granules, originalHeight, originalWidth) : granules),
 		originalHeight(originalHeight),
 		originalWidth(originalWidth),
 		periodic(periodic),
-		cropRect(cropRect) {
+		cropRect(cropRect),
+		debug(debug) {
 
 	labelRegions();
 	regionLabels.convertTo(regionLabelsFloat, CV_32F);
@@ -78,19 +79,19 @@ GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, 
 
 	//////////////////////////////////////////
 	//Visualize the downflow bubbles
-    Mat regionLabelsClone = regionLabels.clone();
-	for (int row = 0; row < regionLabels.rows; row++) {
-		for (int col = 0; col < regionLabels.cols; col++) {
-			if (downFlowBubbles.find(regionLabelsClone.at<MAT_TYPE_INT>(row, col)) == downFlowBubbles.end()) {
-				regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 0;
-			} else {
-				regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 1;
-			}
-		}
-	}
-	#ifdef DEBUG
-		imwrite(string("df_bubbles") + to_string(timeMoment) + "_" + to_string(layer) + ".png", convertTo8Bit(regionLabelsClone));
-	#endif
+    //Mat regionLabelsClone = regionLabels.clone();
+	//for (int row = 0; row < regionLabels.rows; row++) {
+	//	for (int col = 0; col < regionLabels.cols; col++) {
+	//		if (downFlowBubbles.find(regionLabelsClone.at<MAT_TYPE_INT>(row, col)) == downFlowBubbles.end()) {
+	//			regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 0;
+	//		} else {
+	//			regionLabelsClone.at<MAT_TYPE_INT>(row, col) = 1;
+	//		}
+	//	}
+	//}
+	//#ifdef DEBUG
+	//	imwrite(string("df_bubbles") + to_string(timeMoment) + "_" + to_string(layer) + ".png", convertTo8Bit(regionLabelsClone));
+	//#endif
 	//////////////////////////////////////////
 
 	this->regionsOnBoundaries = periodic ? regionsOnBoundaries : set<int>();
