@@ -91,14 +91,11 @@ void recvLog() {
 
 FileWriter::FileWriter(const string& fileName) {
 	if (getProcId() == 0 && !fileName.empty()) {
-		output = make_unique<std::ofstream>(fileName, ios_base::app);
+		output = unique_ptr<std::ofstream>(new std::ofstream(fileName, ios_base::app));
 	}
 }
 
 FileWriter::~FileWriter() {
-	if (getProcId() == 0 && output.get()) {
-		output->close();
-	}
 }
 
 void FileWriter::write(const string& str) {
