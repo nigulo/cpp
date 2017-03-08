@@ -187,6 +187,7 @@ int main(int argc, char *argv[]) {
 				fw1.write(granDist->getGranuleSizeStr());
 				fw2.write(granDist->getDfLaneStr());
 				fw3.write(granDist->getDfBubbleStr());
+				cout << layer << ": " << granDist->getGranuleSizeStr() << endl;
 			}
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
 			recvLog();
