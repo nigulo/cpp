@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 
 	timeMoments.sort(std::greater<int>());
 
-	size_t numUsedLayers = 0;
+	vector<int> layers;
 
 	for (int timeMoment : timeMoments) {
 		if (timeMoment > 0) {
@@ -150,6 +150,10 @@ int main(int argc, char *argv[]) {
 			});
 			map<int, unique_ptr<GranDist>> granDists;
 			Rect cropRect(colOffset, rowOffset, width, height);
+			bool createLayers = false;
+			if (layers.empty()) {
+				createLayers = true;
+			}
 			for (int layer = 0; layer < numLayers; layer++) {
 				auto& mat = matrices[layer];
 				if (layer < fromLayer || (layer - fromLayer) % step != 0) {
@@ -162,24 +166,21 @@ int main(int argc, char *argv[]) {
 						bool debug = false;
 					#endif
 					granDists[layer] = unique_ptr<GranDist>(new GranDist(timeMoment, layer, mat, height, width, periodic, cropRect, debug));
+					if (createLayers) {
+						layers.push_back(layer);
+					}
 				}
 			}
-			if (numUsedLayers > 0) {
-				assert(numUsedLayers == granDists.size());
-			} else {
-				numUsedLayers = granDists.size();
-			}
+			assert(layers.size() == granDists.size());
 
 			auto it = granDists.begin();
 			#pragma omp parallel for
-			for (size_t i = 0; i < numUsedLayers; i++) {
+			for (size_t i = 0; i < layers.size(); i++) {
 				it->second->process();
 				it++;
 			}
-			for (auto& i : granDists) {
-				auto& granDist = i.second;
-				granDist->process();
-				int layer = i.first;
+			for (auto layer : layers) {
+				auto& granDist = granDists[layer];
 				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt");
 				FileWriter fw2(string("df_width_minima_") + to_string(layer) + ".txt");
 				FileWriter fw3(string("df_bubble_size_maxima_") + to_string(layer) + ".txt");
@@ -190,12 +191,11 @@ int main(int argc, char *argv[]) {
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
 			recvLog();
 		} else {
-			assert(numUsedLayers > 0); // If this happens the number of processors is greater than number of snapshots
-			for (size_t i = 0; i < numUsedLayers; i++) {
-				// Dummy writers
-				FileWriter fw1;
-				FileWriter fw2;
-				FileWriter fw3;
+			assert(!layers.empty()); // If this happens the number of processors is greater than number of snapshots
+			for (auto layer : layers) {
+				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt");
+				FileWriter fw2(string("df_width_minima_") + to_string(layer) + ".txt");
+				FileWriter fw3(string("df_bubble_size_maxima_") + to_string(layer) + ".txt");
 				fw1.write();
 				fw2.write();
 				fw3.write();
