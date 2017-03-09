@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
 				}
 				if (toLayer == 0 || layer <= toLayer) {
 					#ifdef DEBUG
-						bool debug = layer % debugSampling == 0;
+						bool debug = (layer - fromLayer) % debugSampling == 0;
 					#else
 						bool debug = false;
 					#endif
@@ -173,11 +173,10 @@ int main(int argc, char *argv[]) {
 			}
 			assert(layers.size() == granDists.size());
 
-			auto it = granDists.begin();
 			#pragma omp parallel for
 			for (size_t i = 0; i < layers.size(); i++) {
-				it->second->process();
-				it++;
+				auto layer = layers[i];
+				granDists[layer]->process();
 			}
 			for (auto layer : layers) {
 				auto& granDist = granDists[layer];
@@ -187,7 +186,6 @@ int main(int argc, char *argv[]) {
 				fw1.write(granDist->getGranuleSizeStr());
 				fw2.write(granDist->getDfLaneStr());
 				fw3.write(granDist->getDfBubbleStr());
-				cout << layer << ": " << granDist->getGranuleSizeStr() << endl;
 			}
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
 			recvLog();

@@ -554,9 +554,9 @@ void GranDist::process() {
 
 	// Visualize matrices
 	//imwrite(string("granule_sizes") + to_string(layer) + ".png", granuleSizes);
-	#ifdef DEBUG
+	if (debug) {
 		imwrite(string("granule_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", granuleSizeMaximaRGB);
-	#endif
+	}
 
 	//-------------------------------------------------------------------------
 	// Find and output down flow lane width minima
@@ -614,9 +614,9 @@ void GranDist::process() {
 
 
 	//imwrite(string("df_widths") + to_string(layer) + ".png", downFlowLaneWidths);
-	#ifdef DEBUG
+	if (debug) {
 		imwrite(string("df_width_minima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
-	#endif
+	}
 
 	//-------------------------------------------------------------------------
 	// Find and output down flow bubble size maxima
@@ -644,8 +644,8 @@ void GranDist::process() {
 
 	// Visualize matrices
 	//imwrite(string("df_bubble_sizes") + to_string(layer) + ".png", downFlowBubbleSizes);
-	#ifdef DEBUG
+	if (debug) {
 		imwrite(string("df_bubble_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", downFlowBubbleSizeMaximaRGB);
-	#endif
+	}
 
 }
