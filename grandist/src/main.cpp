@@ -51,8 +51,12 @@ int main(int argc, char *argv[]) {
 	assert(startTime >= 0);
 	assert(endTime == 0 || endTime >= startTime);
 
-	int debugSampling = Utils::FindIntProperty(params, "debugSampling", 10);
-	assert(debugSampling >= 1);
+	int debugFromLayer = Utils::FindIntProperty(params, "debugFromLayer", 1);
+	int debugToLayer = Utils::FindIntProperty(params, "debugToLayer", 0);
+	int debugStep = Utils::FindIntProperty(params, "debugStep", 10);
+	assert(debugFromLayer >= 0);
+	assert(debugToLayer == 0 || debugToLayer >= debugFromLayer);
+	assert(debugStep > 0);
 
 	bool periodic = Utils::FindIntProperty(params, "periodic", 1);
 
@@ -161,7 +165,7 @@ int main(int argc, char *argv[]) {
 				}
 				if (toLayer == 0 || layer <= toLayer) {
 					#ifdef DEBUG
-						bool debug = (layer - fromLayer) % debugSampling == 0;
+						bool debug = layer >= debugFromLayer && (debugToLayer == 0 || layer <= debugToLayer) && (layer - fromLayer) % debugStep == 0;
 					#else
 						bool debug = false;
 					#endif
