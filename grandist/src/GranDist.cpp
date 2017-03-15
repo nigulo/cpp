@@ -51,7 +51,7 @@ Mat& convertTo8Bit(Mat& mat) {
 }
 
 
-GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect, bool debug) :
+GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect, bool saveMaps) :
 		timeMoment(timeMoment),
 		layer(layer),
 		granules(periodic ? tileMatrix(granules, originalHeight, originalWidth) : granules),
@@ -59,7 +59,7 @@ GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, 
 		originalWidth(originalWidth),
 		periodic(periodic),
 		cropRect(cropRect),
-		debug(debug) {
+		saveMaps(saveMaps) {
 
 	labelRegions();
 	regionLabels.convertTo(regionLabelsFloat, CV_32F);
@@ -246,7 +246,8 @@ tuple<Mat, Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat
 					if (!inIgLane || laneIndex) {
 						Mat& dists = inGranule ? granuleSizes : (inIgLane ? igLaneWidths : dfPatchSizes);
 						for (int row1 = startRow; row1 < row; row1++) {
-							dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
+							assert(dist == row - startRow - 1);
+							dists.at<MAT_TYPE_FLOAT>(row1, col) = row - startRow;
 							if (inIgLane) {
 								igLaneIndices.at<MAT_TYPE_FLOAT>(row1, col) = *laneIndex;
 							}
@@ -264,7 +265,8 @@ tuple<Mat, Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat
 			auto laneIndex = getIgLaneIndex(regionLabels, startRow, row, col, domainStart, domainEnd);
 			if (!inIgLane || laneIndex) {
 				for (int row1 = startRow; row1 < row; row1++) {
-					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
+					assert(dist == row - startRow - 1);
+					dists.at<MAT_TYPE_FLOAT>(row1, col) = row - startRow;
 					if (inIgLane) {
 						igLaneIndices.at<MAT_TYPE_FLOAT>(row1, col) = *laneIndex;
 					}
@@ -459,11 +461,9 @@ void GranDist::process() {
 	for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
 		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;
-		//#ifdef DEBUG
-		//	if (((int) angle) == 0) {
-		//		imwrite(string("granules") + to_string(timeMoment) + "_" + to_string(layer) + "_" + to_string((int) angle) + ".png", (granulesRotated - 1) * 255);
-		//	}
-		//#endif
+		if (saveMaps && ((int) angle) == 0) {
+			imwrite(string("map") + to_string(timeMoment) + "_" + to_string(layer) + "_" + to_string((int) angle) + ".png", (granulesRotated - 1) * 255);
+		}
 		auto dists = calcDistances(granulesRotated, regionLabelsRotated);
 		auto verticalGranuleSizes = get<0>(dists);
 		auto verticalIgLaneWidths = get<1>(dists);
@@ -541,6 +541,7 @@ void GranDist::process() {
 			int row = get<1>(extremum);
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
+			//assert(granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW);
 			granuleSizesOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
@@ -554,7 +555,7 @@ void GranDist::process() {
 
 	// Visualize matrices
 	//imwrite(string("granule_sizes") + to_string(layer) + ".png", granuleSizes);
-	if (debug) {
+	if (saveMaps) {
 		imwrite(string("granule_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", granuleSizeMaximaRGB);
 	}
 
@@ -614,7 +615,7 @@ void GranDist::process() {
 
 
 	//imwrite(string("df_widths") + to_string(layer) + ".png", downFlowLaneWidths);
-	if (debug) {
+	if (saveMaps) {
 		imwrite(string("ig_lane_width_minima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", igLaneWidthMinimaRGB);
 	}
 
@@ -670,7 +671,7 @@ void GranDist::process() {
 	Mat igLaneWidthMaximaRGB = convertToColorAndMarkExtrema(igLaneMaxWidthsClone, igLaneWidthMaxima, 0);
 
 
-	if (debug) {
+	if (saveMaps) {
 		imwrite(string("ig_lane_width_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", igLaneWidthMaximaRGB);
 	}
 
@@ -700,7 +701,7 @@ void GranDist::process() {
 
 	// Visualize matrices
 	//imwrite(string("df_bubble_sizes") + to_string(layer) + ".png", downFlowBubbleSizes);
-	if (debug) {
+	if (saveMaps) {
 		imwrite(string("df_patch_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", dfPatchSizeMaximaRGB);
 	}
 

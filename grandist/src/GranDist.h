@@ -51,7 +51,7 @@ public:
 	}
 
 	string getIgLaneMaxWidthsStr() const {
-		return igLaneMinWidthsOut.str();
+		return igLaneMaxWidthsOut.str();
 	}
 
 	string getDfPatchSizesStr() const {
@@ -66,7 +66,7 @@ private:
 	int originalWidth;
 	bool periodic;
 	Rect cropRect;
-	bool debug;
+	bool saveMaps;
 	Mat regionLabels;
 	set<int> regionsOnBoundaries;
 	set<int> downFlowPatches;
