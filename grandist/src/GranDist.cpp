@@ -204,7 +204,7 @@ unique_ptr<float> GranDist::getIgLaneIndex(const Mat& regionLabels, int startRow
  * Calculates inter- and intragranular distances on vertical lines
  * @param[in] granules rotated matrix of down/up flows
  * @param[in] granuleLabels rotated matrix of granule labels
- * @return matrices of granule sizes, down flow widths, down flow bubble sizes and down flow lane indices
+ * @return matrices of granule sizes, intergranular lane widths, down flow patch sizes and down intergranular lane indices
  */
 tuple<Mat, Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& regionLabels) const {
 	Mat granuleSizes = Mat::zeros(granules.rows, granules.cols, CV_32F);
@@ -453,9 +453,11 @@ void GranDist::process() {
 	}
 	//Mat croppedGranules = granules(cropRect);
 	Mat granuleSizes;
-	Mat igLaneWidths;
+	Mat igLaneMinWidths;
+	Mat igLaneMaxWidths;
 	Mat dfPatchSizes;
-	Mat igLaneIndices;
+	Mat igLaneMinIndices;
+	Mat igLaneMaxIndices;
 	for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
 		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;
@@ -489,9 +491,11 @@ void GranDist::process() {
 		if (angle == 0) {
 			// First time
 			granuleSizes = newGranuleSizes;
-			igLaneWidths = newIgLaneWidths;
+			igLaneMinWidths = newIgLaneWidths;
+			igLaneMaxWidths = newIgLaneWidths.clone();
 			dfPatchSizes = newDfPatchSizes;
-			igLaneIndices = newIgLaneIndices;
+			igLaneMinIndices = newIgLaneIndices;
+			igLaneMaxIndices = newIgLaneIndices.clone();
 		} else {
 			for (int row = 0; row < newGranuleSizes.rows; row++) {
 				for (int col = 0; col < newGranuleSizes.cols; col++) {
@@ -501,7 +505,8 @@ void GranDist::process() {
 							// in granule and new size is greater
 							granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
 						}
-						igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
+						igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
+						igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					} else {
 						if (inDownFlowPatch(regionLabelsFloat, row, col)) {
@@ -510,13 +515,19 @@ void GranDist::process() {
 								// in down flow bubble and new size is greater
 								dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
 							}
-							igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
+							igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
+							igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						} else {
 							auto newWidth = newIgLaneWidths.at<MAT_TYPE_FLOAT>(row, col);
-							if (newWidth < igLaneWidths.at<MAT_TYPE_FLOAT>(row, col)) {
+							if (newWidth < igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col)) {
 								// in down flow lane and new width is shorter
-								igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = newWidth;
-								igLaneIndices.at<MAT_TYPE_FLOAT>(row, col) = newIgLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
+								igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col) = newWidth;
+								igLaneMinIndices.at<MAT_TYPE_FLOAT>(row, col) = newIgLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
+							}
+							if (newWidth > igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col)) {
+								// in down flow lane and new width is longer
+								igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col) = newWidth;
+								igLaneMaxIndices.at<MAT_TYPE_FLOAT>(row, col) = newIgLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
 							}
 							dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						}
@@ -541,7 +552,7 @@ void GranDist::process() {
 			int row = get<1>(extremum);
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
-			granuleSizeOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
+			granuleSizesOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
 
@@ -559,20 +570,20 @@ void GranDist::process() {
 	}
 
 	//-------------------------------------------------------------------------
-	// Find and output down flow lane width minima
+	// Find and output intergranular lane width minima
 	//-------------------------------------------------------------------------
 
-	Mat igWidthsClone = igLaneWidths.clone();
-	Mat minimaLabels = labelExtrema(igLaneWidths, true);
+	Mat igLaneMinWidthsClone = igLaneMinWidths.clone();
+	Mat minimaLabels = labelExtrema(igLaneMinWidths, true);
 	//std::ofstream output2(string("df_width_minima_") + to_string(layer) + ".txt", ios_base::app);
-	auto igLaneWidthMinima = findExtrema(igLaneWidths, minimaLabels, less<float>());
+	auto igLaneWidthMinima = findExtrema(igLaneMinWidths, minimaLabels, less<float>());
 	filterExtrema(igLaneWidthMinima, false);
 
 	map<float /*down flow lane index*/, tuple<float, int, int> /*minimum*/> uniqueMinima;
 	for (auto extremum : igLaneWidthMinima) {
 		auto row = get<1>(extremum);
 		auto col = get<2>(extremum);
-		auto index = igLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
+		auto index = igLaneMinIndices.at<MAT_TYPE_FLOAT>(row, col);
 		if (index == 0) {
 			// These are the lane indices that were turned to zero due to rounding errors in matrix rotation.
 			// Actually they should also be included in results, but probably there are no many of these
@@ -591,35 +602,81 @@ void GranDist::process() {
 
 	for (auto i : uniqueMinima) {
 		auto extremum = i.second;
-		igLaneOut << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+		igLaneMinWidthsOut << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 		igLaneWidthMinima.push_back(extremum);
 	}
 
 
 	// Replace occurrences of INFTY with zeros
-	for (int row = 0; row < igLaneWidths.rows; row++) {
-		for (int col = 0; col < igLaneWidths.cols; col++) {
-			if (igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
-				igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
+	for (int row = 0; row < igLaneMinWidths.rows; row++) {
+		for (int col = 0; col < igLaneMinWidths.cols; col++) {
+			if (igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
+				igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
-			if (igWidthsClone.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
-				igWidthsClone.at<MAT_TYPE_FLOAT>(row, col) = 0;
+			if (igLaneMinWidthsClone.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
+				igLaneMinWidthsClone.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
 		}
 	}
 
-	convertTo8Bit(igLaneWidths);
-	convertTo8Bit(igWidthsClone);
-	Mat downFlowLaneWidthMinimaRGB = convertToColorAndMarkExtrema(igWidthsClone, igLaneWidthMinima, INFTY);
+	convertTo8Bit(igLaneMinWidths);
+	convertTo8Bit(igLaneMinWidthsClone);
+	Mat igLaneWidthMinimaRGB = convertToColorAndMarkExtrema(igLaneMinWidthsClone, igLaneWidthMinima, INFTY);
 
 
 	//imwrite(string("df_widths") + to_string(layer) + ".png", downFlowLaneWidths);
 	if (debug) {
-		imwrite(string("ig_lane_width_minima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
+		imwrite(string("ig_lane_width_minima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", igLaneWidthMinimaRGB);
 	}
 
 	//-------------------------------------------------------------------------
-	// Find and output down flow bubble size maxima
+	// Find and output intergranular lane width minima
+	//-------------------------------------------------------------------------
+
+	Mat igLaneMaxWidthsClone = igLaneMaxWidths.clone();
+	Mat maximaLabels = labelExtrema(igLaneMaxWidths, false);
+	//std::ofstream output2(string("df_width_minima_") + to_string(layer) + ".txt", ios_base::app);
+	auto igLaneWidthMaxima = findExtrema(igLaneMaxWidths, maximaLabels, greater<float>());
+	filterExtrema(igLaneWidthMaxima, false);
+
+	map<float /*down flow lane index*/, tuple<float, int, int> /*maximum*/> uniqueMaxima;
+	for (auto extremum : igLaneWidthMaxima) {
+		auto row = get<1>(extremum);
+		auto col = get<2>(extremum);
+		auto index = igLaneMaxIndices.at<MAT_TYPE_FLOAT>(row, col);
+		if (index == 0) {
+			// These are the lane indices that were turned to zero due to rounding errors in matrix rotation.
+			// Actually they should also be included in results, but probably there are no many of these
+			//assert(false);
+		} else {
+			auto i = uniqueMaxima.find(index);
+			if (i == uniqueMaxima.end()) {
+				uniqueMaxima[index] = extremum;
+			} else if (get<0>(extremum) < get<0>(i->second)) {
+				uniqueMaxima[i->first] = extremum;
+			}
+		}
+	}
+
+	igLaneWidthMaxima.clear();
+
+	for (auto i : uniqueMaxima) {
+		auto extremum = i.second;
+		igLaneMaxWidthsOut << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+		igLaneWidthMaxima.push_back(extremum);
+	}
+
+	convertTo8Bit(igLaneMaxWidths);
+	convertTo8Bit(igLaneMaxWidthsClone);
+	Mat igLaneWidthMaximaRGB = convertToColorAndMarkExtrema(igLaneMaxWidthsClone, igLaneWidthMaxima, 0);
+
+
+	if (debug) {
+		imwrite(string("ig_lane_width_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", igLaneWidthMinimaRGB);
+	}
+
+	//-------------------------------------------------------------------------
+	// Find and output down flow patch size maxima
 	//-------------------------------------------------------------------------
 	Mat dfPatchSizesClone = dfPatchSizes.clone();
 	//std::ofstream output3(string("df_bubble_size_maxima_") + to_string(layer) + ".txt", ios_base::app);
@@ -631,7 +688,7 @@ void GranDist::process() {
 			int row = get<1>(extremum);
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
-			dfPatchOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
+			dfPatchSizesOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
 

@@ -42,16 +42,20 @@ private:
 	void filterExtrema(vector<tuple<float /*value*/, int /*row*/, int /*col*/>>& extrema, bool byRegionLabel = true) const;
 
 public:
-	string getGranuleSizeStr() const {
-		return granuleSizeOut.str();
+	string getGranuleSizesStr() const {
+		return granuleSizesOut.str();
 	}
 
-	string getIgLaneStr() const {
-		return igLaneOut.str();
+	string getIgLaneMinWidthsStr() const {
+		return igLaneMinWidthsOut.str();
 	}
 
-	string getDfPatchStr() const {
-		return dfPatchOut.str();
+	string getIgLaneMaxWidthsStr() const {
+		return igLaneMinWidthsOut.str();
+	}
+
+	string getDfPatchSizesStr() const {
+		return dfPatchSizesOut.str();
 	}
 
 private:
@@ -71,9 +75,10 @@ private:
 	map<int, int> regionAreas;
 	// Output streams for results
 
-	stringstream granuleSizeOut;
-	stringstream igLaneOut;
-	stringstream dfPatchOut;
+	stringstream granuleSizesOut;
+	stringstream igLaneMinWidthsOut;
+	stringstream igLaneMaxWidthsOut;
+	stringstream dfPatchSizesOut;
 };
 
 #endif /* GRANDIST_H_ */
