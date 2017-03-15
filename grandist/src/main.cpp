@@ -51,12 +51,13 @@ int main(int argc, char *argv[]) {
 	assert(startTime >= 0);
 	assert(endTime == 0 || endTime >= startTime);
 
-	int debugFromLayer = Utils::FindIntProperty(params, "debugFromLayer", 1);
-	int debugToLayer = Utils::FindIntProperty(params, "debugToLayer", 0);
-	int debugStep = Utils::FindIntProperty(params, "debugStep", 10);
-	assert(debugFromLayer >= 0);
-	assert(debugToLayer == 0 || debugToLayer >= debugFromLayer);
-	assert(debugStep > 0);
+	int saveMaps = Utils::FindIntProperty(params, "saveMaps", 0);
+	int mapsFromLayer = Utils::FindIntProperty(params, "mapsFromLayer", 1);
+	int mapsToLayer = Utils::FindIntProperty(params, "mapsToLayer", 0);
+	int mapsStep = Utils::FindIntProperty(params, "mapsStep", 10);
+	assert(mapsFromLayer >= 0);
+	assert(mapsToLayer == 0 || mapsToLayer >= mapsFromLayer);
+	assert(mapsStep > 0);
 
 	bool periodic = Utils::FindIntProperty(params, "periodic", 1);
 
@@ -164,12 +165,8 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 				if (toLayer == 0 || layer <= toLayer) {
-					#ifdef DEBUG
-						bool debug = layer >= debugFromLayer && (debugToLayer == 0 || layer <= debugToLayer) && (layer - fromLayer) % debugStep == 0;
-					#else
-						bool debug = false;
-					#endif
-					granDists[layer] = unique_ptr<GranDist>(new GranDist(timeMoment, layer, mat, height, width, periodic, cropRect, debug));
+					bool maps = saveMaps && layer >= mapsFromLayer && (mapsToLayer == 0 || layer <= mapsToLayer) && (layer - fromLayer) % mapsStep == 0;
+					granDists[layer] = unique_ptr<GranDist>(new GranDist(timeMoment, layer, mat, height, width, periodic, cropRect, maps));
 					if (createLayers) {
 						layers.push_back(layer);
 					}
