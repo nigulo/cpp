@@ -188,8 +188,8 @@ int main(int argc, char *argv[]) {
 				FileWriter fw2(string("df_width_minima_") + to_string(layer) + ".txt");
 				FileWriter fw3(string("df_bubble_size_maxima_") + to_string(layer) + ".txt");
 				fw1.write(granDist->getGranuleSizeStr());
-				fw2.write(granDist->getDfLaneStr());
-				fw3.write(granDist->getDfBubbleStr());
+				fw2.write(granDist->getIgLaneStr());
+				fw3.write(granDist->getDfPatchStr());
 			}
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
 			recvLog();

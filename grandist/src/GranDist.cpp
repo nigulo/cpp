@@ -71,7 +71,7 @@ GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, 
 			if (granules.at<MAT_TYPE_FLOAT>(row, col) == DOWN_FLOW)  {
 				int label = regionLabels.at<MAT_TYPE_INT>(row, col);
 				if (closedRegions.find(label) != closedRegions.end() && regionsOnBoundaries.find(label) == regionsOnBoundaries.end()) {
-					downFlowBubbles.insert(label);
+					downFlowPatches.insert(label);
 				}
 			}
 		}
@@ -171,8 +171,8 @@ bool inDomain(const Mat& granules, int row, int col) {
 /**
  * @return true if the given point is in the down flow bubble, false in case it is in down flow lane.
  */
-bool GranDist::inDownFlowBubble(const Mat& regionLabels, int row, int col) const {
-	return downFlowBubbles.find((int) regionLabels.at<MAT_TYPE_FLOAT>(row, col)) != downFlowBubbles.end();
+bool GranDist::inDownFlowPatch(const Mat& regionLabels, int row, int col) const {
+	return downFlowPatches.find((int) regionLabels.at<MAT_TYPE_FLOAT>(row, col)) != downFlowPatches.end();
 }
 
 /**
@@ -186,7 +186,7 @@ bool GranDist::onBoundary(const Mat& regionLabels, int row, int col) const {
 //	return startRow > domainStart && endRow < domainEnd && regionLabels.at<MAT_TYPE_FLOAT>(startRow - 1, col) != regionLabels.at<MAT_TYPE_FLOAT>(endRow, col);
 //}
 
-unique_ptr<float> GranDist::getDownflowLaneIndex(const Mat& regionLabels, int startRow, int endRow, int col, int domainStart, int domainEnd) const {
+unique_ptr<float> GranDist::getIgLaneIndex(const Mat& regionLabels, int startRow, int endRow, int col, int domainStart, int domainEnd) const {
 	if (startRow <= domainStart || endRow >= domainEnd) {
 		return unique_ptr<float>(nullptr);
 	}
@@ -208,9 +208,9 @@ unique_ptr<float> GranDist::getDownflowLaneIndex(const Mat& regionLabels, int st
  */
 tuple<Mat, Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat& regionLabels) const {
 	Mat granuleSizes = Mat::zeros(granules.rows, granules.cols, CV_32F);
-	Mat downFlowLaneWidths = Mat::ones(granules.rows, granules.cols, CV_32F) * INFTY;
-	Mat downFlowBubbleSizes = Mat::zeros(granules.rows, granules.cols, CV_32F);
-	Mat downFlowLaneIndices = Mat::zeros(granules.rows, granules.cols, CV_32F);
+	Mat igLaneWidths = Mat::ones(granules.rows, granules.cols, CV_32F) * INFTY;
+	Mat dfPatchSizes = Mat::zeros(granules.rows, granules.cols, CV_32F);
+	Mat igLaneIndices = Mat::zeros(granules.rows, granules.cols, CV_32F);
 	for (int col = 0; col < granules.cols; col++) {
 		bool inGranule = granules.at<MAT_TYPE_FLOAT>(0, col) == UP_FLOW;
 		float dist = 0;
@@ -238,17 +238,17 @@ tuple<Mat, Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat
 			if ((granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW) == inGranule) {
 				dist++;
 			} else {
-				bool inDownFlowLane = inGranule ? false : inDomain(granules, startRow - 1, col) && !inDownFlowBubble(regionLabels, startRow, col);
+				bool inIgLane = inGranule ? false : inDomain(granules, startRow - 1, col) && !inDownFlowPatch(regionLabels, startRow, col);
 				// In case of periodic boundary skip regions intersecting with the boundary, except for down flow lanes
-				if (!periodic || inDownFlowLane || !onBoundary(regionLabels, startRow, col)) {
-					auto laneIndex = getDownflowLaneIndex(regionLabels, startRow, row, col, domainStart, domainEnd);
+				if (!periodic || inIgLane || !onBoundary(regionLabels, startRow, col)) {
+					auto laneIndex = getIgLaneIndex(regionLabels, startRow, row, col, domainStart, domainEnd);
 					// In case of down flow lanes don't count these regions that are on the boundaries
-					if (!inDownFlowLane || laneIndex) {
-						Mat& dists = inGranule ? granuleSizes : (inDownFlowLane ? downFlowLaneWidths : downFlowBubbleSizes);
+					if (!inIgLane || laneIndex) {
+						Mat& dists = inGranule ? granuleSizes : (inIgLane ? igLaneWidths : dfPatchSizes);
 						for (int row1 = startRow; row1 < row; row1++) {
 							dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
-							if (inDownFlowLane) {
-								downFlowLaneIndices.at<MAT_TYPE_FLOAT>(row1, col) = *laneIndex;
+							if (inIgLane) {
+								igLaneIndices.at<MAT_TYPE_FLOAT>(row1, col) = *laneIndex;
 							}
 						}
 					}
@@ -259,20 +259,20 @@ tuple<Mat, Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat
 			}
 		}
 		if (!periodic) {
-			bool inDownFlowLane = inGranule ? false : inDomain(granules, startRow - 1, col) && !inDownFlowBubble(regionLabels, startRow, col);
-			Mat& dists = inGranule ? granuleSizes : (inDownFlowLane ? downFlowLaneWidths : downFlowBubbleSizes);
-			auto laneIndex = getDownflowLaneIndex(regionLabels, startRow, row, col, domainStart, domainEnd);
-			if (!inDownFlowLane || laneIndex) {
+			bool inIgLane = inGranule ? false : inDomain(granules, startRow - 1, col) && !inDownFlowPatch(regionLabels, startRow, col);
+			Mat& dists = inGranule ? granuleSizes : (inIgLane ? igLaneWidths : dfPatchSizes);
+			auto laneIndex = getIgLaneIndex(regionLabels, startRow, row, col, domainStart, domainEnd);
+			if (!inIgLane || laneIndex) {
 				for (int row1 = startRow; row1 < row; row1++) {
 					dists.at<MAT_TYPE_FLOAT>(row1, col) = dist;
-					if (inDownFlowLane) {
-						downFlowLaneIndices.at<MAT_TYPE_FLOAT>(row1, col) = *laneIndex;
+					if (inIgLane) {
+						igLaneIndices.at<MAT_TYPE_FLOAT>(row1, col) = *laneIndex;
 					}
 				}
 			}
 		}
 	}
-	return make_tuple(granuleSizes, downFlowLaneWidths, downFlowBubbleSizes, downFlowLaneIndices);
+	return make_tuple(granuleSizes, igLaneWidths, dfPatchSizes, igLaneIndices);
 }
 
 set<int> GranDist::getClosedRegions() const {
@@ -453,9 +453,9 @@ void GranDist::process() {
 	}
 	//Mat croppedGranules = granules(cropRect);
 	Mat granuleSizes;
-	Mat downFlowLaneWidths;
-	Mat downFlowBubbleSizes;
-	Mat downFlowLaneIndices;
+	Mat igLaneWidths;
+	Mat dfPatchSizes;
+	Mat igLaneIndices;
 	for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
 		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;
@@ -466,9 +466,9 @@ void GranDist::process() {
 		//#endif
 		auto dists = calcDistances(granulesRotated, regionLabelsRotated);
 		auto verticalGranuleSizes = get<0>(dists);
-		auto verticalDownFlowLaneWidths = get<1>(dists);
-		auto verticalDownFlowBubbleSizes = get<2>(dists);
-		auto verticalDownFlowLaneIndices = get<3>(dists);
+		auto verticalIgLaneWidths = get<1>(dists);
+		auto verticalDfPatchSizes = get<2>(dists);
+		auto verticalIgLaneIndices = get<3>(dists);
 		//#ifdef DEBUG
 		//	if (((int) angle) == 0) {
 		//		double min1, max1;
@@ -478,20 +478,20 @@ void GranDist::process() {
 		//#endif
 		if (angle > 0) {
 			verticalGranuleSizes = rotate(verticalGranuleSizes, -angle);
-			verticalDownFlowLaneWidths = rotate(verticalDownFlowLaneWidths, -angle);
-			verticalDownFlowBubbleSizes = rotate(verticalDownFlowBubbleSizes, -angle);
-			verticalDownFlowLaneIndices = rotate(verticalDownFlowLaneIndices, -angle);
+			verticalIgLaneWidths = rotate(verticalIgLaneWidths, -angle);
+			verticalDfPatchSizes = rotate(verticalDfPatchSizes, -angle);
+			verticalIgLaneIndices = rotate(verticalIgLaneIndices, -angle);
 		}
 		Mat newGranuleSizes = verticalGranuleSizes;//(cropRect);
-		Mat newDownFlowLaneWidths = verticalDownFlowLaneWidths;//(cropRect);
-		Mat newDownFlowBubbleSizes = verticalDownFlowBubbleSizes;//(cropRect);
-		Mat newDownFlowLaneIndices = verticalDownFlowLaneIndices;//(cropRect);
+		Mat newIgLaneWidths = verticalIgLaneWidths;//(cropRect);
+		Mat newDfPatchSizes = verticalDfPatchSizes;//(cropRect);
+		Mat newIgLaneIndices = verticalIgLaneIndices;//(cropRect);
 		if (angle == 0) {
 			// First time
 			granuleSizes = newGranuleSizes;
-			downFlowLaneWidths = newDownFlowLaneWidths;
-			downFlowBubbleSizes = newDownFlowBubbleSizes;
-			downFlowLaneIndices = newDownFlowLaneIndices;
+			igLaneWidths = newIgLaneWidths;
+			dfPatchSizes = newDfPatchSizes;
+			igLaneIndices = newIgLaneIndices;
 		} else {
 			for (int row = 0; row < newGranuleSizes.rows; row++) {
 				for (int col = 0; col < newGranuleSizes.cols; col++) {
@@ -501,24 +501,24 @@ void GranDist::process() {
 							// in granule and new size is greater
 							granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
 						}
-						downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
-						downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
+						igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
+						dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					} else {
-						if (inDownFlowBubble(regionLabelsFloat, row, col)) {
-							auto newSize = newDownFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col);
-							if (newSize > downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
+						if (inDownFlowPatch(regionLabelsFloat, row, col)) {
+							auto newSize = newDfPatchSizes.at<MAT_TYPE_FLOAT>(row, col);
+							if (newSize > dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col)) {
 								// in down flow bubble and new size is greater
-								downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
+								dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
 							}
-							downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
+							igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
 						} else {
-							auto newWidth = newDownFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col);
-							if (newWidth < downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col)) {
+							auto newWidth = newIgLaneWidths.at<MAT_TYPE_FLOAT>(row, col);
+							if (newWidth < igLaneWidths.at<MAT_TYPE_FLOAT>(row, col)) {
 								// in down flow lane and new width is shorter
-								downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = newWidth;
-								downFlowLaneIndices.at<MAT_TYPE_FLOAT>(row, col) = newDownFlowLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
+								igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = newWidth;
+								igLaneIndices.at<MAT_TYPE_FLOAT>(row, col) = newIgLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
 							}
-							downFlowBubbleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
+							dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						}
 						granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					}
@@ -562,17 +562,17 @@ void GranDist::process() {
 	// Find and output down flow lane width minima
 	//-------------------------------------------------------------------------
 
-	Mat downFlowLaneWidthsClone = downFlowLaneWidths.clone();
-	Mat minimaLabels = labelExtrema(downFlowLaneWidths, true);
+	Mat igWidthsClone = igLaneWidths.clone();
+	Mat minimaLabels = labelExtrema(igLaneWidths, true);
 	//std::ofstream output2(string("df_width_minima_") + to_string(layer) + ".txt", ios_base::app);
-	auto downFlowLaneWidthMinima = findExtrema(downFlowLaneWidths, minimaLabels, less<float>());
-	filterExtrema(downFlowLaneWidthMinima, false);
+	auto igLaneWidthMinima = findExtrema(igLaneWidths, minimaLabels, less<float>());
+	filterExtrema(igLaneWidthMinima, false);
 
 	map<float /*down flow lane index*/, tuple<float, int, int> /*minimum*/> uniqueMinima;
-	for (auto extremum : downFlowLaneWidthMinima) {
+	for (auto extremum : igLaneWidthMinima) {
 		auto row = get<1>(extremum);
 		auto col = get<2>(extremum);
-		auto index = downFlowLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
+		auto index = igLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
 		if (index == 0) {
 			// These are the lane indices that were turned to zero due to rounding errors in matrix rotation.
 			// Actually they should also be included in results, but probably there are no many of these
@@ -587,65 +587,65 @@ void GranDist::process() {
 		}
 	}
 
-	downFlowLaneWidthMinima.clear();
+	igLaneWidthMinima.clear();
 
 	for (auto i : uniqueMinima) {
 		auto extremum = i.second;
-		dfLaneOut << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-		downFlowLaneWidthMinima.push_back(extremum);
+		igLaneOut << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
+		igLaneWidthMinima.push_back(extremum);
 	}
 
 
 	// Replace occurrences of INFTY with zeros
-	for (int row = 0; row < downFlowLaneWidths.rows; row++) {
-		for (int col = 0; col < downFlowLaneWidths.cols; col++) {
-			if (downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
-				downFlowLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
+	for (int row = 0; row < igLaneWidths.rows; row++) {
+		for (int col = 0; col < igLaneWidths.cols; col++) {
+			if (igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
+				igLaneWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
-			if (downFlowLaneWidthsClone.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
-				downFlowLaneWidthsClone.at<MAT_TYPE_FLOAT>(row, col) = 0;
+			if (igWidthsClone.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
+				igWidthsClone.at<MAT_TYPE_FLOAT>(row, col) = 0;
 			}
 		}
 	}
 
-	convertTo8Bit(downFlowLaneWidths);
-	convertTo8Bit(downFlowLaneWidthsClone);
-	Mat downFlowLaneWidthMinimaRGB = convertToColorAndMarkExtrema(downFlowLaneWidthsClone, downFlowLaneWidthMinima, INFTY);
+	convertTo8Bit(igLaneWidths);
+	convertTo8Bit(igWidthsClone);
+	Mat downFlowLaneWidthMinimaRGB = convertToColorAndMarkExtrema(igWidthsClone, igLaneWidthMinima, INFTY);
 
 
 	//imwrite(string("df_widths") + to_string(layer) + ".png", downFlowLaneWidths);
 	if (debug) {
-		imwrite(string("df_width_minima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
+		imwrite(string("ig_lane_width_minima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", downFlowLaneWidthMinimaRGB);
 	}
 
 	//-------------------------------------------------------------------------
 	// Find and output down flow bubble size maxima
 	//-------------------------------------------------------------------------
-	Mat downFlowBubbleSizesClone = downFlowBubbleSizes.clone();
+	Mat dfPatchSizesClone = dfPatchSizes.clone();
 	//std::ofstream output3(string("df_bubble_size_maxima_") + to_string(layer) + ".txt", ios_base::app);
-	auto downFlowBubbleSizeMaxima = findExtrema(downFlowBubbleSizes, regionLabels, greater<float>());
-	filterExtrema(downFlowBubbleSizeMaxima);
+	auto dfPatchSizeMaxima = findExtrema(dfPatchSizes, regionLabels, greater<float>());
+	filterExtrema(dfPatchSizeMaxima);
 
-	for (auto extremum : downFlowBubbleSizeMaxima) {
+	for (auto extremum : dfPatchSizeMaxima) {
 		if (get<0>(extremum) != 0) {
 			int row = get<1>(extremum);
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
-			dfBubbleOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
+			dfPatchOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
 		}
 	}
 
 	// Convert to 8-bit matrices and normalize from 0 to 255
-	convertTo8Bit(downFlowBubbleSizes);
-	convertTo8Bit(downFlowBubbleSizesClone);
+	convertTo8Bit(dfPatchSizes);
+	convertTo8Bit(dfPatchSizesClone);
 
 	// Convert to color image and mark positions of extrema red
-	Mat downFlowBubbleSizeMaximaRGB = convertToColorAndMarkExtrema(downFlowBubbleSizesClone, downFlowBubbleSizeMaxima, 0);
+	Mat dfPatchSizeMaximaRGB = convertToColorAndMarkExtrema(dfPatchSizesClone, dfPatchSizeMaxima, 0);
 
 	// Visualize matrices
 	//imwrite(string("df_bubble_sizes") + to_string(layer) + ".png", downFlowBubbleSizes);
 	if (debug) {
-		imwrite(string("df_bubble_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", downFlowBubbleSizeMaximaRGB);
+		imwrite(string("df_patch_size_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", dfPatchSizeMaximaRGB);
 	}
 
 }
