@@ -121,6 +121,17 @@ void GranDist::labelRegions() {
 	regionLabels = floodFill.getLabels();
 	numRegions = floodFill.getNumRegions();
 	regionAreas = floodFill.getRegionAreas();
+
+	//Mat croppedRegionLabels = regionLabels(cropRect);
+	//FloodFill floodFill2(croppedRegionLabels);
+	//auto& regionLabels2 = floodFill2.getRegionLabels();
+	//auto& regionAreas = floodFill2.getRegionAreas();
+	//for (int row = 0; row < granules.rows; row++) {
+	//	for (int col = 0; col < granules.cols; col++) {
+	//		regionLabels.get<MAT_TYPE_INT>(row, col);
+	//	}
+	//}
+
 }
 
 /**
