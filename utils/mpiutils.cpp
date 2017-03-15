@@ -15,20 +15,12 @@
 
 int procId;
 int numProc;
-int tagLogLen;
-int tagLog;
-int tagStrLen;
-int tagStr;
 
-void mpiInit(int argc, char *argv[], int tagLogLen, int tagLog, int tagStrLen, int tagStr) {
+void mpiInit(int argc, char *argv[]) {
 #ifdef _MPI
 	MPI::Init(argc, argv);
 	numProc = MPI::COMM_WORLD.Get_size();
 	procId = MPI::COMM_WORLD.Get_rank();
-	::tagLogLen = tagLogLen,
-	::tagLog = tagLog;
-	::tagStrLen = tagStrLen,
-	::tagStr = tagStr;
 #else
 	numProc = 1;
 	procId = 0;
@@ -89,7 +81,7 @@ void recvLog() {
 }
 
 
-FileWriter::FileWriter(const string& fileName) {
+FileWriter::FileWriter(const string& fileName, int id) : id(id) {
 	if (getProcId() == 0 && !fileName.empty()) {
 		output = unique_ptr<std::ofstream>(new std::ofstream(fileName, ios_base::app));
 	}
@@ -102,6 +94,7 @@ void FileWriter::write(const string& str) {
 	if (getProcId() > 0) {
 #ifdef _MPI
 		int len = str.length() + 1;
+		MPI::COMM_WORLD.Send(&id, 1, MPI::INT, 0, tagId);
 		MPI::COMM_WORLD.Send(&len, 1, MPI::INT, 0, tagStrLen);
 		MPI::COMM_WORLD.Send(str.c_str(), len, MPI::CHAR, 0, tagStr);
 		MPI::COMM_WORLD.Barrier();
@@ -113,8 +106,11 @@ void FileWriter::write(const string& str) {
 		}
 #ifdef _MPI
 		for (int i = 1; i < getNumProc(); i++) {
+			int idRecv;
 			int len;
 			MPI::Status status;
+			MPI::COMM_WORLD.Recv(&idRecv, 1, MPI::INT, MPI_ANY_SOURCE, tagId, status);
+			assert(id == idRecv);
 			MPI::COMM_WORLD.Recv(&len, 1,  MPI::INT, MPI_ANY_SOURCE, tagStrLen, status);
 			assert(status.Get_error() == MPI::SUCCESS);
 			char strRecv[len];

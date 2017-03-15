@@ -14,7 +14,16 @@
 
 using namespace std;
 
-void mpiInit(int argc, char *argv[], int tagLogLen = 1, int tagLog = 2, int tagStrLen = 3, int tagStr = 4);
+enum MessageTag {
+	tagLogLen = 1,
+	tagLog = 2,
+	tagStrLen = 3,
+	tagStr = 4,
+	tagId = 4
+};
+
+
+void mpiInit(int argc, char *argv[]);
 void mpiFinalize();
 void mpiBarrier();
 
@@ -28,11 +37,12 @@ void recvLog();
 
 class FileWriter {
 public:
-	FileWriter(const string& fileName = "");
+	FileWriter(const string& fileName, int id = 0);
 	virtual ~FileWriter();
 	void write(const string& str = "");
 
 private:
+	const int id; // For double checking if the message sender and receiver are correct
 	unique_ptr<std::ofstream> output;
 };
 

@@ -184,10 +184,10 @@ int main(int argc, char *argv[]) {
 			}
 			for (auto layer : layers) {
 				auto& granDist = granDists[layer];
-				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt");
-				FileWriter fw2(string("ig_lane_width_minima_") + to_string(layer) + ".txt");
-				FileWriter fw3(string("ig_lane_width_maxima_") + to_string(layer) + ".txt");
-				FileWriter fw4(string("df_patch_size_maxima_") + to_string(layer) + ".txt");
+				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt", layer);
+				FileWriter fw2(string("ig_lane_width_minima_") + to_string(layer) + ".txt", layer + layers.size());
+				FileWriter fw3(string("ig_lane_width_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 2);
+				FileWriter fw4(string("df_patch_size_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 3);
 				fw1.write(granDist->getGranuleSizesStr());
 				fw2.write(granDist->getIgLaneMinWidthsStr());
 				fw3.write(granDist->getIgLaneMaxWidthsStr());
@@ -198,10 +198,10 @@ int main(int argc, char *argv[]) {
 		} else {
 			assert(!layers.empty()); // If this happens the number of processors is greater than number of snapshots
 			for (auto layer : layers) {
-				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt");
-				FileWriter fw2(string("ig_lane_width_minima_") + to_string(layer) + ".txt");
-				FileWriter fw3(string("ig_lane_width_maxima_") + to_string(layer) + ".txt");
-				FileWriter fw4(string("df_patch_size_maxima_") + to_string(layer) + ".txt");
+				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt", layer);
+				FileWriter fw2(string("ig_lane_width_minima_") + to_string(layer) + ".txt", layer + layers.size());
+				FileWriter fw3(string("ig_lane_width_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 2);
+				FileWriter fw4(string("df_patch_size_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 3);
 				fw1.write();
 				fw2.write();
 				fw3.write();
