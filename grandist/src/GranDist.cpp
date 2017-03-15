@@ -454,10 +454,8 @@ void GranDist::process() {
 	//Mat croppedGranules = granules(cropRect);
 	Mat granuleSizes;
 	Mat igLaneMinWidths;
-	Mat igLaneMaxWidths;
 	Mat dfPatchSizes;
-	Mat igLaneMinIndices;
-	Mat igLaneMaxIndices;
+	Mat igLaneIndices;
 	for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
 		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
 		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;
@@ -492,10 +490,8 @@ void GranDist::process() {
 			// First time
 			granuleSizes = newGranuleSizes;
 			igLaneMinWidths = newIgLaneWidths;
-			igLaneMaxWidths = newIgLaneWidths.clone();
 			dfPatchSizes = newDfPatchSizes;
-			igLaneMinIndices = newIgLaneIndices;
-			igLaneMaxIndices = newIgLaneIndices.clone();
+			igLaneIndices = newIgLaneIndices;
 		} else {
 			for (int row = 0; row < newGranuleSizes.rows; row++) {
 				for (int col = 0; col < newGranuleSizes.cols; col++) {
@@ -506,7 +502,6 @@ void GranDist::process() {
 							granuleSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
 						}
 						igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
-						igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 					} else {
 						if (inDownFlowPatch(regionLabelsFloat, row, col)) {
@@ -516,18 +511,12 @@ void GranDist::process() {
 								dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col) = newSize;
 							}
 							igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col) = INFTY;
-							igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						} else {
 							auto newWidth = newIgLaneWidths.at<MAT_TYPE_FLOAT>(row, col);
 							if (newWidth < igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col)) {
 								// in down flow lane and new width is shorter
 								igLaneMinWidths.at<MAT_TYPE_FLOAT>(row, col) = newWidth;
-								igLaneMinIndices.at<MAT_TYPE_FLOAT>(row, col) = newIgLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
-							}
-							if (newWidth > igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col)) {
-								// in down flow lane and new width is longer
-								igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col) = newWidth;
-								igLaneMaxIndices.at<MAT_TYPE_FLOAT>(row, col) = newIgLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
+								igLaneIndices.at<MAT_TYPE_FLOAT>(row, col) = newIgLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
 							}
 							dfPatchSizes.at<MAT_TYPE_FLOAT>(row, col) = 0;
 						}
@@ -538,7 +527,7 @@ void GranDist::process() {
 		}
 	}
 
-	//regionLabels = regionLabels(cropRect);
+	Mat igLaneMaxWidths = igLaneMinWidths.clone();
 
 	//-------------------------------------------------------------------------
 	// Find and output granule size maxima
@@ -583,10 +572,10 @@ void GranDist::process() {
 	for (auto extremum : igLaneWidthMinima) {
 		auto row = get<1>(extremum);
 		auto col = get<2>(extremum);
-		auto index = igLaneMinIndices.at<MAT_TYPE_FLOAT>(row, col);
+		auto index = igLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
 		if (index == 0) {
 			// These are the lane indices that were turned to zero due to rounding errors in matrix rotation.
-			// Actually they should also be included in results, but probably there are no many of these
+			// Actually they should also be included in results, but probably there are not many of these
 			//assert(false);
 		} else {
 			auto i = uniqueMinima.find(index);
@@ -630,8 +619,18 @@ void GranDist::process() {
 	}
 
 	//-------------------------------------------------------------------------
-	// Find and output intergranular lane width minima
+	// Find and output intergranular lane width maxima
 	//-------------------------------------------------------------------------
+
+	// Replace occurrences of INFTY with zeros
+	for (int row = 0; row < igLaneMaxWidths.rows; row++) {
+		for (int col = 0; col < igLaneMaxWidths.cols; col++) {
+			if (igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col) == INFTY) {
+				igLaneMaxWidths.at<MAT_TYPE_FLOAT>(row, col) = 0;
+			}
+		}
+	}
+
 
 	Mat igLaneMaxWidthsClone = igLaneMaxWidths.clone();
 	Mat maximaLabels = labelExtrema(igLaneMaxWidths, false);
@@ -643,16 +642,16 @@ void GranDist::process() {
 	for (auto extremum : igLaneWidthMaxima) {
 		auto row = get<1>(extremum);
 		auto col = get<2>(extremum);
-		auto index = igLaneMaxIndices.at<MAT_TYPE_FLOAT>(row, col);
+		auto index = igLaneIndices.at<MAT_TYPE_FLOAT>(row, col);
 		if (index == 0) {
 			// These are the lane indices that were turned to zero due to rounding errors in matrix rotation.
-			// Actually they should also be included in results, but probably there are no many of these
+			// Actually they should also be included in results, but probably there are not many of these
 			//assert(false);
 		} else {
 			auto i = uniqueMaxima.find(index);
 			if (i == uniqueMaxima.end()) {
 				uniqueMaxima[index] = extremum;
-			} else if (get<0>(extremum) < get<0>(i->second)) {
+			} else if (get<0>(extremum) > get<0>(i->second)) {
 				uniqueMaxima[i->first] = extremum;
 			}
 		}
@@ -672,7 +671,7 @@ void GranDist::process() {
 
 
 	if (debug) {
-		imwrite(string("ig_lane_width_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", igLaneWidthMinimaRGB);
+		imwrite(string("ig_lane_width_maxima") + to_string(timeMoment) + "_" + to_string(layer) + ".png", igLaneWidthMaximaRGB);
 	}
 
 	//-------------------------------------------------------------------------
