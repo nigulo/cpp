@@ -19,7 +19,7 @@ enum MessageTag {
 	tagLog = 2,
 	tagStrLen = 3,
 	tagStr = 4,
-	tagId = 4
+	tagId = 5
 };
 
 
