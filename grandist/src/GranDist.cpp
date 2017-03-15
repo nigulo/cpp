@@ -325,8 +325,8 @@ set<int /*granuleLabel*/> GranDist::getGranulesOnBoundaries() const {
 /**
  * Labels the local extrema of the distance matrix.
  */
-Mat labelExtrema(const Mat& dists, bool minimaOrMaxima) {
-	FloodFill floodFill(dists);
+Mat labelExtrema(const Mat& dists, bool minimaOrMaxima, const Mat* mask) {
+	FloodFill floodFill(dists, equal_to<float>(), mask);
 	for (;;) {
 		float globalExtremum = minimaOrMaxima ? INFTY : 0;
 		int extremumRow = -1;
@@ -563,7 +563,7 @@ void GranDist::process() {
 	//-------------------------------------------------------------------------
 
 	Mat igLaneMinWidthsClone = igLaneMinWidths.clone();
-	Mat minimaLabels = labelExtrema(igLaneMinWidths, true);
+	Mat minimaLabels = labelExtrema(igLaneMinWidths, true, &igLaneIndices);
 	//std::ofstream output2(string("df_width_minima_") + to_string(layer) + ".txt", ios_base::app);
 	auto igLaneWidthMinima = findExtrema(igLaneMinWidths, minimaLabels, less<float>());
 	filterExtrema(igLaneWidthMinima, false);
@@ -633,7 +633,7 @@ void GranDist::process() {
 
 
 	Mat igLaneMaxWidthsClone = igLaneMaxWidths.clone();
-	Mat maximaLabels = labelExtrema(igLaneMaxWidths, false);
+	Mat maximaLabels = labelExtrema(igLaneMaxWidths, false, &igLaneIndices);
 	//std::ofstream output2(string("df_width_minima_") + to_string(layer) + ".txt", ios_base::app);
 	auto igLaneWidthMaxima = findExtrema(igLaneMaxWidths, maximaLabels, greater<float>());
 	filterExtrema(igLaneWidthMaxima, false);
