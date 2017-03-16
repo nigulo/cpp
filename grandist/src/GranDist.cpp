@@ -54,7 +54,7 @@ Mat& convertTo8Bit(Mat& mat) {
 GranDist::GranDist(int timeMoment, int layer, Mat granules, bool periodic, Rect cropRect, bool saveMaps) :
 		timeMoment(timeMoment),
 		layer(layer),
-		granules(periodic ? tileMatrix(granules, originalHeight, originalWidth) : granules),
+		granules(periodic ? tileMatrix(granules, cropRect.height, cropRect.width) : granules),
 		originalHeight(cropRect.height),
 		originalWidth(cropRect.width),
 		periodic(periodic),
@@ -149,6 +149,7 @@ void GranDist::labelRegions() {
 	regionLabels = floodFill.getLabels();
 	numRegions = floodFill.getNumRegions();
 	regionAreas = floodFill.getRegionAreas();
+
 	regionAreas.erase(regionLabels.at<MAT_TYPE_INT>(0, 0)); // Removing the region of extra padding
 	if (periodic) {
 		auto& regionExtents = floodFill.getRegionExtents();
