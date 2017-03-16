@@ -12,6 +12,7 @@
 #include <functional>
 #include <set>
 #include <map>
+#include <tuple>
 
 using namespace cv;
 using namespace std;
@@ -46,9 +47,14 @@ public:
 		return label - 1;
 	}
 
-	const map<int, int> getRegionAreas() {
+	const map<int /*label*/, int /*area*/>& getRegionAreas() const {
 		return regionAreas;
 	}
+
+	const map<int /*label*/, tuple<int /*minRow*/, int /*maxRow*/, int /*minCol*/, int /*maxCol*/>>& getRegionExtents() const {
+		return regionExtents;
+	}
+
 private:
 	bool checkMask(int row, int col);
 	void fillConnectedRegion(const int row, const int col);
@@ -62,9 +68,14 @@ private:
 	map<int, float> neighbors;
 	set<int> closedRegions;
 	int label; // Label of the last area
-	map<int /*label*/, int> regionAreas;
+	map<int /*label*/, int /*area*/> regionAreas;
+	map<int /*label*/, tuple<int /*minRow*/, int /*maxRow*/, int /*minCol*/, int /*maxCol*/>> regionExtents;
 	int area; // Area of the last region filled
 	int maskValue;
+	int minRow;
+	int maxRow;
+	int minCol;
+	int maxCol;
 };
 
 #endif /* FLOODFILL_H_ */

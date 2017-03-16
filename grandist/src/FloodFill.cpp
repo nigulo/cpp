@@ -27,10 +27,14 @@ bool FloodFill::checkMask(int row, int col) {
 }
 
 void FloodFill::fillConnectedRegion(const int row, const int col) {
-	//cout << "markClosedRegion " << label << " " << row << " " << col << endl;
+	minRow = row < minRow ? row : minRow;
+	maxRow = row > maxRow ? row : maxRow;
 	auto startEndCols = fillRow(row, col);
 	int startCol = startEndCols.first;
 	int endCol = startEndCols.second;
+	area += endCol - startCol + 1;
+	minCol = startCol < minCol ? startCol : minCol;
+	maxCol = endCol > maxCol ? endCol : maxCol;
 	for (int col1 = startCol; col1 <= endCol; col1++) {
 		auto value = mat.at<MAT_TYPE_FLOAT>(row, col1);
 		if (row > 0 && labels.at<MAT_TYPE_INT>(row - 1, col1) == 0) {
@@ -50,7 +54,6 @@ void FloodFill::fillConnectedRegion(const int row, const int col) {
 			}
 		}
 	}
-	//cout << "markClosedRegion end " << label << " " << row << " " << col << endl;
 }
 
 pair<int, int> FloodFill::fillRow(const int row, const int col) {
@@ -80,8 +83,6 @@ pair<int, int> FloodFill::fillRow(const int row, const int col) {
 			break;
 		}
 	}
-	area += endCol - startCol - 1;
-	//cout << "markRow " << (startCol + 1) << " " << (endCol - 1) << endl;
 	return make_pair(startCol + 1, endCol - 1);
 }
 
@@ -100,9 +101,14 @@ void FloodFill::fill(const int row, const int col) {
 			maskValue = mask->at<MAT_TYPE_FLOAT>(row, col);
 		}
 		area = 0;
+		minRow = row;
+		maxRow = row;
+		minCol = col;
+		maxCol = col;
 		closedRegions.insert(label);
 		fillConnectedRegion(row, col);
 		regionAreas[label] = area;
+		regionExtents[label] = make_tuple(minRow, maxRow, minCol, maxCol);
 		label++;
 	}
 }

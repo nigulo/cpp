@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
 				}
 				if (toLayer == 0 || layer <= toLayer) {
 					bool maps = saveMaps && layer >= mapsFromLayer && (mapsToLayer == 0 || layer <= mapsToLayer) && (layer - fromLayer) % mapsStep == 0;
-					granDists[layer] = unique_ptr<GranDist>(new GranDist(timeMoment, layer, mat, height, width, periodic, cropRect, maps));
+					granDists[layer] = unique_ptr<GranDist>(new GranDist(timeMoment, layer, mat, periodic, cropRect, maps));
 					if (createLayers) {
 						layers.push_back(layer);
 					}

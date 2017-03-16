@@ -51,21 +51,21 @@ Mat& convertTo8Bit(Mat& mat) {
 }
 
 
-GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect, bool saveMaps) :
+GranDist::GranDist(int timeMoment, int layer, Mat granules, bool periodic, Rect cropRect, bool saveMaps) :
 		timeMoment(timeMoment),
 		layer(layer),
 		granules(periodic ? tileMatrix(granules, originalHeight, originalWidth) : granules),
-		originalHeight(originalHeight),
-		originalWidth(originalWidth),
+		originalHeight(cropRect.height),
+		originalWidth(cropRect.width),
 		periodic(periodic),
 		cropRect(cropRect),
 		saveMaps(saveMaps) {
-
 	labelRegions();
 	regionLabels.convertTo(regionLabelsFloat, CV_32F);
 	const auto& closedRegions = getClosedRegions();
 
-	auto regionsOnBoundaries = getGranulesOnBoundaries();
+	auto regionsOnBoundaries = getRegionsOnBoundaries();
+
 	for (int row = 0; row < regionLabels.rows; row++) {
 		for (int col = 0; col < regionLabels.cols; col++) {
 			if (granules.at<MAT_TYPE_FLOAT>(row, col) == DOWN_FLOW)  {
@@ -95,6 +95,31 @@ GranDist::GranDist(int timeMoment, int layer, Mat granules, int originalHeight, 
 	//////////////////////////////////////////
 
 	this->regionsOnBoundaries = periodic ? regionsOnBoundaries : set<int>();
+
+	/////////////////////////////////////////////////////
+	// Sanity check for region area calculation.
+	// No time to write unit tests. Can be removed if ok.
+	//for (auto& regionAndArea : regionAreas) {
+	//	if (regionsOnBoundaries.find(regionAndArea.first) == regionsOnBoundaries.end()) {
+	//		if (regionAndArea.second != regionAreasForDebug[regionAndArea.first]) {
+	//			int row;
+	//			int col;
+	//			for (row = 0; row < regionLabels.rows; row++) {
+	//				for (col = 0; col < regionLabels.cols; col++) {
+	//					if (regionLabels.at<MAT_TYPE_INT>(row, col) == regionAndArea.first) {
+	//						break;
+	//					}
+	//				}
+	//			}
+	//			cout << "Jama: " << regionAndArea.first << " at (" << row << ", " << col<< "): " << regionAndArea.second << " !=" << regionAreasForDebug[regionAndArea.first] << endl;
+	//		}
+	//		assert(regionAndArea.second == regionAreasForDebug[regionAndArea.first]);
+	//	} else {
+	//		assert(regionAndArea.second <= regionAreasForDebug[regionAndArea.first]);
+	//	}
+	//}
+	/////////////////////////////////////////////////////
+
 }
 
 GranDist::~GranDist() {
@@ -104,6 +129,9 @@ GranDist::~GranDist() {
  * Labels the connected regions.
  */
 void GranDist::labelRegions() {
+	int rowOffset = (granules.rows - 2 * originalHeight) / 2;
+	int colOffset = (granules.cols - 2 * originalWidth) / 2;
+
 	FloodFill floodFill(granules);
 	for (int row = 0; row < granules.rows; row++) {
 		for (int col = 0; col < granules.cols; col++) {
@@ -121,14 +149,41 @@ void GranDist::labelRegions() {
 	regionLabels = floodFill.getLabels();
 	numRegions = floodFill.getNumRegions();
 	regionAreas = floodFill.getRegionAreas();
+	regionAreas.erase(regionLabels.at<MAT_TYPE_INT>(0, 0)); // Removing the region of extra padding
+	if (periodic) {
+		auto& regionExtents = floodFill.getRegionExtents();
+		for (auto& regionAndArea : regionAreas) {
+			auto& extents = regionExtents.at(regionAndArea.first);
+			if (get<0>(extents) <= rowOffset && get<1>(extents) >= rowOffset + 2 * originalHeight - 1) {
+				//assert(regionAndArea.second % 2 == 0); // Somehow the areas can be odd, but why
+				//cout << "Dividing by two: " << regionAndArea.first << " " << regionAndArea.second;
+				regionAndArea.second /= 2;
+				//cout << " " << regionAndArea.second << endl;
+			}
+			if (get<2>(extents) <= colOffset && get<3>(extents) >= colOffset + 2 * originalWidth - 1) {
+				//assert(regionAndArea.second % 2 == 0); // Somehow the areas can be odd, but why
+				//cout << "Dividing by two: " << regionAndArea.first << " " << regionAndArea.second;
+				regionAndArea.second /= 2;
+				//cout << " " << regionAndArea.second << endl;
+			}
+		}
+	}
 
+	// Calculation of region areas is done on cropped region label matrix, because
+	// we don't want that for regions spanning from edge to edge some parts would be counted twice
 	//Mat croppedRegionLabels = regionLabels(cropRect);
 	//FloodFill floodFill2(croppedRegionLabels);
-	//auto& regionLabels2 = floodFill2.getRegionLabels();
-	//auto& regionAreas = floodFill2.getRegionAreas();
-	//for (int row = 0; row < granules.rows; row++) {
-	//	for (int col = 0; col < granules.cols; col++) {
-	//		regionLabels.get<MAT_TYPE_INT>(row, col);
+	//auto& regionLabels2 = floodFill2.getLabels();
+	//auto regionAreas2 = floodFill2.getRegionAreas();
+	//for (int row = 0; row < croppedRegionLabels.rows; row++) {
+	//	for (int col = 0; col < croppedRegionLabels.cols; col++) {
+	//		int regionLabel1a = croppedRegionLabels.at<MAT_TYPE_INT>(row, col);
+	//		if (regionAreas.find(regionLabel1) == regionAreas.end()) {
+	//			regionAreas.insert({regionLabel1, regionAreas2[regionLabel2]});
+	//		} else if (regionAreas2.find(regionLabel2) != regionAreas.end()) {
+	//			regionAreas[regionLabel1] += regionAreas2[regionLabel2];
+	//		}
+	//		regionAreas2.erase(regionLabel2);
 	//	}
 	//}
 
@@ -309,8 +364,8 @@ set<int> GranDist::getClosedRegions() const {
 }
 
 
-set<int /*granuleLabel*/> GranDist::getGranulesOnBoundaries() const {
-	set<int> granulesOnBoundaries;
+set<int /*regionLabel*/> GranDist::getRegionsOnBoundaries() const {
+	set<int> regionsOnBoundaries;
 
 	int rowOffset = (regionLabels.rows - 2 * originalHeight) / 2;
 	int colOffset = (regionLabels.cols - 2 * originalWidth) / 2;
@@ -320,18 +375,18 @@ set<int /*granuleLabel*/> GranDist::getGranulesOnBoundaries() const {
 
 	for (int row = 0; row < regionLabels.rows; row++) {
 		if (regionLabels.at<MAT_TYPE_INT>(row, midCol) == regionLabels.at<MAT_TYPE_INT>(row, midCol - 1)) {
-			granulesOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(row, colOffset));
-			granulesOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(row, midCol + originalWidth - 1));
+			regionsOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(row, colOffset));
+			regionsOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(row, midCol + originalWidth - 1));
 			//cout << granuleLabels.at<MAT_TYPE_INT>(row, 0) << endl;
 		}
 	}
 	for (int col = 0; col < regionLabels.cols; col++) {
 		if (regionLabels.at<MAT_TYPE_INT>(midRow, col) == regionLabels.at<MAT_TYPE_INT>(midRow - 1, col)) {
-			granulesOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(rowOffset, col));
-			granulesOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(midRow + originalHeight - 1, col));
+			regionsOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(rowOffset, col));
+			regionsOnBoundaries.insert(regionLabels.at<MAT_TYPE_INT>(midRow + originalHeight - 1, col));
 		}
 	}
-	return granulesOnBoundaries;
+	return regionsOnBoundaries;
 }
 
 

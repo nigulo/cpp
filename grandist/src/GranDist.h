@@ -28,14 +28,14 @@ enum RegionType {
 
 class GranDist {
 public:
-	GranDist(int timeMoment, int layer, Mat granules, int originalHeight, int originalWidth, bool periodic, Rect cropRect, bool debug);
+	GranDist(int timeMoment, int layer, Mat granules, bool periodic, Rect cropRect, bool debug);
 	void process();
 	virtual ~GranDist();
 private:
 	void labelRegions();
 	tuple<Mat, Mat, Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
 	set<int> getClosedRegions() const;
-	set<int /*granuleLabel*/> getGranulesOnBoundaries() const;
+	set<int /*regionLabel*/> getRegionsOnBoundaries() const;
 	bool inDownFlowPatch(const Mat& regionLabels, int row, int col) const;
 	bool onBoundary(const Mat& granuleLabels, int row, int col) const;
 	unique_ptr<float> getIgLaneIndex(const Mat& regionLabels, int startRow, int endRow, int col, int domainStart, int domainEnd) const;
@@ -68,13 +68,14 @@ private:
 	Rect cropRect;
 	bool saveMaps;
 	Mat regionLabels;
-	set<int> regionsOnBoundaries;
-	set<int> downFlowPatches;
+	set<int /*regionLabel*/> regionsOnBoundaries;
+	set<int /*regionLabel*/> downFlowPatches;
 	Mat regionLabelsFloat;
 	int numRegions;
-	map<int, int> regionAreas;
-	// Output streams for results
+	map<int /*regionLabel*/, int /*area*/> regionAreas;
+	//map<int /*regionLabel*/, int /*area*/> regionAreasForDebug;
 
+	// Output streams for results
 	stringstream granuleSizesOut;
 	stringstream igLaneMinWidthsOut;
 	stringstream igLaneMaxWidthsOut;
