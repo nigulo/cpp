@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
 					mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = UP_FLOW;
 				} else {
 					mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = DOWN_FLOW;
-					fillingFactors[coord[verticalCoord]] += 1;
+					fillingFactors[coord[verticalCoord]]++;
 				}
 			});
 			map<int, unique_ptr<GranDist>> granDists;
@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
 				fw2.write(granDist->getIgLaneMinWidthsStr());
 				fw3.write(granDist->getIgLaneMaxWidthsStr());
 				fw4.write(granDist->getDfPatchSizesStr());
-				fw5.write(to_string(((float) fillingFactors[i]) / width / height));
+				fw5.write(to_string(((float) fillingFactors[i]) / width / height) + "\n");
 				i++;
 			}
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
