@@ -122,6 +122,7 @@ int main(int argc, char *argv[]) {
 
 			Mat matrices[numLayers];
 			int fillingFactors[numLayers];
+			int totals[numLayers];
 			int rows = ceil(((double) height) * sqrt(2));
 			int cols = ceil(((double) width) * sqrt(2));
 
@@ -182,7 +183,6 @@ int main(int argc, char *argv[]) {
 				auto layer = layers[i];
 				granDists[layer]->process();
 			}
-			int i = 0;
 			for (auto layer : layers) {
 				auto& granDist = granDists[layer];
 				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt", layer);
@@ -194,8 +194,7 @@ int main(int argc, char *argv[]) {
 				fw2.write(granDist->getIgLaneMinWidthsStr());
 				fw3.write(granDist->getIgLaneMaxWidthsStr());
 				fw4.write(granDist->getDfPatchSizesStr());
-				fw5.write(to_string(((float) fillingFactors[i]) / width / height) + "\n");
-				i++;
+				fw5.write(to_string(((float) fillingFactors[layer]) / width / height) + "\n");
 			}
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
 			recvLog();
