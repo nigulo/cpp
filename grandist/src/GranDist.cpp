@@ -473,7 +473,7 @@ void GranDist::process() {
 		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
 		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;
 		if (saveMaps && ((int) angle) == 0) {
-			imwrite(string("map") + to_string(timeMoment) + "_" + to_string(layer) + "_" + to_string((int) angle) + ".png", (granulesRotated - 1) * 255);
+			imwrite(string("map_") + to_string(timeMoment) + "_" + to_string(layer) + "_" + to_string((int) angle) + ".png", (granulesRotated - 1) * 255);
 		}
 		auto dists = calcDistances(granulesRotated, regionLabelsRotated);
 		auto verticalGranuleSizes = get<0>(dists);

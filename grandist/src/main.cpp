@@ -115,12 +115,13 @@ int main(int argc, char *argv[]) {
 			//auto numY = dims[1];
 			//auto numZ = dims[2];
 
-			auto depth = dims[verticalCoord];
+			int numLayers = dims[verticalCoord];
+			auto depth = numLayers;
 			auto width = dims[fstCoord];
 			auto height = dims[sndCoord];
 
-			int numLayers = dims[verticalCoord];
 			Mat matrices[numLayers];
+			int fillingFactors[numLayers];
 			int rows = ceil(((double) height) * sqrt(2));
 			int cols = ceil(((double) width) * sqrt(2));
 
@@ -139,9 +140,10 @@ int main(int argc, char *argv[]) {
 			for (int i = 0; i < depth; i++) {
 				// Using hidden fact that RegionType.OUT_OF_DOMAIN is 0
 				matrices[i] = Mat::zeros(rows, cols, CV_32F);
+				fillingFactors[i] = 0;
 			}
 
-			loader.load([&dims, verticalCoord, fstCoord, sndCoord, &matrices, rowOffset, colOffset](int t, int x, int y, int z, double field) {
+			loader.load([&dims, verticalCoord, fstCoord, sndCoord, &matrices, rowOffset, colOffset, &fillingFactors](int t, int x, int y, int z, double field) {
 				int coord[] = {x, y, z};
 				assert(coord[verticalCoord] < dims[verticalCoord]);
 				auto& mat = matrices[coord[verticalCoord]];
@@ -151,6 +153,7 @@ int main(int argc, char *argv[]) {
 					mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = UP_FLOW;
 				} else {
 					mat.at<MAT_TYPE_FLOAT>(coord[sndCoord] + rowOffset, coord[fstCoord] + colOffset) = DOWN_FLOW;
+					fillingFactors[coord[verticalCoord]] += 1;
 				}
 			});
 			map<int, unique_ptr<GranDist>> granDists;
@@ -179,16 +182,20 @@ int main(int argc, char *argv[]) {
 				auto layer = layers[i];
 				granDists[layer]->process();
 			}
+			int i = 0;
 			for (auto layer : layers) {
 				auto& granDist = granDists[layer];
 				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt", layer);
 				FileWriter fw2(string("ig_lane_width_minima_") + to_string(layer) + ".txt", layer + layers.size());
 				FileWriter fw3(string("ig_lane_width_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 2);
 				FileWriter fw4(string("df_patch_size_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 3);
+				FileWriter fw5(string("filling_factors_") + to_string(layer) + ".txt", layer + layers.size() * 4);
 				fw1.write(granDist->getGranuleSizesStr());
 				fw2.write(granDist->getIgLaneMinWidthsStr());
 				fw3.write(granDist->getIgLaneMaxWidthsStr());
 				fw4.write(granDist->getDfPatchSizesStr());
+				fw5.write(to_string(((float) fillingFactors[i]) / width / height));
+				i++;
 			}
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
 			recvLog();
@@ -199,10 +206,12 @@ int main(int argc, char *argv[]) {
 				FileWriter fw2(string("ig_lane_width_minima_") + to_string(layer) + ".txt", layer + layers.size());
 				FileWriter fw3(string("ig_lane_width_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 2);
 				FileWriter fw4(string("df_patch_size_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 3);
+				FileWriter fw5(string("filling_factors_") + to_string(layer) + ".txt", layer + layers.size() * 4);
 				fw1.write();
 				fw2.write();
 				fw3.write();
 				fw4.write();
+				fw5.write();
 
 			}
 			sendLog("Waiting for other processes to finish.\n");
