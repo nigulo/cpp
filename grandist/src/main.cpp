@@ -122,7 +122,6 @@ int main(int argc, char *argv[]) {
 
 			Mat matrices[numLayers];
 			int fillingFactors[numLayers];
-			int totals[numLayers];
 			int rows = ceil(((double) height) * sqrt(2));
 			int cols = ceil(((double) width) * sqrt(2));
 
