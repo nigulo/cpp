@@ -5,6 +5,7 @@
 #include "pcdl/SnapshotLoader.h"
 #include "GranDist.h"
 #include "common.h"
+#include "utils/mpiutils.h"
 #include <list>
 
 using namespace boost;
