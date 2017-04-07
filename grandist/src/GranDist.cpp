@@ -150,13 +150,17 @@ void GranDist::labelRegions() {
 	for (int row = 0; row < granules.rows; row++) {
 		for (int col = 0; col < granules.cols; col++) {
 			auto regionLabel = regionLabels.at<MAT_TYPE_INT>(row, col);
-			if (regionBoundaries.find(regionLabel) == regionBoundaries.end()) {
+			if (regionPerimeters.find(regionLabel) == regionPerimeters.end()) {
 				boundaryDetect.detect(row, col);
-				regionBoundaries[regionLabel] = ((float) (boundaryDetect.getInner().size() + boundaryDetect.getOuter().size())) / 2;
+				regionPerimeters[regionLabel] = ((float) (boundaryDetect.getInner().size() + boundaryDetect.getOuter().size())) / (2 * M_PI);
 			}
 		}
 	}
-	regionBoundaries.erase(regionLabels.at<MAT_TYPE_INT>(0, 0)); // Removing the region of extra padding
+	regionPerimeters.erase(regionLabels.at<MAT_TYPE_INT>(0, 0)); // Removing the region of extra padding
+	if (saveMaps) {
+		imwrite(string("inner_boundaries_") + to_string(timeMoment) + "_" + to_string(layer) + ".png", (boundaryDetect.getInnerBoundaries()) * 255);
+		imwrite(string("outer_boundaries_") + to_string(timeMoment) + "_" + to_string(layer) + ".png", (boundaryDetect.getOuterBoundaries()) * 255);
+	}
 
 }
 
@@ -579,7 +583,7 @@ void GranDist::process() {
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
 			//assert(granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW);
-			granuleSizesOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
+			output << label << " GRAN " << regionAreas[label] << " " << regionPerimeters[label] << " " << get<0>(extremum) << " " << row << " " << col << " " << endl;
 		}
 	}
 
@@ -626,10 +630,8 @@ void GranDist::process() {
 	}
 
 	igLaneWidthMinima.clear();
-
 	for (auto i : uniqueMinima) {
 		auto extremum = i.second;
-		igLaneMinWidthsOut << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
 		igLaneWidthMinima.push_back(extremum);
 	}
 
@@ -698,10 +700,39 @@ void GranDist::process() {
 	igLaneWidthMaxima.clear();
 
 	for (auto i : uniqueMaxima) {
-		auto extremum = i.second;
-		igLaneMaxWidthsOut << get<0>(extremum) << " " << get<1>(extremum) << " " << get<2>(extremum) << endl;
-		igLaneWidthMaxima.push_back(extremum);
+		float igIndex = i.first;
+		auto maximum = i.second;
+		float maximumWidth = get<0>(maximum);
+		int maximumRow = get<1>(maximum);
+		int maximumCol = get<2>(maximum);
+		int label = regionLabels.at<MAT_TYPE_INT>(maximumRow, maximumCol);
+
+		float minimumWidth = 0;
+		int minimumRow = -1;
+		int minimumCol = -1;
+		if (uniqueMinima.find(igIndex) != uniqueMinima.end()) {
+			auto minimum = uniqueMinima[igIndex];
+			minimumWidth = get<0>(minimum);
+			minimumRow = get<1>(minimum);
+			minimumCol = get<2>(minimum);
+		}
+		output << (numRegions + (int) i.first) << " IGL " << regionAreas[label] << " " << regionPerimeters[label] << " " << minimumWidth << " " << maximumWidth << " " << minimumRow << " " << minimumCol << " " << maximumRow << " " << maximumCol << " " << label << endl;
+		igLaneWidthMaxima.push_back(maximum);
 	}
+	// Just in case output those minima which don't have corresponding maxima (should be zero though)
+	for (auto i : uniqueMinima) {
+		float igIndex = i.first;
+		auto minimum = i.second;
+		float minimumWidth = get<0>(minimum);
+		int minimumRow = get<1>(minimum);
+		int minimumCol = get<2>(minimum);
+		int label = regionLabels.at<MAT_TYPE_INT>(minimumRow, minimumCol);
+
+		if (uniqueMaxima.find(igIndex) == uniqueMaxima.end()) {
+			output << (numRegions + (int) i.first) << " IGL " << regionAreas[label] << " " << regionPerimeters[label] << " " << minimumWidth << " " << 0 << " " << minimumRow << " " << minimumCol << " " << -1 << " " << -1 << " " << label << endl;
+		}
+	}
+
 
 	convertTo8Bit(igLaneMaxWidths);
 	convertTo8Bit(igLaneMaxWidthsClone);
@@ -725,7 +756,7 @@ void GranDist::process() {
 			int row = get<1>(extremum);
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
-			dfPatchSizesOut << get<0>(extremum) << " " << row << " " << col << " " << regionAreas.find(label)->second << endl;
+			output << label << " DFP " << regionAreas[label] << " " << regionPerimeters[label] << " " << get<0>(extremum) << " " << row << " " << col << " " << endl;
 		}
 	}
 

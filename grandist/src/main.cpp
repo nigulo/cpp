@@ -7,11 +7,20 @@
 #include "common.h"
 #include "utils/mpiutils.h"
 #include <list>
+#include <algorithm>
 
 using namespace boost;
 using namespace boost::filesystem;
 using namespace utils;
 using namespace pcdl;
+using namespace std;
+
+
+string zeroPad(int num, int maxNum) {
+	string maxNumStr = to_string(maxNum);
+	string numStr = to_string(num);
+	return string(std::max(0,  (int) maxNumStr.length() - (int) numStr.length()), '0') + numStr;
+}
 
 int main(int argc, char *argv[]) {
 
@@ -19,7 +28,7 @@ int main(int argc, char *argv[]) {
 
 	if (argc == 2 && string("-h") == argv[1]) {
 		if (getProcId() == 0) {
-			cout << "Usage: ./D2 [param file] [params to overwrite]\nparam file defaults to " << "parameters.txt" << endl;
+			cout << "Usage: ./grandist [param file] [params to overwrite]\nparam file defaults to " << "parameters.txt" << endl;
 		}
 		return EXIT_SUCCESS;
 	}
@@ -67,6 +76,7 @@ int main(int argc, char *argv[]) {
 	int sndCoord = verticalCoord == 0 ? 2 : (verticalCoord == 1 ? 0 : 1);
 
 	assert(verticalCoord >= 0 && verticalCoord <= 2);
+	string outputFilePrefix = Utils::FindProperty(params, "outputFilePrefix", "results");
 
 	string filePath = Utils::FindProperty(params, "filePath", "");
 	filePath += "/proc0";
@@ -103,6 +113,7 @@ int main(int argc, char *argv[]) {
 	timeMoments.sort(std::greater<int>());
 
 	vector<int> layers;
+	int maxLayer = 0;
 
 	for (int timeMoment : timeMoments) {
 		if (timeMoment > 0) {
@@ -173,6 +184,9 @@ int main(int argc, char *argv[]) {
 					granDists[layer] = unique_ptr<GranDist>(new GranDist(timeMoment, layer, mat, periodic, cropRect, maps));
 					if (createLayers) {
 						layers.push_back(layer);
+						if (layer > maxLayer) {
+							maxLayer = layer;
+						}
 					}
 				}
 			}
@@ -185,32 +199,22 @@ int main(int argc, char *argv[]) {
 			}
 			for (auto layer : layers) {
 				auto& granDist = granDists[layer];
-				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt", layer);
-				FileWriter fw2(string("ig_lane_width_minima_") + to_string(layer) + ".txt", layer + layers.size());
-				FileWriter fw3(string("ig_lane_width_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 2);
-				FileWriter fw4(string("df_patch_size_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 3);
-				FileWriter fw5(string("filling_factors_") + to_string(layer) + ".txt", layer + layers.size() * 4);
-				fw1.write(granDist->getGranuleSizesStr());
-				fw2.write(granDist->getIgLaneMinWidthsStr());
-				fw3.write(granDist->getIgLaneMaxWidthsStr());
-				fw4.write(granDist->getDfPatchSizesStr());
-				fw5.write(to_string(((float) fillingFactors[layer]) / width / height) + "\n");
+				string layerStr = zeroPad(layer, maxLayer);
+				FileWriter fw1(string(outputFilePrefix + "_") + layerStr + ".txt", layer);
+				FileWriter fw2(string(outputFilePrefix + "_ff_") + layerStr + ".txt", layer + layers.size() * 4);
+				fw1.write(granDist->getOutputStr());
+				fw2.write(to_string(((float) fillingFactors[layer]) / width / height) + "\n");
 			}
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
 			recvLog();
 		} else {
 			assert(!layers.empty()); // If this happens the number of processors is greater than number of snapshots
 			for (auto layer : layers) {
-				FileWriter fw1(string("granule_size_maxima_") + to_string(layer) + ".txt", layer);
-				FileWriter fw2(string("ig_lane_width_minima_") + to_string(layer) + ".txt", layer + layers.size());
-				FileWriter fw3(string("ig_lane_width_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 2);
-				FileWriter fw4(string("df_patch_size_maxima_") + to_string(layer) + ".txt", layer + layers.size() * 3);
-				FileWriter fw5(string("filling_factors_") + to_string(layer) + ".txt", layer + layers.size() * 4);
+				string layerStr = zeroPad(layer, maxLayer);
+				FileWriter fw1(string(outputFilePrefix + "_") + layerStr + ".txt", layer);
+				FileWriter fw2(string(outputFilePrefix + "_ff_") + layerStr + ".txt", layer + layers.size() * 4);
 				fw1.write();
 				fw2.write();
-				fw3.write();
-				fw4.write();
-				fw5.write();
 
 			}
 			sendLog("Waiting for other processes to finish.\n");
