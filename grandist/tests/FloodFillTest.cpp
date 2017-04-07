@@ -274,7 +274,6 @@ BOOST_AUTO_TEST_CASE(test_fill_equal)
 	closedRegionsExpected.insert(8);
 
 	auto& closedRegions = floodFill.getClosedRegions();
-
 	BOOST_CHECK_EQUAL(closedRegions.size(), closedRegionsExpected.size());
 	{
 		auto j = closedRegionsExpected.begin();
@@ -297,12 +296,37 @@ BOOST_AUTO_TEST_CASE(test_fill_equal)
 
 	auto& regionAreas = floodFill.getRegionAreas();
 	BOOST_CHECK_EQUAL(regionAreas.size(), regionAreasExpected.size());
-
 	{
 		auto j = regionAreasExpected.begin();
 		for (auto i = regionAreas.begin(); i != regionAreas.end(); i++, j++) {
 			BOOST_CHECK_EQUAL(i->first, j->first);
 			BOOST_CHECK_EQUAL(i->second, j->second);
+		}
+	}
+
+
+	//------------------------------------------------------------
+	map<int /*label*/, tuple<int /*minRow*/, int /*maxRow*/, int /*minCol*/, int /*maxCol*/>> regionExtentsExpected;
+	regionExtentsExpected[1] = make_tuple(0, 6, 0, 7);
+	regionExtentsExpected[2] = make_tuple(1, 3, 1, 3);
+	regionExtentsExpected[3] = make_tuple(6, 6, 0, 0);
+	regionExtentsExpected[4] = make_tuple(5, 6, 0, 1);
+	regionExtentsExpected[5] = make_tuple(1, 2, 5, 6);
+	regionExtentsExpected[6] = make_tuple(5, 5, 4, 4);
+	regionExtentsExpected[7] = make_tuple(0, 0, 7, 7);
+	regionExtentsExpected[8] = make_tuple(4, 5, 6, 6);
+	regionExtentsExpected[9] = make_tuple(2, 2, 6, 6);
+
+	auto& regionExtents = floodFill.getRegionExtents();
+	BOOST_CHECK_EQUAL(regionExtents.size(), regionExtentsExpected.size());
+	{
+		auto j = regionExtentsExpected.begin();
+		for (auto i = regionExtents.begin(); i != regionExtents.end(); i++, j++) {
+			BOOST_CHECK_EQUAL(i->first, j->first);
+			BOOST_CHECK_EQUAL(get<0>(i->second), get<0>(j->second));
+			BOOST_CHECK_EQUAL(get<1>(i->second), get<1>(j->second));
+			BOOST_CHECK_EQUAL(get<2>(i->second), get<2>(j->second));
+			BOOST_CHECK_EQUAL(get<3>(i->second), get<3>(j->second));
 		}
 	}
 }
