@@ -115,6 +115,11 @@ int main(int argc, char *argv[]) {
 	vector<int> layers;
 	int maxLayer = 0;
 
+	if (getProcId() == 0) {
+		std::ofstream output(outputFilePrefix + ".txt", ios_base::app);
+		output << "height slice id type area perimeter max_width max_width_row max_width_col min_width min_width_row min_width_col id2" << endl;
+	}
+
 	for (int timeMoment : timeMoments) {
 		if (timeMoment > 0) {
 			Utils::SetProperty(params, "timeMoment", to_string(timeMoment));
@@ -197,23 +202,23 @@ int main(int argc, char *argv[]) {
 				auto layer = layers[i];
 				granDists[layer]->process();
 			}
+			FileWriter fw1(outputFilePrefix + ".txt", 0);
 			for (auto layer : layers) {
 				auto& granDist = granDists[layer];
 				string layerStr = zeroPad(layer, maxLayer);
-				FileWriter fw1(string(outputFilePrefix + "_") + layerStr + ".txt", layer);
-				FileWriter fw2(string(outputFilePrefix + "_ff_") + layerStr + ".txt", layer + layers.size() * 4);
 				fw1.write(granDist->getOutputStr());
+				FileWriter fw2(string(outputFilePrefix + "_ff_") + layerStr + ".txt", layer + 1);
 				fw2.write(to_string(((float) fillingFactors[layer]) / width / height) + "\n");
 			}
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
 			recvLog();
 		} else {
 			assert(!layers.empty()); // If this happens the number of processors is greater than number of snapshots
+			FileWriter fw1(outputFilePrefix + ".txt", 0);
 			for (auto layer : layers) {
 				string layerStr = zeroPad(layer, maxLayer);
-				FileWriter fw1(string(outputFilePrefix + "_") + layerStr + ".txt", layer);
-				FileWriter fw2(string(outputFilePrefix + "_ff_") + layerStr + ".txt", layer + layers.size() * 4);
 				fw1.write();
+				FileWriter fw2(string(outputFilePrefix + "_ff_") + layerStr + ".txt", layer + 1);
 				fw2.write();
 
 			}

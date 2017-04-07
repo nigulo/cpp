@@ -583,7 +583,8 @@ void GranDist::process() {
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
 			//assert(granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW);
-			output << label << " GRAN " << regionAreas[label] << " " << regionPerimeters[label] << " " << get<0>(extremum) << " " << row << " " << col << " " << endl;
+			output << layer << " " << timeMoment << " " << label << " GRAN " << regionAreas[label] << " " << regionPerimeters[label] << " "
+					<< get<0>(extremum) << " " << row << " " << col << " -1 -1 -1 -1" << endl;
 		}
 	}
 
@@ -610,7 +611,7 @@ void GranDist::process() {
 	auto igLaneWidthMinima = findExtrema(igLaneMinWidths, minimaLabels, less<float>());
 	filterExtrema(igLaneWidthMinima, false);
 
-	map<float /*down flow lane index*/, tuple<float, int, int> /*minimum*/> uniqueMinima;
+	map<float /*down flow lane index*/, tuple<float, int, int> /*minimum*/> uniqueIgLaneWidthMinima;
 	for (auto extremum : igLaneWidthMinima) {
 		auto row = get<1>(extremum);
 		auto col = get<2>(extremum);
@@ -620,17 +621,17 @@ void GranDist::process() {
 			// Actually they should also be included in results, but probably there are not many of these
 			//assert(false);
 		} else {
-			auto i = uniqueMinima.find(index);
-			if (i == uniqueMinima.end()) {
-				uniqueMinima[index] = extremum;
+			auto i = uniqueIgLaneWidthMinima.find(index);
+			if (i == uniqueIgLaneWidthMinima.end()) {
+				uniqueIgLaneWidthMinima[index] = extremum;
 			} else if (get<0>(extremum) < get<0>(i->second)) {
-				uniqueMinima[i->first] = extremum;
+				uniqueIgLaneWidthMinima[i->first] = extremum;
 			}
 		}
 	}
 
 	igLaneWidthMinima.clear();
-	for (auto i : uniqueMinima) {
+	for (auto i : uniqueIgLaneWidthMinima) {
 		auto extremum = i.second;
 		igLaneWidthMinima.push_back(extremum);
 	}
@@ -678,7 +679,7 @@ void GranDist::process() {
 	auto igLaneWidthMaxima = findExtrema(igLaneMaxWidths, maximaLabels, greater<float>());
 	filterExtrema(igLaneWidthMaxima, false);
 
-	map<float /*down flow lane index*/, tuple<float, int, int> /*maximum*/> uniqueMaxima;
+	map<float /*down flow lane index*/, tuple<float, int, int> /*maximum*/> uniqueIgLaneWidthMaxima;
 	for (auto extremum : igLaneWidthMaxima) {
 		auto row = get<1>(extremum);
 		auto col = get<2>(extremum);
@@ -688,18 +689,18 @@ void GranDist::process() {
 			// Actually they should also be included in results, but probably there are not many of these
 			//assert(false);
 		} else {
-			auto i = uniqueMaxima.find(index);
-			if (i == uniqueMaxima.end()) {
-				uniqueMaxima[index] = extremum;
+			auto i = uniqueIgLaneWidthMaxima.find(index);
+			if (i == uniqueIgLaneWidthMaxima.end()) {
+				uniqueIgLaneWidthMaxima[index] = extremum;
 			} else if (get<0>(extremum) > get<0>(i->second)) {
-				uniqueMaxima[i->first] = extremum;
+				uniqueIgLaneWidthMaxima[i->first] = extremum;
 			}
 		}
 	}
 
 	igLaneWidthMaxima.clear();
 
-	for (auto i : uniqueMaxima) {
+	for (auto i : uniqueIgLaneWidthMaxima) {
 		float igIndex = i.first;
 		auto maximum = i.second;
 		float maximumWidth = get<0>(maximum);
@@ -707,20 +708,21 @@ void GranDist::process() {
 		int maximumCol = get<2>(maximum);
 		int label = regionLabels.at<MAT_TYPE_INT>(maximumRow, maximumCol);
 
-		float minimumWidth = 0;
+		float minimumWidth = -1;
 		int minimumRow = -1;
 		int minimumCol = -1;
-		if (uniqueMinima.find(igIndex) != uniqueMinima.end()) {
-			auto minimum = uniqueMinima[igIndex];
+		if (uniqueIgLaneWidthMinima.find(igIndex) != uniqueIgLaneWidthMinima.end()) {
+			auto minimum = uniqueIgLaneWidthMinima[igIndex];
 			minimumWidth = get<0>(minimum);
 			minimumRow = get<1>(minimum);
 			minimumCol = get<2>(minimum);
 		}
-		output << (numRegions + (int) i.first) << " IGL " << regionAreas[label] << " " << regionPerimeters[label] << " " << minimumWidth << " " << maximumWidth << " " << minimumRow << " " << minimumCol << " " << maximumRow << " " << maximumCol << " " << label << endl;
+		output << layer << " " << timeMoment << " " << (numRegions + (int) i.first) << " IGL -1 -1 " << maximumWidth << " " << maximumRow << " "
+				<< maximumCol << " " << minimumWidth << " " << minimumRow << " " << minimumCol << " " << label << endl;
 		igLaneWidthMaxima.push_back(maximum);
 	}
 	// Just in case output those minima which don't have corresponding maxima (should be zero though)
-	for (auto i : uniqueMinima) {
+	for (auto i : uniqueIgLaneWidthMinima) {
 		float igIndex = i.first;
 		auto minimum = i.second;
 		float minimumWidth = get<0>(minimum);
@@ -728,11 +730,11 @@ void GranDist::process() {
 		int minimumCol = get<2>(minimum);
 		int label = regionLabels.at<MAT_TYPE_INT>(minimumRow, minimumCol);
 
-		if (uniqueMaxima.find(igIndex) == uniqueMaxima.end()) {
-			output << (numRegions + (int) i.first) << " IGL " << regionAreas[label] << " " << regionPerimeters[label] << " " << minimumWidth << " " << 0 << " " << minimumRow << " " << minimumCol << " " << -1 << " " << -1 << " " << label << endl;
+		if (uniqueIgLaneWidthMaxima.find(igIndex) == uniqueIgLaneWidthMaxima.end()) {
+			output << layer << " " << timeMoment << " " << (numRegions + (int) i.first) << " IGL -1 -1 -1 -1 -1 "
+					<< minimumWidth << " " << minimumRow << " " << minimumCol << " " << label << endl;
 		}
 	}
-
 
 	convertTo8Bit(igLaneMaxWidths);
 	convertTo8Bit(igLaneMaxWidthsClone);
@@ -756,7 +758,8 @@ void GranDist::process() {
 			int row = get<1>(extremum);
 			int col = get<2>(extremum);
 			int label = regionLabels.at<MAT_TYPE_INT>(row, col);
-			output << label << " DFP " << regionAreas[label] << " " << regionPerimeters[label] << " " << get<0>(extremum) << " " << row << " " << col << " " << endl;
+			output << layer << " " << timeMoment << " " << label << " DFP " << regionAreas[label] << " " << regionPerimeters[label] << " "
+					<< get<0>(extremum) << " " << row << " " << col << " -1 -1 -1 -1" << endl;
 		}
 	}
 
