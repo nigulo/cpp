@@ -304,7 +304,6 @@ BOOST_AUTO_TEST_CASE(test_fill_equal)
 		}
 	}
 
-
 	//------------------------------------------------------------
 	map<int /*label*/, tuple<int /*minRow*/, int /*maxRow*/, int /*minCol*/, int /*maxCol*/>> regionExtentsExpected;
 	regionExtentsExpected[1] = make_tuple(0, 6, 0, 7);

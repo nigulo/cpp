@@ -85,4 +85,6 @@ private:
 	stringstream output;
 };
 
+Mat& tileMatrix(Mat& mat, int rows, int cols);
+
 #endif /* GRANDIST_H_ */
