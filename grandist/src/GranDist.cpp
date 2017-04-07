@@ -8,6 +8,7 @@
 #include "GranDist.h"
 #include "common.h"
 #include "FloodFill.h"
+#include "BoundaryDetect.h"
 #include <vector>
 #ifdef GPU
 #include <opencv2/gpu/gpu.hpp>
@@ -95,31 +96,6 @@ GranDist::GranDist(int timeMoment, int layer, Mat granules, bool periodic, Rect 
 	//////////////////////////////////////////
 
 	this->regionsOnBoundaries = periodic ? regionsOnBoundaries : set<int>();
-
-	/////////////////////////////////////////////////////
-	// Sanity check for region area calculation.
-	// No time to write unit tests. Can be removed if ok.
-	//for (auto& regionAndArea : regionAreas) {
-	//	if (regionsOnBoundaries.find(regionAndArea.first) == regionsOnBoundaries.end()) {
-	//		if (regionAndArea.second != regionAreasForDebug[regionAndArea.first]) {
-	//			int row;
-	//			int col;
-	//			for (row = 0; row < regionLabels.rows; row++) {
-	//				for (col = 0; col < regionLabels.cols; col++) {
-	//					if (regionLabels.at<MAT_TYPE_INT>(row, col) == regionAndArea.first) {
-	//						break;
-	//					}
-	//				}
-	//			}
-	//			cout << "Jama: " << regionAndArea.first << " at (" << row << ", " << col<< "): " << regionAndArea.second << " !=" << regionAreasForDebug[regionAndArea.first] << endl;
-	//		}
-	//		assert(regionAndArea.second == regionAreasForDebug[regionAndArea.first]);
-	//	} else {
-	//		assert(regionAndArea.second <= regionAreasForDebug[regionAndArea.first]);
-	//	}
-	//}
-	/////////////////////////////////////////////////////
-
 }
 
 GranDist::~GranDist() {
@@ -170,23 +146,17 @@ void GranDist::labelRegions() {
 		}
 	}
 
-	// Calculation of region areas is done on cropped region label matrix, because
-	// we don't want that for regions spanning from edge to edge some parts would be counted twice
-	//Mat croppedRegionLabels = regionLabels(cropRect);
-	//FloodFill floodFill2(croppedRegionLabels);
-	//auto& regionLabels2 = floodFill2.getLabels();
-	//auto regionAreas2 = floodFill2.getRegionAreas();
-	//for (int row = 0; row < croppedRegionLabels.rows; row++) {
-	//	for (int col = 0; col < croppedRegionLabels.cols; col++) {
-	//		int regionLabel1a = croppedRegionLabels.at<MAT_TYPE_INT>(row, col);
-	//		if (regionAreas.find(regionLabel1) == regionAreas.end()) {
-	//			regionAreas.insert({regionLabel1, regionAreas2[regionLabel2]});
-	//		} else if (regionAreas2.find(regionLabel2) != regionAreas.end()) {
-	//			regionAreas[regionLabel1] += regionAreas2[regionLabel2];
-	//		}
-	//		regionAreas2.erase(regionLabel2);
-	//	}
-	//}
+	BoundaryDetect boundaryDetect(granules);
+	for (int row = 0; row < granules.rows; row++) {
+		for (int col = 0; col < granules.cols; col++) {
+			auto regionLabel = regionLabels.at<MAT_TYPE_INT>(row, col);
+			if (regionBoundaries.find(regionLabel) == regionBoundaries.end()) {
+				boundaryDetect.detect(row, col);
+				regionBoundaries[regionLabel] = ((float) (boundaryDetect.getInner().size() + boundaryDetect.getOuter().size())) / 2;
+			}
+		}
+	}
+	regionBoundaries.erase(regionLabels.at<MAT_TYPE_INT>(0, 0)); // Removing the region of extra padding
 
 }
 

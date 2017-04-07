@@ -73,7 +73,8 @@ private:
 	Mat regionLabelsFloat;
 	int numRegions;
 	map<int /*regionLabel*/, int /*area*/> regionAreas;
-	//map<int /*regionLabel*/, int /*area*/> regionAreasForDebug;
+	map<int /*regionLabel*/, float /*boundary*/> regionBoundaries;
+	Mat boundaryMap;
 
 	// Output streams for results
 	stringstream granuleSizesOut;

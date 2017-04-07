@@ -22,7 +22,7 @@ enum ConnectivityMode {
 
 class BoundaryDetect {
 public:
-	BoundaryDetect(const Mat& src, ConnectivityMode mode = CONNECTIVITY_MODE_4);
+	BoundaryDetect(const Mat& regions, ConnectivityMode mode = CONNECTIVITY_MODE_4);
 	virtual ~BoundaryDetect();
 	void detect(int row, int col);
 
@@ -34,17 +34,27 @@ public:
 		return outer;
 	}
 
+	const Mat& getInnerBoundaries() const {
+		return innerBoundaries;
+	}
+
+	const Mat& getOuterBoundaries() const {
+		return outerBoundaries;
+	}
+
 private:
 	Point2i getDelta(int dir);
 	void step(Point2i point, int dir);
 
 private:
-	const Mat& mat;
+	const Mat& regions;
 	const ConnectivityMode mode;
 	const int numNeighbours;
 	float value;
 	vector<Point2i> inner;
 	vector<Point2i> outer;
+	Mat innerBoundaries;
+	Mat outerBoundaries;
 };
 
 #endif /* BOUNDARYDETECT_H_ */

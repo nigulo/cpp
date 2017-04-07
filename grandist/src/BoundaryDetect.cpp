@@ -8,11 +8,13 @@
 #include "BoundaryDetect.h"
 #include "common.h"
 
-BoundaryDetect::BoundaryDetect(const Mat& mat, ConnectivityMode mode) :
-	mat(mat),
+BoundaryDetect::BoundaryDetect(const Mat& regions, ConnectivityMode mode) :
+	regions(regions),
 	mode(mode),
 	numNeighbours(mode == CONNECTIVITY_MODE_4 ? 4 : 8),
-	value(0) {
+	value(0),
+	innerBoundaries(Mat::zeros(regions.rows, regions.cols, CV_32F)),
+	outerBoundaries(Mat::zeros(regions.rows + 2, regions.cols + 2, CV_32F)) {
 
 }
 
@@ -84,7 +86,7 @@ void BoundaryDetect::step(Point2i point, int dir) {
 	dir %= numNeighbours;
 	for (int i = 0; i < numNeighbours; i++) {
 		auto newPoint = point + getDelta(dir);
-		if (newPoint.x >= 0 && newPoint.x < mat.cols && newPoint.y >= 0 && newPoint.y < mat.rows && mat.at<MAT_TYPE_FLOAT>(newPoint.y, newPoint.x) == value) {
+		if (newPoint.x >= 0 && newPoint.x < regions.cols && newPoint.y >= 0 && newPoint.y < regions.rows && regions.at<MAT_TYPE_FLOAT>(newPoint.y, newPoint.x) == value) {
 			if (inner.size() >= 3 && newPoint == inner[1] && inner[inner.size() - 1] == inner[0]) {
 				// loop is connected
 				inner.pop_back();
@@ -113,10 +115,12 @@ void removeDuplicates(vector<Point2i>& points) {
 }
 
 void BoundaryDetect::detect(int row, int col) {
-	value = mat.at<MAT_TYPE_FLOAT>(row, col);
+	value = regions.at<MAT_TYPE_FLOAT>(row, col);
+	inner.clear();
+	outer.clear();
 	int c = col;
 	for (; c > 0; c--) {
-		if (mat.at<MAT_TYPE_FLOAT>(row, c - 1) != value) {
+		if (regions.at<MAT_TYPE_FLOAT>(row, c - 1) != value) {
 			break;
 		}
 	}
@@ -124,4 +128,10 @@ void BoundaryDetect::detect(int row, int col) {
 	step(Point2i(c, row), dir);
 	removeDuplicates(inner);
 	removeDuplicates(outer);
+	for (auto& p : inner) {
+		innerBoundaries.at<MAT_TYPE_FLOAT>(p.y, p.x) = 1;
+	}
+	for (auto& p : outer) {
+		outerBoundaries.at<MAT_TYPE_FLOAT>(p.y + 1, p.x + 1) = 1;
+	}
 }
