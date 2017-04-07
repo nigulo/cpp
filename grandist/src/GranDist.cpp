@@ -52,10 +52,10 @@ Mat& convertTo8Bit(Mat& mat) {
 }
 
 
-GranDist::GranDist(int timeMoment, int layer, Mat granules, bool periodic, Rect cropRect, bool saveMaps) :
+GranDist::GranDist(int timeMoment, int layer, Mat field, bool periodic, Rect cropRect, bool saveMaps) :
 		timeMoment(timeMoment),
 		layer(layer),
-		granules(periodic ? tileMatrix(granules, cropRect.height, cropRect.width) : granules),
+		field(periodic ? tileMatrix(field, cropRect.height, cropRect.width) : field),
 		originalHeight(cropRect.height),
 		originalWidth(cropRect.width),
 		periodic(periodic),
@@ -63,13 +63,13 @@ GranDist::GranDist(int timeMoment, int layer, Mat granules, bool periodic, Rect 
 		saveMaps(saveMaps) {
 	labelRegions();
 	regionLabels.convertTo(regionLabelsFloat, CV_32F);
-	const auto& closedRegions = getClosedRegions();
+	const auto& closedRegions = findClosedRegions();
 
-	auto regionsOnBoundaries = getRegionsOnBoundaries();
+	auto regionsOnBoundaries = findRegionsOnBoundaries();
 
 	for (int row = 0; row < regionLabels.rows; row++) {
 		for (int col = 0; col < regionLabels.cols; col++) {
-			if (granules.at<MAT_TYPE_FLOAT>(row, col) == DOWN_FLOW)  {
+			if (field.at<MAT_TYPE_FLOAT>(row, col) == DOWN_FLOW)  {
 				int label = regionLabels.at<MAT_TYPE_INT>(row, col);
 				if (closedRegions.find(label) != closedRegions.end() && regionsOnBoundaries.find(label) == regionsOnBoundaries.end()) {
 					downFlowPatches.insert(label);
@@ -105,12 +105,12 @@ GranDist::~GranDist() {
  * Labels the connected regions.
  */
 void GranDist::labelRegions() {
-	int rowOffset = (granules.rows - 2 * originalHeight) / 2;
-	int colOffset = (granules.cols - 2 * originalWidth) / 2;
+	int rowOffset = (field.rows - 2 * originalHeight) / 2;
+	int colOffset = (field.cols - 2 * originalWidth) / 2;
 
-	FloodFill floodFill(granules);
-	for (int row = 0; row < granules.rows; row++) {
-		for (int col = 0; col < granules.cols; col++) {
+	FloodFill floodFill(field);
+	for (int row = 0; row < field.rows; row++) {
+		for (int col = 0; col < field.cols; col++) {
 			floodFill.fill(row, col);
 		}
 	}
@@ -146,9 +146,9 @@ void GranDist::labelRegions() {
 		}
 	}
 
-	BoundaryDetect boundaryDetect(granules);
-	for (int row = 0; row < granules.rows; row++) {
-		for (int col = 0; col < granules.cols; col++) {
+	BoundaryDetect boundaryDetect(field);
+	for (int row = 0; row < field.rows; row++) {
+		for (int col = 0; col < field.cols; col++) {
 			auto regionLabel = regionLabels.at<MAT_TYPE_INT>(row, col);
 			if (regionPerimeters.find(regionLabel) == regionPerimeters.end()) {
 				boundaryDetect.detect(row, col);
@@ -318,7 +318,7 @@ tuple<Mat, Mat, Mat, Mat> GranDist::calcDistances(const Mat& granules, const Mat
 	return make_tuple(granuleSizes, igLaneWidths, dfPatchSizes, igLaneIndices);
 }
 
-set<int> GranDist::getClosedRegions() const {
+set<int> GranDist::findClosedRegions() const {
 	// Need to give regionLabelsFloat instead of regionLabels to FloodFill class
 	// as it currently only supports float matrices
 	FloodFill floodFill(regionLabelsFloat);
@@ -339,7 +339,7 @@ set<int> GranDist::getClosedRegions() const {
 }
 
 
-set<int /*regionLabel*/> GranDist::getRegionsOnBoundaries() const {
+set<int /*regionLabel*/> GranDist::findRegionsOnBoundaries() const {
 	set<int> regionsOnBoundaries;
 
 	int rowOffset = (regionLabels.rows - 2 * originalHeight) / 2;
@@ -466,8 +466,8 @@ void GranDist::filterExtrema(vector<tuple<float /*value*/, int /*row*/, int /*co
 		if (byRegionLabel) {
 			// The region of the extremum falls into original map
 			int label = regionLabels.at<MAT_TYPE_INT>(get<1>(*i), get<2>(*i));
-			for (int row = cropRect.y; row < granules.rows; row++) {
-				for (int col = cropRect.x; col < granules.cols; col++) {
+			for (int row = cropRect.y; row < field.rows; row++) {
+				for (int col = cropRect.x; col < field.cols; col++) {
 					if (regionLabels.at<MAT_TYPE_INT>(row, col) == label) {
 						found = true;
 						break;
@@ -492,7 +492,7 @@ void GranDist::filterExtrema(vector<tuple<float /*value*/, int /*row*/, int /*co
 
 void GranDist::process() {
 	if (periodic) {
-		tileMatrix(granules, originalHeight, originalWidth);
+		tileMatrix(field, originalHeight, originalWidth);
 	}
 	//Mat croppedGranules = granules(cropRect);
 	Mat granuleSizes;
@@ -500,7 +500,7 @@ void GranDist::process() {
 	Mat dfPatchSizes;
 	Mat igLaneIndices;
 	for (double angle = 0; angle < 180; angle += DELTA_ANGLE) {
-		Mat granulesRotated = angle > 0 ? rotate(granules, angle) : granules;
+		Mat granulesRotated = angle > 0 ? rotate(field, angle) : field;
 		Mat regionLabelsRotated = angle > 0 ? rotate(regionLabelsFloat, angle) : regionLabelsFloat;
 		if (saveMaps && ((int) angle) == 0) {
 			imwrite(string("map_") + to_string(timeMoment) + "_" + to_string(layer) + "_" + to_string((int) angle) + ".png", (granulesRotated - 1) * 255);
@@ -536,7 +536,7 @@ void GranDist::process() {
 		} else {
 			for (int row = 0; row < newGranuleSizes.rows; row++) {
 				for (int col = 0; col < newGranuleSizes.cols; col++) {
-					if (granules.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW) {
+					if (field.at<MAT_TYPE_FLOAT>(row, col) == UP_FLOW) {
 						auto newSize = newGranuleSizes.at<MAT_TYPE_FLOAT>(row, col);
 						if (newSize > granuleSizes.at<MAT_TYPE_FLOAT>(row, col)) {
 							// in granule and new size is greater

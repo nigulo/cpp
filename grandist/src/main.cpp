@@ -61,6 +61,8 @@ int main(int argc, char *argv[]) {
 	assert(startTime >= 0);
 	assert(endTime == 0 || endTime >= startTime);
 
+	int save3dMask = Utils::FindIntProperty(params, "save3dMask", 0);
+
 	int saveMaps = Utils::FindIntProperty(params, "saveMaps", 0);
 	int mapsFromLayer = Utils::FindIntProperty(params, "mapsFromLayer", 1);
 	int mapsToLayer = Utils::FindIntProperty(params, "mapsToLayer", 0);

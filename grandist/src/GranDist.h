@@ -28,28 +28,46 @@ enum RegionType {
 
 class GranDist {
 public:
-	GranDist(int timeMoment, int layer, Mat granules, bool periodic, Rect cropRect, bool debug);
-	void process();
+	GranDist(int timeMoment, int layer, Mat field, bool periodic, Rect cropRect, bool debug);
 	virtual ~GranDist();
+
+	void process();
+
+	string getOutputStr() const {
+		return output.str();
+	}
+
+	const Mat& getField() const {
+		return field;
+	}
+
+	const Mat& getRegionLabels() const {
+		return regionLabels;
+	}
+
+	const set<int /*regionLabel*/>& getRegionsOnBoundaries() const {
+		return regionsOnBoundaries;
+	}
+
+	const set<int /*regionLabel*/>& getDownFlowPatches() const {
+		return downFlowPatches;
+	}
+
+
 private:
 	void labelRegions();
 	tuple<Mat, Mat, Mat, Mat> calcDistances(const Mat& mat, const Mat& granuleLabels) const;
-	set<int> getClosedRegions() const;
-	set<int /*regionLabel*/> getRegionsOnBoundaries() const;
+	set<int> findClosedRegions() const;
+	set<int /*regionLabel*/> findRegionsOnBoundaries() const;
 	bool inDownFlowPatch(const Mat& regionLabels, int row, int col) const;
 	bool onBoundary(const Mat& granuleLabels, int row, int col) const;
 	unique_ptr<float> getIgLaneIndex(const Mat& regionLabels, int startRow, int endRow, int col, int domainStart, int domainEnd) const;
 	void filterExtrema(vector<tuple<float /*value*/, int /*row*/, int /*col*/>>& extrema, bool byRegionLabel = true) const;
 
-public:
-	string getOutputStr() const {
-		return output.str();
-	}
-
 private:
 	int timeMoment;
 	int layer;
-	Mat granules;
+	Mat field;
 	int originalHeight;
 	int originalWidth;
 	bool periodic;
