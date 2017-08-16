@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string>
+#include <fftw3.h>
 
 #include <fstream>
 #include <vector>
@@ -15,7 +16,7 @@
 #include <iomanip>
 #include "Transformer.h"
 
-//#define TEST
+#define TEST
 //#define ONLY_AZIMUTHAL_RECONST
 
 using namespace utils;
@@ -33,11 +34,65 @@ string paramFileName;
 #define DATA_TXT "data.txt"
 #define RECONST_TXT "reconst.txt"
 
+void fft(bool direction, int n, fftw_complex* data) {
+    fftw_complex* in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n);
+    fftw_complex* out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n);
+
+    memcpy(in, data, sizeof(fftw_complex) * n);
+	fftw_plan p = fftw_plan_dft_1d(n, in, out, direction ? FFTW_FORWARD : FFTW_BACKWARD, FFTW_ESTIMATE);
+
+    fftw_execute(p); /* repeat as needed */
+    memcpy(data, out, sizeof(fftw_complex) * n);
+
+    fftw_destroy_plan(p);
+    fftw_free(in);
+    fftw_free(out);
+
+}
+
+vector<double> fclencurt_weights(int n, double a, double b) {
+    int n2 = 2 * n - 2;
+    fftw_complex* c = (fftw_complex*) malloc(sizeof(fftw_complex) * n2);
+    for (int i = 0; i < n; i++) {
+    	if (i % 2 == 0) {
+    		c[i][0] = 2.0 / (1 - i*i);
+    		if (i > 0) {
+    			c[n2 - i][0] = c[i][0];
+    		}
+
+    	} else {
+    		c[i][0] = 0;
+    		if (i > 0) {
+    			c[n2 - i][0] = 0;
+    		}
+    	}
+    	c[i][1] = 0;
+    }
+    //for (int i = 0; i < n2; i++) {
+    //	cout << i << ": " << c[i][0] << " " << c[i][1] << endl;
+    //}
+    fft(false, n2, c);
+    vector<double> w;
+    //for (int i = 0; i < n2; i++) {
+    //	cout << i << ": " << c[i][0]/n2 << " " << c[i][1]/n2 << endl;
+    //}
+	w.push_back(c[0][0]/n2/2);
+    for (int i = 1; i < n - 1; i++) {
+    	w.push_back(c[i][0]/n2);
+    }
+	w.push_back(c[n - 1][0]/n2/2);
+    for (auto wi : w) {
+    	cout << wi << endl;
+    }
+    free(c);
+    return w;
+}
+
 void loadTestData(const map<string, string>& params) {
 	cout << "Generating test data!" << endl;
     std::ofstream data_out(Utils::FindProperty(params, string(DATA_OUT), DATA_TXT));
-	const int m_phi = 75;
-	const int m_theta = 200;
+	const int m_phi = 200;
+	const int m_theta = 400;
 	int N = m_phi;
 	int M = m_phi * m_theta;
 	Transformer transformer(N, M, Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT), Utils::FindProperty(params, RECONST_OUT, RECONST_TXT));
@@ -52,13 +107,20 @@ void loadTestData(const map<string, string>& params) {
     //double integral = 0;
     //double dPhi = 2 * M_PI * x1_step;
     //double dTheta = 2 * M_PI * x2_step;
+    int weight_offset = m_theta * pole_dist / 180;
+    vector<double> weights = fclencurt_weights(m_theta + 2 * weight_offset, -1, 1);
+    for (size_t i = 1; i < weights.size() - 1; i++) {
+    	weights[i] *= M_PI / (0.5 + weights.size() / 2);
+    }
+    weights[0] *= M_PI * 2;
+    weights[weights.size() - 1] *= M_PI * 2;
     for (int i = 0; i < m_phi; i++) {
 	    double x1 = -0.5 + x1_step * i;
 	    for (int j = 0; j < m_theta; j++) {
 		    double x2 = x2_offset + x2_step * j;
 		    transformer.setX(m, x1, x2);
-		    double field = /*sin(2*M_PI*(x1+0.5)) +*/ sin(2*2*M_PI*(x1+0.5)) * sin(3*4*M_PI*x2);
-		    transformer.setY(m, field);
+		    double field = /*sin(2*M_PI*(x1+0.5)) +*/ sin(3*2*M_PI*(x1+0.5)) * sin(2*4*M_PI*x2);
+		    transformer.setY(m, field * weights[j + weight_offset]);
 	    	data_out << x1 << " " << x2 << " " << field << endl;
 	    	m++;
 	    	//double theta = M_PI * 2 * x2;
