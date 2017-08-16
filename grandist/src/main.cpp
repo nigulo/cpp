@@ -8,6 +8,7 @@
 #include "utils/mpiutils.h"
 #include <list>
 #include <algorithm>
+#include <fstream>
 
 using namespace boost;
 using namespace boost::filesystem;
@@ -61,7 +62,7 @@ int main(int argc, char *argv[]) {
 	assert(startTime >= 0);
 	assert(endTime == 0 || endTime >= startTime);
 
-	int save3dMask = Utils::FindIntProperty(params, "save3dMask", 0);
+	int save3dMap = Utils::FindIntProperty(params, "save3dMap", 0);
 
 	int saveMaps = Utils::FindIntProperty(params, "saveMaps", 0);
 	int mapsFromLayer = Utils::FindIntProperty(params, "mapsFromLayer", 1);
@@ -87,6 +88,7 @@ int main(int argc, char *argv[]) {
 	path dir(filePath);
 	list<int> timeMoments;
 	int timeMomentIndex = 0;
+	int maxTimeMoment = 0;
 	for (directory_iterator itr(dir); itr != end_itr; ++itr) {
 		if (!is_regular_file(itr->status())) {
 			continue;
@@ -104,6 +106,9 @@ int main(int argc, char *argv[]) {
 		int timeMoment = stoi(fileName.substr(index + 3));
 		if (timeMoment < startTime || (endTime > 0 && timeMoment > endTime)) {
 			continue;
+		}
+		if (timeMoment > maxTimeMoment) {
+			maxTimeMoment = timeMoment;
 		}
 		if (timeMomentIndex++ % getNumProc() == getProcId()) {
 			timeMoments.push_back(timeMoment);
@@ -205,12 +210,39 @@ int main(int argc, char *argv[]) {
 				granDists[layer]->process();
 			}
 			FileWriter fw1(outputFilePrefix + ".txt", 0);
+			unique_ptr<std::ofstream> data3dOut;
+			if (save3dMap) {
+				string timeMomentStr = zeroPad(timeMoment, maxTimeMoment);
+				data3dOut = make_unique<std::ofstream>(outputFilePrefix + "_3d_" + timeMomentStr + ".dat", ios::out | ios::binary);
+				int header[4] = {height, width, numLayers, 2};
+			    data3dOut->write((char*) header, sizeof(int) * 4);
+			}
 			for (auto layer : layers) {
 				auto& granDist = granDists[layer];
 				string layerStr = zeroPad(layer, maxLayer);
 				fw1.write(granDist->getOutputStr());
 				FileWriter fw2(string(outputFilePrefix + "_ff_") + layerStr + ".txt", layer + 1);
 				fw2.write(to_string(((float) fillingFactors[layer]) / width / height) + "\n");
+				if (data3dOut) {
+					auto field = granDist->getField();
+					field = field(cropRect) - 1; // Now 0 is downflow and 2 upflow
+					auto& regionLabels = granDist->getRegionLabels();
+					auto& downFlowPatches = granDist->getDownFlowPatches();
+					int sizeOfBuffer = 2 * field.rows * field.cols;
+				    int buffer[sizeOfBuffer];
+				    int i = 0;
+				    for (int row = 0; row < field.rows; row++) {
+					    for (int col = 0; col < field.cols; col++) {
+					    	auto label = regionLabels.at<MAT_TYPE_INT>(row + rowOffset, col + colOffset);
+					    	buffer[i] = field.at<MAT_TYPE_FLOAT>(row, col) == 0 ?
+					    			(downFlowPatches.find(label) == downFlowPatches.end() ? 0 : 1) : 2;
+					    	buffer[i + 1] = label;
+					    	i += 2;
+					    }
+
+				    }
+				    data3dOut->write((char*) buffer, sizeof(int) * sizeOfBuffer);
+				}
 			}
 			sendLog("Time moment " + to_string(timeMoment) + " processed.\n");
 			recvLog();
