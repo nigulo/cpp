@@ -226,6 +226,15 @@ void loadData(const map<string, string>& params) {
 	vector<int> varIndices;
 	int bufferSize = Utils::FindIntProperty(params, "bufferSize", prec == SinglePrecision ? 8000 : 4000);
 
+    int weightOffset = polarGap * numTheta / (180 - 2 * polarGap);
+    //cout << "weight_offset: " << weight_offset << endl;
+    vector<double> weights = fclencurt_weights(numTheta + 2 * weightOffset, -1, 1);
+    for (size_t i = 1; i < weights.size() - 1; i++) {
+    	weights[i] *= M_PI / (0.5 + weights.size() / 2);
+    }
+    weights[0] *= M_PI * 2;
+    weights[weights.size() - 1] *= M_PI * 2;
+
     /* define nodes and data*/
 	if (type == TYPE_SNAPSHOT) {
 		assert(dims.size() == 3);
@@ -336,7 +345,7 @@ void loadData(const map<string, string>& params) {
 								field = ((double*) y)[i];
 							}
 
-							data.insert(dataIter, {x1, x2, field});
+							data.insert(dataIter, {x1, x2, field * weights[thetaCoord + weightOffset]});
 						}
 					}
 				}
