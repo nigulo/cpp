@@ -51,6 +51,7 @@ void fft(bool direction, int n, fftw_complex* data) {
 }
 
 vector<double> fclencurt_weights(int n, double a, double b) {
+	//cout << "n: " << n << endl;
     int n2 = 2 * n - 2;
     fftw_complex* c = (fftw_complex*) malloc(sizeof(fftw_complex) * n2);
     for (int i = 0; i < n; i++) {
@@ -67,6 +68,9 @@ vector<double> fclencurt_weights(int n, double a, double b) {
     		}
     	}
     	c[i][1] = 0;
+		if (i > 0) {
+			c[n2 - i][1] = 0;
+		}
     }
     //for (int i = 0; i < n2; i++) {
     //	cout << i << ": " << c[i][0] << " " << c[i][1] << endl;
@@ -76,14 +80,15 @@ vector<double> fclencurt_weights(int n, double a, double b) {
     //for (int i = 0; i < n2; i++) {
     //	cout << i << ": " << c[i][0]/n2 << " " << c[i][1]/n2 << endl;
     //}
-	w.push_back(c[0][0]/n2/2);
+    double bma = b - a;
+	w.push_back(bma * c[0][0]/n2/2);
     for (int i = 1; i < n - 1; i++) {
-    	w.push_back(c[i][0]/n2);
+    	w.push_back(bma * c[i][0]/n2);
     }
-	w.push_back(c[n - 1][0]/n2/2);
-    for (auto wi : w) {
-    	cout << wi << endl;
-    }
+	w.push_back(bma * c[n - 1][0]/n2/2);
+    //for (auto wi : w) {
+    //	cout << wi << endl;
+    //}
     free(c);
     return w;
 }
@@ -91,8 +96,8 @@ vector<double> fclencurt_weights(int n, double a, double b) {
 void loadTestData(const map<string, string>& params) {
 	cout << "Generating test data!" << endl;
     std::ofstream data_out(Utils::FindProperty(params, string(DATA_OUT), DATA_TXT));
-	const int m_phi = 200;
-	const int m_theta = 400;
+	const int m_phi = 256;
+	const int m_theta = 127;
 	int N = m_phi;
 	int M = m_phi * m_theta;
 	Transformer transformer(N, M, Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT), Utils::FindProperty(params, RECONST_OUT, RECONST_TXT));
@@ -100,14 +105,15 @@ void loadTestData(const map<string, string>& params) {
     /* define nodes and data*/
     int m = 0;
     double x1_step = 1.0 / m_phi;
-    double pole_dist = 0;//15;
+    double pole_dist = 180.0/(2 + m_theta);//15;
     double x2_range = 0.5 * (180 - 2 * pole_dist) / 180;
     double x2_offset = 0.5 * pole_dist / 180;
     double x2_step = x2_range / m_theta;
     //double integral = 0;
     //double dPhi = 2 * M_PI * x1_step;
     //double dTheta = 2 * M_PI * x2_step;
-    int weight_offset = m_theta * pole_dist / 180;
+    int weight_offset = pole_dist * m_theta / (180 - 2 * pole_dist);
+    //cout << "weight_offset: " << weight_offset << endl;
     vector<double> weights = fclencurt_weights(m_theta + 2 * weight_offset, -1, 1);
     for (size_t i = 1; i < weights.size() - 1; i++) {
     	weights[i] *= M_PI / (0.5 + weights.size() / 2);
@@ -118,8 +124,12 @@ void loadTestData(const map<string, string>& params) {
 	    double x1 = -0.5 + x1_step * i;
 	    for (int j = 0; j < m_theta; j++) {
 		    double x2 = x2_offset + x2_step * j;
+		    if ((x2 == 0 || x2 == 0.5) && i > 0) {
+		    	// Don't set the pole multiple times
+		    	continue;
+		    }
 		    transformer.setX(m, x1, x2);
-		    double field = /*sin(2*M_PI*(x1+0.5)) +*/ sin(3*2*M_PI*(x1+0.5)) * sin(2*4*M_PI*x2);
+		    double field = /*sin(2*M_PI*(x1+0.5)) +*/ sin(3*2*M_PI*(x1+0.5)) * sin(2*8*M_PI*x2);
 		    transformer.setY(m, field * weights[j + weight_offset]);
 	    	data_out << x1 << " " << x2 << " " << field << endl;
 	    	m++;
