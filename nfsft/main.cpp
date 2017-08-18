@@ -100,8 +100,7 @@ void loadTestData(const map<string, string>& params) {
 	const int m_theta = 127;
 	int N = m_phi;
 	int M = m_phi * m_theta;
-	Transformer transformer(N, M, Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT), Utils::FindProperty(params, RECONST_OUT, RECONST_TXT));
-    transformer.init();
+
     /* define nodes and data*/
     int m = 0;
     double x1_step = 1.0 / m_phi;
@@ -109,9 +108,7 @@ void loadTestData(const map<string, string>& params) {
     double x2_range = 0.5 * (180 - 2 * pole_dist) / 180;
     double x2_offset = 0.5 * pole_dist / 180;
     double x2_step = x2_range / m_theta;
-    //double integral = 0;
-    //double dPhi = 2 * M_PI * x1_step;
-    //double dTheta = 2 * M_PI * x2_step;
+
     int weight_offset = pole_dist * m_theta / (180 - 2 * pole_dist);
     //cout << "weight_offset: " << weight_offset << endl;
     vector<double> weights = fclencurt_weights(m_theta + 2 * weight_offset, -1, 1);
@@ -120,6 +117,12 @@ void loadTestData(const map<string, string>& params) {
     }
     weights[0] *= M_PI * 2;
     weights[weights.size() - 1] *= M_PI * 2;
+
+	Transformer transformer(N, M, Utils::FindProperty(params, RESULTS_OUT, RESULTS_TXT), Utils::FindProperty(params, RECONST_OUT, RECONST_TXT));
+    transformer.init();
+    //double integral = 0;
+    //double dPhi = 2 * M_PI * x1_step;
+    //double dTheta = 2 * M_PI * x2_step;
     for (int i = 0; i < m_phi; i++) {
 	    double x1 = -0.5 + x1_step * i;
 	    for (int j = 0; j < m_theta; j++) {
@@ -129,8 +132,9 @@ void loadTestData(const map<string, string>& params) {
 		    	continue;
 		    }
 		    transformer.setX(m, x1, x2);
-		    double field = /*sin(2*M_PI*(x1+0.5)) +*/ sin(3*2*M_PI*(x1+0.5)) * sin(2*8*M_PI*x2);
-		    transformer.setY(m, field * weights[j + weight_offset]);
+		    double field = /*sin(2*M_PI*(x1+0.5)) +*/ (sin(3*2*M_PI*(x1+0.5)) + sin(7*2*M_PI*(x1+0.5)) + sin(16*2*M_PI*(x1+0.5)) + sin(33*2*M_PI*(x1+0.5)) + sin(67*2*M_PI*(x1+0.5))) * (sin(2*8*M_PI*x2) + sin(2*17*M_PI*x2) + sin(2*35*M_PI*x2) + sin(2*71*M_PI*x2));
+		    transformer.setWeight(m, weights[j + weight_offset]);
+		    transformer.setY(m, field);
 	    	data_out << x1 << " " << x2 << " " << field << endl;
 	    	m++;
 	    	//double theta = M_PI * 2 * x2;
@@ -345,7 +349,7 @@ void loadData(const map<string, string>& params) {
 								field = ((double*) y)[i];
 							}
 
-							data.insert(dataIter, {x1, x2, field * weights[thetaCoord + weightOffset]});
+							data.insert(dataIter, {x1, x2, field, weights[thetaCoord + weightOffset]});
 						}
 					}
 				}
@@ -356,6 +360,7 @@ void loadData(const map<string, string>& params) {
 			assert(m < M);
 			data_out << elem[0] << " " << elem[1] << " " << elem[2] << "\n";
 			transformer.setX(m, elem[0], elem[1]);
+			transformer.setWeight(m, elem[3]);
 			transformer.setY(m, elem[2]);
 			m++;
 		}
@@ -392,7 +397,7 @@ void loadData(const map<string, string>& params) {
 			dataOutDir += "/";
 		}
 		while (dl.Next()) {
-			for (size_t t = 0; t < dl.GetPageSize(); t++) {
+			for (int t = 0; t < dl.GetPageSize(); t++) {
 				if (t + timeOffset < startTime) {
 					continue;
 				}
@@ -441,9 +446,10 @@ void loadData(const map<string, string>& params) {
 						if (data_out) {
 							*data_out << x1 << " " << x2 << " " << field << endl;
 						}
-						if (t == startTime) {
+						if ((int) t == startTime) {
 							transformer.setX(m, x1, x2);
 						}
+						transformer.setWeight(m, weights[thetaCoord + weightOffset]);
 						transformer.setY(m, field);
 						//plan.f[m][0] = y[i];
 						//plan.f[m][1] = 0;

@@ -9,16 +9,18 @@
 #include "Transformer.h"
 #include <iostream>
 
-Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */, const string& resultOut, const string& reconstOut, bool decompOrPower) :
+Transformer::Transformer(int N /* bandwidth/maximum degree */, int M /* number of nodes */,
+		const string& resultOut, const string& reconstOut, bool decompOrPower,
+		const vector<double>& weights) :
 	N(N),
 	M(M),
 	result_out(resultOut),
 	reconst_out(nullptr),
-	decompOrPower(decompOrPower) {
+	decompOrPower(decompOrPower),
+	weights(weights) {
 	if (!reconstOut.empty()) {
 		reconst_out = new ofstream(reconstOut);
 	}
-
 }
 
 Transformer::~Transformer() {
@@ -110,7 +112,12 @@ void Transformer::transform(int timeMoment) {
 		nfsft_trafo_direct(&plan);
 
 		for (int m = 0; m < plan.M_total; m++) {
-			*reconst_out << timeMomentStr << plan.x[2*m] << " " << plan.x[2*m + 1] << " " << plan.f[m][0] << " " << plan.f[m][1] << endl;
+			if (weights.empty()) {
+				*reconst_out << timeMomentStr << plan.x[2*m] << " " << plan.x[2*m + 1] << " " << plan.f[m][0] << " " << plan.f[m][1] << endl;
+			} else {
+				auto weight = weights[m];
+				*reconst_out << timeMomentStr << plan.x[2*m] << " " << plan.x[2*m + 1] << " " << plan.f[m][0] << " " << plan.f[m][1] << endl;
+			}
 		}
 		reconst_out->flush();
     }
@@ -127,6 +134,17 @@ void Transformer::setX(int m, double x1, double x2) {
 }
 
 void Transformer::setY(int m, double y) {
-    plan.f[m][0] = y;
+	if ((int) weights.size() <= m) {
+		plan.f[m][0] = y;
+	} else {
+		plan.f[m][0] = y * weights[m];
+	}
     plan.f[m][1] = 0;
+}
+
+void Transformer::setWeight(int m, double w) {
+	while ((int) weights.size() <= m) {
+		weights.push_back(1.0);
+	}
+	weights[m] = w;
 }
